@@ -16,13 +16,18 @@
  */
 package spoon.test.position;
 
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import org.apache.commons.io.FileUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.CtAssignment;
@@ -30,6 +35,8 @@ import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCase;
 import spoon.reflect.code.CtCatch;
 import spoon.reflect.code.CtCatchVariable;
+import spoon.reflect.code.CtConstructorCall;
+import spoon.reflect.code.CtExecutableReferenceExpression;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtFieldRead;
@@ -70,7 +77,9 @@ import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.compiler.VirtualFile;
 import spoon.support.reflect.CtExtendedModifier;
 import spoon.test.comment.testclasses.BlockComment;
-import spoon.test.comment.testclasses.Comment1;import spoon.test.position.testclasses.AnnonymousClassNewIface;
+import spoon.test.comment.testclasses.Comment1;
+import spoon.test.position.testclasses.AnnonymousClassNewIface;
+import spoon.test.position.testclasses.AnnotationWithAngleBracket;
 import spoon.test.position.testclasses.ArrayArgParameter;
 import spoon.test.position.testclasses.CatchPosition;
 import spoon.test.position.testclasses.CompilationUnitComments;
@@ -92,21 +101,23 @@ import spoon.test.position.testclasses.FooMethod;
 import spoon.test.position.testclasses.FooStatement;
 import spoon.test.position.testclasses.FooSwitch;
 import spoon.test.position.testclasses.Kokos;
+import spoon.test.position.testclasses.MoreLambda;
 import spoon.test.position.testclasses.NoMethodModifiers;
 import spoon.test.position.testclasses.PositionParameterTypeWithReference;
 import spoon.test.position.testclasses.PositionTry;
 import spoon.test.position.testclasses.SomeEnum;
 import spoon.test.position.testclasses.TypeParameter;
-import spoon.test.position.testclasses.MoreLambda;
 import spoon.test.query_function.testclasses.VariableReferencesModelTest;
+import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.ModelUtils.build;
 import static spoon.testing.utils.ModelUtils.buildClass;
 
@@ -379,10 +390,10 @@ public class PositionTest {
 		BodyHolderSourcePosition position = (BodyHolderSourcePosition) foo.getPosition();
 
 		assertEquals(3, position.getLine());
-		assertEquals(31, position.getEndLine());
+		assertEquals(35, position.getEndLine());
 
 		assertEquals(42, position.getSourceStart());
-		assertEquals(411, position.getSourceEnd());
+		assertEquals(468, position.getSourceEnd());
 
 		assertEquals("FooGeneric", contentAtPosition(classContent, position.getNameStart(), position.getNameEnd()));
 		assertEquals("public", contentAtPosition(classContent, position.getModifierSourceStart(), position.getModifierSourceEnd()));
@@ -411,6 +422,25 @@ public class PositionTest {
 
 		// /!\ the annotations can be between two modifiers
 		assertEquals("public @Deprecated static", contentAtPosition(classContent, position2.getModifierSourceStart(), position2.getModifierSourceEnd()));
+
+		CtMethod<?> method2 = foo.getMethodsByName("n").get(0);
+		BodyHolderSourcePosition position3 = (BodyHolderSourcePosition) method2
+				.getPosition();
+
+		assertEquals("protected static<S> S n(int parm2) {\n"
+				+ "\t\treturn null;\n"
+				+ "\t}", contentAtPosition(classContent, position3));
+		assertEquals("n", contentAtPosition(classContent, position3.getNameStart(), position3.getNameEnd()));
+
+		assertEquals("protected static", contentAtPosition(classContent, position3.getModifierSourceStart(), position3.getModifierSourceEnd()));
+	}
+
+	@Test
+	@Timeout(unit = TimeUnit.MILLISECONDS, value = 10000L)
+	public void testPositionTerminates() {
+		assertDoesNotThrow(() -> {
+			final Factory build = build(AnnotationWithAngleBracket.class);
+		});
 	}
 
 	@Test
@@ -815,6 +845,11 @@ public class PositionTest {
 		String classContent = getClassContent(type);
 		
 		CtExtendedModifier modifier = type.getExtendedModifiers().iterator().next();
+		// a type might have implicit modifiers, and those should not have a valid position
+		if (modifier.isImplicit()) {
+			assertFalse(modifier.getPosition().isValidPosition());
+			return;
+		}
 		SourcePosition commentPos = type.getComments().get(0).getPosition();
 		//modifier is not positioned in comment, but after comment
 		assertTrue(commentPos.getSourceEnd() < modifier.getPosition().getSourceStart());
@@ -1316,7 +1351,7 @@ public class PositionTest {
 			assertTrue(cl.getSimpleName().equals("A"));
 			assertTrue(cl.getMethods().size() == 1);
 		} catch(Exception e) {
-			fail("Error while parsing incomplete class declaration");
+			fail("Error while parsing incomplete class declaration "+e);
 		}
 	}
 
@@ -1394,8 +1429,7 @@ public class PositionTest {
 			.filter(elt -> elt.getPosition().isValidPosition())
 			.collect(Collectors.toList());
 
-		assertTrue("Some Spoon elements have an invalid line position",
-			listOfBadPositionElements.stream().allMatch(elt -> elt.getPosition().getLine() == 1));
+		assertTrue(listOfBadPositionElements.stream().allMatch(elt -> elt.getPosition().getLine() == 1), "Some Spoon elements have an invalid line position");
 	}
 
 	@Test
@@ -1426,5 +1460,119 @@ public class PositionTest {
 						p -> assertEquals(((CtParameter) p).getSimpleName(), contentAtPosition(classContent, ((CtParameter) p).getPosition()))
 				)
 		);
+	}
+
+	@ModelTest("src/test/java/spoon/test/position/testclasses/ExecutableReferencePositionTestClass.java")
+	void testExecutableReferencesInInvocation(Factory factory) {
+		// contract: Executable references in invocations should have a proper source position
+		CtType<?> type = factory.Type().getAll().get(0);
+		CtMethod<?> method = type.getMethodsByName("entrypoint").get(0);
+
+		// referencedPlain();
+		CtInvocation<?> untypedInvocation = method.getBody().getStatement(2);
+		// ExecutableReferencePositionTestClass.<String>referencedTyped();
+		CtInvocation<?> typedInvocation = method.getBody().getStatement(3);
+
+		assertEquals("referencedPlain", sourceSubstring(untypedInvocation.getExecutable().getPosition()));
+		assertEquals("<String>referencedTyped", sourceSubstring(typedInvocation.getExecutable().getPosition()));
+	}
+
+	@ModelTest("src/test/java/spoon/test/position/testclasses/ExecutableReferencePositionTestClass.java")
+	void testExecutableReferencesInMethodReference(Factory factory) {
+		// contract: Executable references in method references should have a proper source position
+		CtType<?> type = factory.Type().getAll().get(0);
+		CtMethod<?> method = type.getMethodsByName("entrypoint").get(0);
+		// Runnable r1 = ExecutableReferencePositionTestClass::referencedPlain;
+		CtLocalVariable<?> untypedVar = method.getBody().getStatement(0);
+		CtExecutableReferenceExpression<?, ?> untypedInvocation = (CtExecutableReferenceExpression<?, ?>) untypedVar.getAssignment();
+		// Runnable r2 = ExecutableReferencePositionTestClass::<String>referencedTyped;
+		CtLocalVariable<?> typedVar = method.getBody().getStatement(1);
+		CtExecutableReferenceExpression<?, ?> typedInvocation = (CtExecutableReferenceExpression<?, ?>) typedVar.getAssignment();
+
+		assertEquals("referencedPlain", sourceSubstring(untypedInvocation.getExecutable().getPosition()));
+		assertEquals("<String>referencedTyped", sourceSubstring(typedInvocation.getExecutable().getPosition()));
+	}
+
+	@ModelTest("src/test/java/spoon/test/position/testclasses/ExecutableReferencePositionTestClass.java")
+	void testExecutableReferencesInConstructorCall(Factory factory) {
+		// contract: Executable references in constructor calls should not have a source position and be implicit
+		CtType<?> type = factory.Type().getAll().get(0);
+		CtMethod<?> method = type.getMethodsByName("entrypoint").get(0);
+		// new ExecutableReferencePositionTestClass();
+		CtConstructorCall<?> untypedInvocation = method.getBody().getStatement(4);
+		// new <String>ExecutableReferencePositionTestClass(20);
+		CtConstructorCall<?> typedInvocation = method.getBody().getStatement(5);
+
+		assertTrue(untypedInvocation.getExecutable().isImplicit());
+		assertFalse(untypedInvocation.getExecutable().getPosition().isValidPosition());
+		assertTrue(typedInvocation.getExecutable().isImplicit());
+		assertFalse(typedInvocation.getExecutable().getPosition().isValidPosition());
+	}
+
+	@ModelTest("src/test/java/spoon/test/position/testclasses/ExecutableReferencePositionTestClass.java")
+	void testExecutableReferenceWithGenericClassConstructorCall(Factory factory) {
+		// contract: Executable references in constructor calls should not have a source position and be implicit
+		CtType<?> type = factory.Type().getAll().get(0);
+		CtMethod<?> method = type.getMethodsByName("entrypoint").get(0);
+		// new TestClassWithGenericParameter<String>();
+		CtConstructorCall<?> untypedInvocation = method.getBody().getStatement(6);
+
+		assertTrue(untypedInvocation.getExecutable().isImplicit());
+		assertFalse(untypedInvocation.getExecutable().getPosition().isValidPosition());
+	}
+
+	@ModelTest("src/test/java/spoon/test/position/testclasses/ExecutableReferencePositionTestClass.java")
+	void testExecutableReferencesInExplicitConstructorInvocation(Factory factory) {
+		// contract: Executable references in explicit constructor calls (delegation) should not have a source position
+		//           and be implicit
+		CtType<?> enclosingType = factory.Type().getAll().get(0);
+		CtClass<?> untypedType = (CtClass<?>) enclosingType.getNestedTypes().stream()
+			.filter(it -> it.getSimpleName().equals("TestUntypedExplicitConstructorCall"))
+			.findFirst()
+			.orElseThrow();
+		CtClass<?> typedType = (CtClass<?>) enclosingType.getNestedTypes().stream()
+			.filter(it -> it.getSimpleName().equals("TestTypedExplicitConstructorCall"))
+			.findFirst()
+			.orElseThrow();
+		CtClass<?> untypedNoArgsType = (CtClass<?>) enclosingType.getNestedTypes().stream()
+			.filter(it -> it.getSimpleName().equals("TestUntypedExplicitConstructorCallNoArgs"))
+			.findFirst()
+			.orElseThrow();
+		CtClass<?> untypedSuperType = (CtClass<?>) enclosingType.getNestedTypes().stream()
+			.filter(it -> it.getSimpleName().equals("TestUntypedExplicitSuperConstructorCall"))
+			.findFirst()
+			.orElseThrow();
+
+		CtClass<?> typedSuperType = (CtClass<?>) enclosingType.getNestedTypes().stream()
+			.filter(it -> it.getSimpleName().equals("TestTypedExplicitSuperConstructorCall"))
+			.findFirst()
+			.orElseThrow();
+
+		CtConstructor<?> untypedConstructor = untypedType.getConstructor();
+		CtConstructor<?> typedConstructor = typedType.getConstructor();
+		CtConstructor<?> untypedNoArgsConstructor = untypedNoArgsType.getConstructor(factory.Type().INTEGER_PRIMITIVE);
+		CtConstructor<?> untypedSuperConstructor = untypedSuperType.getConstructor();
+		CtConstructor<?> typedSuperConstructor = typedSuperType.getConstructor();
+		CtInvocation<?> untypedInvocation = untypedConstructor.getBody().getStatement(0);
+		CtInvocation<?> typedInvocation = typedConstructor.getBody().getStatement(0);
+		CtInvocation<?> untypedNoArgsInvocation = untypedNoArgsConstructor.getBody().getStatement(0);
+		CtInvocation<?> untypedSuperInvocation = untypedSuperConstructor.getBody().getStatement(0);
+		CtInvocation<?> typedSuperInvocation = typedSuperConstructor.getBody().getStatement(0);
+
+		assertTrue(untypedInvocation.getExecutable().isImplicit());
+		assertFalse(untypedInvocation.getExecutable().getPosition().isValidPosition());
+		assertTrue(typedInvocation.getExecutable().isImplicit());
+		assertFalse(typedInvocation.getExecutable().getPosition().isValidPosition());
+		assertTrue(untypedNoArgsInvocation.getExecutable().isImplicit());
+		assertFalse(untypedNoArgsInvocation.getExecutable().getPosition().isValidPosition());
+		assertTrue(untypedSuperInvocation.getExecutable().isImplicit());
+		assertFalse(untypedSuperInvocation.getExecutable().getPosition().isValidPosition());
+		assertTrue(typedSuperInvocation.getExecutable().isImplicit());
+		assertFalse(typedSuperInvocation.getExecutable().getPosition().isValidPosition());
+	}
+
+	private static String sourceSubstring(SourcePosition position) {
+		return position.getCompilationUnit().getOriginalSourceCode()
+			.substring(position.getSourceStart(), position.getSourceEnd() + 1);
 	}
 }

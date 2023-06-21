@@ -16,12 +16,14 @@
  */
 package spoon.test.snippets;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.compiler.SpoonResource;
 import spoon.reflect.code.CtBinaryOperator;
+import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCodeSnippetExpression;
 import spoon.reflect.code.CtCodeSnippetStatement;
+import spoon.reflect.code.CtComment;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLocalVariable;
@@ -36,11 +38,14 @@ import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.compiler.SnippetCompilationHelper;
 import spoon.support.compiler.VirtualFile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.ModelUtils.createFactory;
 
 public class SnippetTest {
@@ -164,4 +169,123 @@ public class SnippetTest {
 		assertEquals(factory.createVariableRead(reference, false), lastStatement.getTarget()); // the target of the inserted invocation has been resolved as the reference of the declared object "s"
 	}
 
+	@Test
+	public void testCompileSnippetsWithCtComment() {
+		// contract: snippets are correctly compiled when followed by a CtComment
+		final Launcher launcher = new Launcher();
+		launcher.addInputResource("src/test/resources/snippet/SnippetCommentResource.java");
+		launcher.buildModel();
+		Factory factory = launcher.getFactory();
+		final CtClass<?> testClass = factory.Class().get("snippet.test.resources.SnippetCommentResource");
+		CtMethod method = testClass.getMethodsByName("modifiedMethod").get(0);
+		CtBlock body = method.getBody();
+		body.addStatement(body.getStatements().size()-1,launcher.getFactory().createInlineComment("inline comment"));
+		body.addStatement(body.getStatements().size()-1,launcher.getFactory().createCodeSnippetStatement("invokedMethod()"));
+		CtBlock innerBlock = body.getStatement(0);
+		innerBlock.addStatement(0,factory.createCodeSnippetStatement("invokedMethod()"));
+		body.addStatement(0,factory.createComment("block comment", CtComment.CommentType.BLOCK));
+		testClass.compileAndReplaceSnippets();
+		assertTrue(body.getStatements().get(0) instanceof CtComment);
+		assertTrue(body.getStatements().get(1) instanceof CtBlock);
+		assertTrue(body.getStatements().get(2) instanceof CtComment);
+		assertTrue(body.getStatements().get(3) instanceof CtInvocation);
+		assertTrue(body.getStatements().get(4) instanceof CtReturn);
+		assertTrue(innerBlock.getStatements().get(0) instanceof CtInvocation);
+		assertEquals(5,body.getStatements().size());
+		assertEquals(1,innerBlock.getStatements().size());
+		assertEquals(0,body.getStatements().get(0).getComments().size());
+		assertEquals(0,body.getStatements().get(1).getComments().size());
+		assertEquals(0,body.getStatements().get(2).getComments().size());
+		assertEquals(0,body.getStatements().get(3).getComments().size());
+	}
+
+	@Test
+	public void testCommentSnippetCompilation() {
+		// contract: a snippet with only comments should be replaced with corresponding CtComments
+		Launcher launcher = new Launcher();
+		Factory factory = launcher.getFactory();
+		launcher.addInputResource("src/test/resources/snippet/SnippetCommentResource.java");
+		launcher.buildModel();
+		CtClass<?> snippetClass = factory.Class().get("snippet.test.resources.SnippetCommentResource");
+		CtMethod method = snippetClass.getMethodsByName("methodForCommentOnlySnippet").get(0);
+		CtBlock body = method.getBody();
+		body.addStatement(1,factory.createCodeSnippetStatement("/* a \n block \n comment */\n// inline"));
+		body.addStatement(0,factory.createCodeSnippetStatement("/* a \n block \n comment */"));
+		body.addStatement(0,factory.createCodeSnippetStatement("int x"));
+		body.addStatement(0,factory.createCodeSnippetStatement("  // inline"));
+		snippetClass.compileAndReplaceSnippets();
+		assertTrue(body.getStatements().get(0) instanceof CtComment);
+		assertTrue(body.getStatements().get(1) instanceof CtLocalVariable);
+		assertTrue(body.getStatements().get(2) instanceof CtComment);
+		assertTrue(body.getStatements().get(3) instanceof CtReturn);
+		assertTrue(body.getStatements().get(4) instanceof CtComment);
+		assertTrue(body.getStatements().get(5) instanceof CtComment);
+		assertEquals(CtComment.CommentType.INLINE,((CtComment) body.getStatements().get(0)).getCommentType());
+		assertEquals(CtComment.CommentType.BLOCK,((CtComment) body.getStatements().get(2)).getCommentType());
+		assertEquals(CtComment.CommentType.BLOCK,((CtComment) body.getStatements().get(4)).getCommentType());
+		assertEquals(CtComment.CommentType.INLINE,((CtComment) body.getStatements().get(5)).getCommentType());
+		assertEquals(6,body.getStatements().size());
+	}
+
+	@Test
+	public void testSnippetCompilationInUnnamedPackage() {
+		// contract: a snippet can be successfully compiled in a class with an unnamed package
+		Launcher launcher = new Launcher();
+		Factory factory = launcher.getFactory();
+		launcher.addInputResource("src/test/resources/snippet/UnnamedPackageSnippetResource.java");
+		launcher.buildModel();
+		CtClass<?> snippetClass = factory.Class().get("UnnamedPackageSnippetResource");
+		CtMethod method = snippetClass.getMethodsByName("method").get(0);
+		CtBlock body = method.getBody();
+		body.addStatement(0,factory.createCodeSnippetStatement("int x"));
+		snippetClass.compileAndReplaceSnippets();
+		assertTrue(body.getStatements().get(0) instanceof CtLocalVariable);
+		assertEquals(1,body.getStatements().size()); 
+	}
+
+	@Test
+	public void testCodeSnippetExpressionsWithNonEqualValuesAreNotEqual() {
+		// contract: Two code snippet expressions with non-equal values are not equal
+		Factory factory = new Launcher().getFactory();
+
+		CtCodeSnippetExpression<Integer> one = factory.createCodeSnippetExpression("1");
+		CtCodeSnippetExpression<Integer> two = factory.createCodeSnippetExpression("2");
+
+		assertThat(one.equals(two), is(false));
+	}
+
+	@Test
+	public void testCodeSnippetExpressionsWithEqualValuesAreEqual() {
+		// contract: Two code snippet expressions with equal values, that are also otherwise equal,
+		// are equal
+		Factory factory = new Launcher().getFactory();
+
+		CtCodeSnippetExpression<Integer> one = factory.createCodeSnippetExpression("1");
+		CtCodeSnippetExpression<Integer> alsoOne = factory.createCodeSnippetExpression("1");
+
+		assertThat(one.equals(alsoOne), is(true));
+	}
+
+	@Test
+	public void testCodeSnippetStatementsWithNonEqualValuesAreNotEqual() {
+		// contract: Two code snippet statements with non-equal values are not equal
+		Factory factory = new Launcher().getFactory();
+
+		CtCodeSnippetStatement intDeclaration = factory.createCodeSnippetStatement("int a;");
+		CtCodeSnippetStatement doubleDeclaration = factory.createCodeSnippetStatement("double a;");
+
+		assertThat(intDeclaration.equals(doubleDeclaration), is(false));
+	}
+
+	@Test
+	public void testCodeSnippetStatementsWithEqualValuesAreEqual() {
+		// contract: Two code snippet statements with equal values, that are also otherwise equal,
+		// are equal
+		Factory factory = new Launcher().getFactory();
+
+		CtCodeSnippetStatement intDeclaration = factory.createCodeSnippetStatement("int a;");
+		CtCodeSnippetStatement alsoIntDeclaration = factory.createCodeSnippetStatement("int a;");
+
+		assertThat(intDeclaration.equals(alsoIntDeclaration), is(true));
+	}
 }

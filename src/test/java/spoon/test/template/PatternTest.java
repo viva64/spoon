@@ -16,7 +16,8 @@
  */
 package spoon.test.template;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import spoon.Launcher;
 import spoon.pattern.ConflictResolutionMode;
 import spoon.pattern.Match;
@@ -66,6 +67,7 @@ import spoon.test.template.testclasses.match.MatchWithParameterType;
 import spoon.test.template.testclasses.replace.DPPSample1;
 import spoon.test.template.testclasses.replace.OldPattern;
 import spoon.test.template.testclasses.types.AClassWithMethodsAndRefs;
+import spoon.testing.utils.LineSeparatorExtension;
 import spoon.testing.utils.ModelUtils;
 
 import java.io.File;
@@ -81,13 +83,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 // main test of Spoon's patterns
@@ -252,13 +254,13 @@ public class PatternTest {
 				.build();
 
 		{
-			List<CtStatement> statements = pattern.generator().generate(CtStatement.class, 
+			List<CtStatement> statements = pattern.generator().generate(
 					new ImmutableMapImpl().putValue("option", true).putValue("value", "spoon"));
 			assertEquals(1, statements.size());
 			assertEquals("java.lang.System.out.print(\"spoon\")", statements.get(0).toString());
 		}
 		{
-			List<CtStatement> statements = pattern.generator().generate(CtStatement.class, 
+			List<CtStatement> statements = pattern.generator().generate(
 					new ImmutableMapImpl().putValue("option", false).putValue("value", 2.1));
 			assertEquals(1, statements.size());
 			assertEquals("java.lang.System.out.println(2.1)", statements.get(0).toString());
@@ -291,7 +293,7 @@ public class PatternTest {
 		// created in "MatchMultiple.createPattern", matching a method "statements"
 		params = params.putValue("statements", statementsToBeAdded);
 
-		List<CtStatement> generated = pattern.generator().generate(CtStatement.class, params);
+		List<CtStatement> generated = pattern.generator().generate(params);
 		assertEquals(Arrays.asList(
 				//these statements comes from `statements` parameter value
 				"int foo = 0",
@@ -591,10 +593,10 @@ public class PatternTest {
 			List<Match> matches = pattern.getMatches(ctClass.getMethodsByName("testMatch1").get(0).getBody());
 
 			// Quantifier.POSSESSIVE matches exactly the right number of times
-			assertEquals("count="+countFinal, countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements2")));
+			assertEquals(countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements2")), "count="+countFinal);
 
 			// Quantifier.GREEDY gets the rest
-			assertEquals("count="+countFinal, 5-countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements1")));
+			assertEquals(5-countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements1")), "count="+countFinal);
 		}
 	}
 
@@ -628,10 +630,10 @@ public class PatternTest {
 
 			List<Match> matches = pattern.getMatches(ctClass.getMethodsByName("testMatch1").get(0).getBody());
 			//the last template has nothing to match -> no match
-			assertEquals("count="+countFinal, 1, matches.size());
-			assertEquals("count="+countFinal, 4-countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements1")));
-			assertEquals("count="+countFinal, countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements2")));
-			assertEquals("count="+countFinal, 2, getCollectionSize(matches.get(0).getParameters().getValue("inlinedSysOut")));
+			assertEquals(1, matches.size(), "count="+countFinal);
+			assertEquals(4-countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements1")), "count="+countFinal);
+			assertEquals(countFinal, getCollectionSize(matches.get(0).getParameters().getValue("statements2")), "count="+countFinal);
+			assertEquals(2, getCollectionSize(matches.get(0).getParameters().getValue("inlinedSysOut")), "count="+countFinal);
 		}
 
 		for (int count = 5; count < 7; count++) {
@@ -641,7 +643,7 @@ public class PatternTest {
 
 			List<Match> matches = pattern.getMatches(ctClass.getMethodsByName("testMatch1").get(0).getBody());
 			//the possessive matcher eats too much. There is no target element for last `printedValue` variable
-			assertEquals("count="+countFinal, 0, matches.size());
+			assertEquals(0, matches.size(), "count="+countFinal);
 		}
 	}
 
@@ -666,13 +668,13 @@ public class PatternTest {
 
 			if (count < 7) {
 				//the last template has nothing to match -> no match
-				assertEquals("count=" + count, 1, matches.size());
-				assertEquals("count=" + count, Math.max(0, 3 - count), getCollectionSize(matches.get(0).getParameters().getValue("statements1")));
-				assertEquals("count=" + count, count - Math.max(0, count - 4), getCollectionSize(matches.get(0).getParameters().getValue("statements2")));
-				assertEquals("count=" + count, Math.max(2, 3 - Math.max(0, count - 3)), getCollectionSize(matches.get(0).getParameters().getValue("printedValue")));
+				assertEquals(1, matches.size(), "count=" + count);
+				assertEquals(Math.max(0, 3 - count), getCollectionSize(matches.get(0).getParameters().getValue("statements1")), "count=" + count);
+				assertEquals(count - Math.max(0, count - 4), getCollectionSize(matches.get(0).getParameters().getValue("statements2")), "count=" + count);
+				assertEquals(Math.max(2, 3 - Math.max(0, count - 3)), getCollectionSize(matches.get(0).getParameters().getValue("printedValue")), "count=" + count);
 			} else {
 				//the possessive matcher eats too much. There is no target element for last `printedValue` variable
-				assertEquals("count=" + count, 0, matches.size());
+				assertEquals(0, matches.size(), "count=" + count);
 			}
 		}
 	}
@@ -1157,6 +1159,7 @@ public class PatternTest {
 	}
 
 	@Test
+	@ExtendWith(LineSeparatorExtension.class)
 	public void testPatternToString() {
 		//contract: Pattern can be printed to String and each parameter is defined there
 		String nl = System.getProperty("line.separator");
@@ -1342,7 +1345,7 @@ public class PatternTest {
 		Pattern pattern = PatternBuilder.create(templateModel).setAddGeneratedBy(true).build();
 
 		final String newQName = "spoon.test.generated.ACloneOfAClassWithMethodsAndRefs";
-		CtClass<?> generatedType = pattern.generator().generateType(newQName, Collections.emptyMap());
+		CtClass<?> generatedType = pattern.generator().generate(newQName, Collections.emptyMap());
 		assertNotNull(generatedType);
 
 		// sanity check that the new type contains all the expected methods
@@ -1392,7 +1395,10 @@ public class PatternTest {
 
 		CtClass<?> generatedType = factory.createClass("spoon.test.generated.ACloneOfAClassWithMethodsAndRefs");
 
-		pattern.generator().addToType(CtMethod.class, Collections.emptyMap(), generatedType);
+		Map<String, Object> params = new HashMap<>();
+		params.put("targetType", generatedType.getReference());
+		CtMethod m = (CtMethod) pattern.generator().generate(params).get(0);
+		generatedType.addMethod(m);
 
 		//contract: the foo method has been added
 		assertEquals(Arrays.asList("foo"),
@@ -1554,7 +1560,7 @@ public class PatternTest {
 		params.put("_methodName_", factory.Code().createLiteral(toBeLoggedMethod.getSimpleName()));
 		params.put("_block_", toBeLoggedMethod.getBody());
 		//create a patter from the LoggerModel#block
-		CtType<?> type = factory.Type().get(LoggerModel.class);
+		CtType<?> type = factory.Templates().Type().get(LoggerModel.class);
 
 
 		// creating a pattern from method "block"
@@ -1563,7 +1569,8 @@ public class PatternTest {
 				//as pattern parameters
 				.configurePatternParameters()
 				.build();
-		final List<CtMethod> aMethods = pattern.generator().addToType(CtMethod.class, params, aTargetType);
+
+		final List<CtMethod> aMethods = pattern.generator().generate(params);
 		assertEquals(1, aMethods.size());
 		final CtMethod<?> aMethod = aMethods.get(0);
 		assertTrue(aMethod.getBody().getStatement(0) instanceof CtTry);
@@ -1639,5 +1646,23 @@ public class PatternTest {
 		Object v = match.getParametersMap().get(name);
 		assertNotNull(v);
 		return ((ImmutableMap) v).asMap();
+	}
+
+	@Test
+	void testGeneratorCopiesMetadataOfTemplateElement() {
+		// contract: metadata should be cloned for all elements generated via template
+
+		String c1 = "public class A { int getOne() { return 1; } }";
+		CtType <?> type = Launcher.parseClass(c1);
+		String key = "foo";
+		String val = "bar";
+
+		// attach metadata
+		type.descendantIterator().forEachRemaining(ctElement -> ctElement.putMetadata(key, val));
+
+		// create clone using the above type as template
+		CtType <?> cloneType = PatternBuilder.create(type).build().generator().generate("B", new HashMap<>());
+
+		cloneType.descendantIterator().forEachRemaining(ctElement -> assertEquals(val, ctElement.getMetadata(key), "Metadata does not match for: " + ctElement));
 	}
 }

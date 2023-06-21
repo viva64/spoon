@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -10,6 +10,7 @@ package spoon.support.sniper.internal;
 import spoon.compiler.Environment;
 import spoon.reflect.code.CtComment;
 import spoon.reflect.visitor.DefaultTokenWriter;
+import spoon.reflect.visitor.PrinterHelper;
 import spoon.reflect.visitor.TokenWriter;
 
 /**
@@ -21,8 +22,38 @@ public class MutableTokenWriter implements TokenWriter {
 	private final TokenWriter delegate;
 	private boolean muted = false;
 
+	// indentation style to use for new elements
+	private boolean originSourceUsesTabulations;
+	private int originSourceTabulationSize;
+
 	public MutableTokenWriter(Environment env) {
-		this.delegate = new DefaultTokenWriter(new DirectPrinterHelper(env));
+		this.delegate = new DefaultTokenWriter(new SniperPrinterHelper(env));
+		originSourceUsesTabulations = true;
+		originSourceTabulationSize = 1;
+	}
+
+	private class SniperPrinterHelper extends PrinterHelper {
+		private final Environment env;
+
+		SniperPrinterHelper(Environment env) {
+			super(env);
+			this.env = env;
+		}
+
+		/**
+		 * We override this method to use the correct style of indentation for new elements.
+		 */
+		@Override
+		protected void autoWriteTabs() {
+			int setTabulationSize = env.getTabulationSize();
+			env.useTabulations(originSourceUsesTabulations);
+			env.setTabulationSize(originSourceTabulationSize);
+
+			super.autoWriteTabs();
+
+			env.setTabulationSize(setTabulationSize);
+			env.useTabulations(true);
+		}
 	}
 
 	/**
@@ -37,6 +68,20 @@ public class MutableTokenWriter implements TokenWriter {
 	 */
 	public void setMuted(boolean muted) {
 		this.muted = muted;
+	}
+
+	/**
+	 * @param originSourceUsesTabulations whether or not the origin source uses tabs for indentation.
+	 */
+	public void setOriginSourceUsesTabulations(boolean originSourceUsesTabulations) {
+		this.originSourceUsesTabulations = originSourceUsesTabulations;
+	}
+
+	/**
+	 * @param originSourceTabulationSize the amount of indentation used in the origin source.
+	 */
+	public void setOriginSourceTabulationSize(int originSourceTabulationSize) {
+		this.originSourceTabulationSize = originSourceTabulationSize;
 	}
 
 	@Override
@@ -129,8 +174,8 @@ public class MutableTokenWriter implements TokenWriter {
 		return this;
 	}
 	@Override
-	public DirectPrinterHelper getPrinterHelper() {
-		return (DirectPrinterHelper) delegate.getPrinterHelper();
+	public PrinterHelper getPrinterHelper() {
+		return delegate.getPrinterHelper();
 	}
 	@Override
 	public void reset() {
@@ -152,4 +197,29 @@ public class MutableTokenWriter implements TokenWriter {
 	public String toString() {
 		return delegate.toString();
 	}
+
+	/**
+	 * Prints a piece of text regardless of mute status
+	 * Don't call this, this is dangerous and irregular design.
+	 */
+	public void directPrint(String text) {
+		int len = text.length();
+		// we do it char by char because there is no write(String) in PrinterHelper
+		for (int i = 0; i < len; i++) {
+			char c = text.charAt(i);
+			//avoid automatic writing of tabs in the middle of text, because write(char) keeps putting it back to true
+			getPrinterHelper().setShouldWriteTabs(false);
+			getPrinterHelper().write(c);
+		}
+	}
+
+	/** writes the piece of text if not muted */
+	public TokenWriter write(String text) {
+		if (isMuted()) {
+			return this;
+		}
+		directPrint(text);
+		return this;
+	}
+
 }

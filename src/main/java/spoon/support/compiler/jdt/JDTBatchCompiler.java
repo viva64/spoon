@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,7 +7,6 @@
  */
 package spoon.support.compiler.jdt;
 
-import org.apache.commons.io.output.NullOutputStream;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.core.compiler.CompilationProgress;
@@ -50,7 +49,7 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 		// by default we don't want anything from JDT
 		// the reports are sent with callbakcs to the reporter
 		// for debuggging, you may use System.out/err instead
-		this(jdtCompiler, new NullOutputStream(), new NullOutputStream());
+		this(jdtCompiler, OutputStream.nullOutputStream(), OutputStream.nullOutputStream());
 	}
 
 	JDTBatchCompiler(JDTBasedSpoonCompiler jdtCompiler, OutputStream outWriter, OutputStream errWriter) {
@@ -77,7 +76,7 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 			for (CompilationUnit compilationUnit : this.compilationUnits) {
 				char[] charName = compilationUnit.getFileName();
 				boolean isModuleInfo = CharOperation.endsWith(charName, JDTConstants.MODULE_INFO_FILE_NAME);
-				if (isModuleInfo == (round == 0)) { // 1st round: modules, 2nd round others (to ensure populating pathToModCU well in time)
+				if (isModuleInfo == (round == 0)) { // 1st round: modules, 2nd round others (to ensure populating pathToModName well in time)
 
 					String fileName = new String(charName);
 					if (isModuleInfo) {
@@ -91,8 +90,13 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 							} else {
 								lastSlash += 1;
 							}
-							//TODO the module name parsed by JDK compiler is in `this.modNames`
-							compilationUnit.module = CharOperation.subarray(modulePath, lastSlash, modulePath.length);
+
+							if (this.module == null) {
+								compilationUnit.module = CharOperation.subarray(modulePath, lastSlash, modulePath.length);
+							} else {
+								compilationUnit.module = getModuleName(compilationUnit).toCharArray();
+							}
+
 							pathToModName.put(String.valueOf(modulePath), compilationUnit.module);
 						}
 					} else {
@@ -108,6 +112,33 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 		}
 
 		return compilationUnits;
+	}
+
+	private String getModuleName(CompilationUnit compilationUnit) {
+		StringBuilder sb = new StringBuilder();
+		int index = 0;
+		while (!sb.toString().equals("module") && index != -1) {
+			sb.setLength(0);
+			index = nextToken(compilationUnit, index, sb);
+		}
+		sb.setLength(0);
+		nextToken(compilationUnit, index, sb);
+		return sb.toString();
+	}
+
+	private int nextToken(CompilationUnit cu, int start, StringBuilder sb) {
+		int index = PositionBuilder.findNextNonWhitespace(cu.contents, cu.contents.length, start);
+		if (index == -1) {
+			return -1;
+		}
+		for (int i = index; i < cu.contents.length; i++) {
+			if (Character.isWhitespace(cu.contents[i]) || cu.contents[i] == '{') {
+				return i + 1;
+			} else {
+				sb.append(cu.contents[i]);
+			}
+		}
+		return -1;
 	}
 
 	public void setCompilationUnits(CompilationUnit[] compilationUnits) {
@@ -201,8 +232,9 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 
 		IProblemFactory problemFactory = getProblemFactory();
 		TreeBuilderCompiler treeBuilderCompiler = new TreeBuilderCompiler(
-				environment, errorHandlingPolicy, compilerOptions,
-				this.jdtCompiler.requestor, problemFactory, this.out, new CompilationProgress() {
+				environment, errorHandlingPolicy, compilerOptions, this.jdtCompiler.requestor, problemFactory,
+				this.out, jdtCompiler.getEnvironment().getIgnoreSyntaxErrors(), jdtCompiler.getEnvironment().getLevel(),
+				new CompilationProgress() {
 
 			private String currentElement = null;
 			private int totalTask = -1;
@@ -220,12 +252,10 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 
 			@Override
 			public void setTaskName(String s) {
-				if (jdtCompiler.getEnvironment().getSpoonProgress() != null) {
-					String strToFind = "Processing ";
-					int processingPosition = s.indexOf(strToFind);
-					if (processingPosition != -1) {
-						currentElement = s.substring(processingPosition + strToFind.length());
-					}
+				String strToFind = "Processing ";
+				int processingPosition = s.indexOf(strToFind);
+				if (processingPosition != -1) {
+					currentElement = s.substring(processingPosition + strToFind.length());
 				}
 			}
 
@@ -234,9 +264,7 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 				if (totalTask == -1) {
 					totalTask = remaining + 1;
 				}
-				if (jdtCompiler.getEnvironment().getSpoonProgress() != null) {
-					jdtCompiler.getEnvironment().getSpoonProgress().step(SpoonProgress.Process.COMPILE, currentElement, totalTask - remaining, totalTask);
-				}
+				jdtCompiler.getEnvironment().getSpoonProgress().step(SpoonProgress.Process.COMPILE, currentElement, totalTask - remaining, totalTask);
 			}
 		});
 		if (jdtCompiler.getEnvironment().getNoClasspath()) {
@@ -249,19 +277,13 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 			};
 			treeBuilderCompiler.lookupEnvironment.mayTolerateMissingType = true;
 		}
-		if (jdtCompiler.getEnvironment().getSpoonProgress() != null) {
 			jdtCompiler.getEnvironment().getSpoonProgress().start(SpoonProgress.Process.COMPILE);
-		}
 		// they have to be done all at once
 		final CompilationUnitDeclaration[] result = treeBuilderCompiler.buildUnits(getCompilationUnits());
-		if (jdtCompiler.getEnvironment().getSpoonProgress() != null) {
-			jdtCompiler.getEnvironment().getSpoonProgress().end(SpoonProgress.Process.COMPILE);
-		}
+		jdtCompiler.getEnvironment().getSpoonProgress().end(SpoonProgress.Process.COMPILE);
 		// now adding the doc
 		if (jdtCompiler.getEnvironment().isCommentsEnabled()) {
-			if (jdtCompiler.getEnvironment().getSpoonProgress() != null) {
-				jdtCompiler.getEnvironment().getSpoonProgress().start(SpoonProgress.Process.COMMENT);
-			}
+			jdtCompiler.getEnvironment().getSpoonProgress().start(SpoonProgress.Process.COMMENT);
 			//compile comments only if they are needed
 			for (int i = 0; i < result.length; i++) {
 				CompilationUnitDeclaration unit = result[i];
@@ -279,14 +301,9 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 				final CompilationResult compilationResult = new CompilationResult(sourceUnit, 0, 0, compilerOptions.maxProblemsPerUnit);
 				CompilationUnitDeclaration tmpDeclForComment = parser.dietParse(sourceUnit, compilationResult);
 				unit.comments = tmpDeclForComment.comments;
-
-				if (jdtCompiler.getEnvironment().getSpoonProgress() != null) {
-					jdtCompiler.getEnvironment().getSpoonProgress().step(SpoonProgress.Process.COMMENT, new String(unit.getFileName()), i + 1, result.length);
-				}
+				jdtCompiler.getEnvironment().getSpoonProgress().step(SpoonProgress.Process.COMMENT, new String(unit.getFileName()), i + 1, result.length);
 			}
-			if (jdtCompiler.getEnvironment().getSpoonProgress() != null) {
-				jdtCompiler.getEnvironment().getSpoonProgress().end(SpoonProgress.Process.COMMENT);
-			}
+			jdtCompiler.getEnvironment().getSpoonProgress().end(SpoonProgress.Process.COMMENT);
 		}
 		return result;
 	}

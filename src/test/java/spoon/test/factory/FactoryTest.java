@@ -16,10 +16,13 @@
  */
 package spoon.test.factory;
 
-import org.junit.Test;
+
+import java.lang.reflect.Method;
+import java.nio.file.Paths;
+
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.SpoonAPI;
-import spoon.SpoonException;
 import spoon.processing.AbstractProcessor;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.CtFieldRead;
@@ -41,14 +44,14 @@ import spoon.support.reflect.declaration.CtMethodImpl;
 import spoon.test.SpoonTestHelpers;
 import spoon.test.factory.testclasses.Foo;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.test.parent.ContractOnSettersParametrizedTest.createCompatibleObject;
 import static spoon.testing.utils.ModelUtils.build;
 import static spoon.testing.utils.ModelUtils.buildClass;
@@ -172,6 +175,23 @@ public class FactoryTest {
 		assertEquals(0, model.getAllTypes().size());
 	}
 
+	@Test
+	public void testGetPackageFromNamedModule() {
+		// contract: It should be possible to get a package from a named module
+
+		final Launcher launcher = new Launcher();
+		launcher.getEnvironment().setComplianceLevel(9);
+		launcher.addInputResource("./src/test/resources/spoon/test/module/simple_module_with_code");
+		launcher.buildModel();
+
+		String packageName = "fr.simplemodule.pack";
+		CtPackage packageInNamedModule = launcher.getFactory().Package().get(packageName);
+
+		assertNotNull(packageInNamedModule);
+		assertThat(packageInNamedModule.getQualifiedName(), equalTo(packageName));
+	}
+
+
 	public void testIncrementalModel() {
 
 		// contract: one can merge two models together
@@ -256,7 +276,7 @@ public class FactoryTest {
 				argsClass[i] = type.getActualClass();
 				if (!type.isPrimitive()) {
 					// post-condition to be sure that createCompatibleObject works well
-					assertTrue(args[i].getClass().toString() + " != " + argsClass[i].toString(), argsClass[i].isAssignableFrom(args[i].getClass()));
+					assertTrue(argsClass[i].isAssignableFrom(args[i].getClass()), args[i].getClass().toString() + " != " + argsClass[i].toString());
 				}
 			}
 

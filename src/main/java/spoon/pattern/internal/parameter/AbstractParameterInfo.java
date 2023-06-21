@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -63,7 +63,8 @@ public abstract class AbstractParameterInfo implements ParameterInfo {
 		if (cca != null) {
 			return cca.getWrappedName(getPlainName());
 		}
-		return getPlainName();
+		// this string can be used later in setSimpleName, which does not allow square brackets, so we replace them
+		return getPlainName().replace("[", "_").replace("]", "_");
 	}
 
 	protected abstract String getPlainName();
@@ -73,10 +74,10 @@ public abstract class AbstractParameterInfo implements ParameterInfo {
 	@Override
 	public ImmutableMap addValueAs(ImmutableMap parameters, Object value) {
 		Class<?> requiredType = getParameterValueType();
-		if (requiredType != null && value != null && requiredType.isInstance(value) == false) {
+		if (requiredType != null && value != null && !requiredType.isInstance(value)) {
 			return null;
 		}
-		if (matches(value) == false) {
+		if (!matches(value)) {
 			return null;
 		}
 		Object newContainer = addValueToContainer(parameters, existingValue -> {
@@ -186,7 +187,7 @@ public abstract class AbstractParameterInfo implements ParameterInfo {
 	 * @return
 	 */
 	protected boolean matches(Object value) {
-		if (parameterValueType != null && (value == null || parameterValueType.isAssignableFrom(value.getClass()) == false)) {
+		if (parameterValueType != null && (value == null || !parameterValueType.isAssignableFrom(value.getClass()))) {
 			return false;
 		}
 		if (matchCondition == null) {
@@ -338,7 +339,7 @@ public abstract class AbstractParameterInfo implements ParameterInfo {
 	 * @return 0 if there is no value. 1 if there is single value or null. Number of values in collection if there is a collection
 	 */
 	private int getNumberOfValues(ImmutableMap parameters) {
-		if (parameters.hasValue(getName()) == false) {
+		if (!parameters.hasValue(getName())) {
 			return 0;
 		}
 		Object value = parameters.getValue(getName());

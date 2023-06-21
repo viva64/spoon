@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -81,6 +81,8 @@ public class SerializationModelStreamer implements ModelStreamer {
 				@Override
 				public boolean matches(CtElement e) {
 					e.setFactory(f);
+					// recall that compilation units are not scanned as part of filterChildren
+					e.getPosition().getCompilationUnit().setFactory(f);
 					return false;
 				}
 			}).list();

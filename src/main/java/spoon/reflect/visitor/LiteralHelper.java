@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,7 +7,9 @@
  */
 package spoon.reflect.visitor;
 
+import spoon.SpoonException;
 import spoon.reflect.code.CtLiteral;
+import spoon.reflect.code.CtTextBlock;
 import spoon.reflect.code.LiteralBase;
 import spoon.reflect.cu.SourcePosition;
 
@@ -42,17 +44,31 @@ abstract class LiteralHelper {
 	}
 
 	private static String getBasedString(Float value, LiteralBase base) {
+		if (value.isInfinite() || value.isNaN()) {
+			throw new SpoonException("Can not convert " + value + " to a float literal.");
+		}
 		if (base == LiteralBase.HEXADECIMAL) {
 			return Float.toHexString(value) + "F";
 		}
-		return Float.toString(value) + "F";
+		return value + "F";
 	}
 
 	private static String getBasedString(Double value, LiteralBase base) {
+		if (value.isInfinite() || value.isNaN()) {
+			throw new SpoonException("Can not convert " + value + " to a double literal.");
+		}
 		if (base == LiteralBase.HEXADECIMAL) {
 			return Double.toHexString(value);
 		}
 		return Double.toString(value);
+	}
+
+	/**
+	 * @param literal CtTextBlock to be converted
+	 * @return source code representation of the literal
+	 */
+	public static String getTextBlockToken(CtTextBlock literal) {
+		return "\"\"\"\n" + literal.getValue().replace("\\", "\\\\") + "\"\"\"";
 	}
 
 	/**

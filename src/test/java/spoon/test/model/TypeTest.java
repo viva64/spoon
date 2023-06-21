@@ -1,74 +1,85 @@
 /**
- * Copyright (C) 2006-2018 INRIA and contributors
- * Spoon - http://spoon.gforge.inria.fr/
+ * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
- * This software is governed by the CeCILL-C License under French law and
- * abiding by the rules of distribution of free software. You can use, modify
- * and/or redistribute the software under the terms of the CeCILL-C license as
- * circulated by CEA, CNRS and INRIA at http://www.cecill.info.
+ * Copyright (C) 2006-2019 INRIA and contributors
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the CeCILL-C License for more details.
- *
- * The fact that you are presently reading this means that you have had
- * knowledge of the CeCILL-C license and that you accept its terms.
+ * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) of the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
  */
 package spoon.test.model;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import spoon.Launcher;
 import spoon.compiler.ModelBuildingException;
+import spoon.reflect.CtModel;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeInformation;
 import spoon.reflect.declaration.CtTypeParameter;
 import spoon.reflect.factory.TypeFactory;
-import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.AllTypeMembersFunction;
 
-import java.util.Collection;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static spoon.testing.utils.ModelUtils.build;
 import static spoon.testing.utils.ModelUtils.createFactory;
 
 public class TypeTest {
 
 	@Test
-	public void testGetAllExecutables() throws Exception {
+	public void testGetDifferentElements() throws Exception {
+		// contract: All elements of a model must be found.
 		CtClass<?> type = build("spoon.test.model", "Foo");
-		assertEquals(1, type.getDeclaredFields().size());
-		assertEquals(3, type.getMethods().size());
-		assertEquals(4, type.getDeclaredExecutables().size());
-		assertEquals(2, type.getAllFields().size());
-		assertEquals(1, type.getConstructors().size());
-		assertEquals(16, type.getAllMethods().size());
-		assertEquals(12, type.getFactory().Type().get(Object.class).getAllMethods().size());
+		assertAll(
+				() -> assertEquals(1, type.getDeclaredFields().size()),
+				() -> assertEquals(3, type.getMethods().size()),
+				() -> assertEquals(4, type.getDeclaredExecutables().size()),
+				() -> assertEquals(2, type.getAllFields().size()),
+				() -> assertEquals(1, type.getConstructors().size()),
+				() -> assertTrue(16 == type.getAllMethods().size() || 15 == type.getAllMethods().size()),
+				() -> assertTrue(12 == type.getFactory().Type().get(Object.class).getAllMethods().size()
+													|| 11 == type.getFactory().Type().get(Object.class).getAllMethods().size()));
 
 		// we have 3  methods in Foo + 2 in Baz - 1 common in Foo.bar (m) + 12 in Object + 1 explicit constructor in Foo
-		Collection<CtExecutableReference<?>> allExecutables = type.getAllExecutables();
-		assertEquals(17, allExecutables.size());
+		/*
+		This assertion is needed because in java.lang.object the method registerNative was removed.
+		See https://bugs.openjdk.java.net/browse/JDK-8232801 for details.
+		To fit this change and support new jdks and the CI both values are correct.
+		In jdk8 object has 12 methods and in newer jdk object has 11
+		 */
+		assertTrue(17 == type.getAllExecutables().size() || 16 == type.getAllExecutables().size());
 	}
 
 	@Test
+	@DisabledForJreRange(min = JRE.JAVA_14)
+	/*
+	* This annotation is needed because in java.lang.object the method registerNative was removed.
+	* See https://bugs.openjdk.java.net/browse/JDK-8232801 for details.
+	*/
 	public void testAllTypeMembersFunctionMode() throws Exception {
 		// contract: AllTypeMembersFunction can be configured to return all members or only internally visible members
 		CtClass<?> type = build("spoon.test.model", "Foo");
-		List<CtMethod> internallyAccessibleMethods = type.map(new AllTypeMembersFunction(CtMethod.class).setMode(AllTypeMembersFunction.Mode.SKIP_PRIVATE)).list();
-		List<CtMethod> allMethods = type.map(new AllTypeMembersFunction(CtMethod.class)).list();
+		List<CtMethod<?>> internallyAccessibleMethods = type.map(new AllTypeMembersFunction(CtMethod.class).setMode(AllTypeMembersFunction.Mode.SKIP_PRIVATE)).list();
+		List<CtMethod<?>> allMethods = type.map(new AllTypeMembersFunction(CtMethod.class)).list();
 		assertEquals(16, internallyAccessibleMethods.size());
 		assertEquals(17, allMethods.size());
+
 		allMethods.removeAll(internallyAccessibleMethods);
 		assertEquals(1, allMethods.size());
 		assertEquals("registerNatives()", allMethods.get(0).getSignature());
+
 	}
 
 	@Test
@@ -134,7 +145,7 @@ public class TypeTest {
 
 		assertEquals("buf", type.getDeclaredOrInheritedField("buf").getSimpleName());
 		assertEquals("count", type.getDeclaredOrInheritedField("count").getSimpleName());
-		
+
 	}
 
 	@Test
@@ -153,13 +164,15 @@ public class TypeTest {
 		checkIsSomething("generics", ctTypeParam);
 	}
 
-	@Test(expected = ModelBuildingException.class)
+	@Test
 	public void testMultiClassNotEnable() {
-		Launcher spoon = new Launcher();
-		spoon.addInputResource("src/test/resources/multiclass/module1");
-		spoon.addInputResource("src/test/resources/multiclass/module2");
-		spoon.buildModel();
-	}
+		assertThrows(ModelBuildingException.class, () -> {
+			Launcher spoon = new Launcher();
+			spoon.addInputResource("src/test/resources/multiclass/module1");
+			spoon.addInputResource("src/test/resources/multiclass/module2");
+			spoon.buildModel();
+		});
+	} 
 
 	@Test
 	public void testMultiClassEnable() {
@@ -170,7 +183,29 @@ public class TypeTest {
 		spoon.buildModel();
 		assertNotNull(spoon.getFactory().Class().get("A"));
 	}
-	
+
+	@Test
+	public void testMultiClassEnableWithStaticFieldAccessToNestedType() {
+		// test that ignoring duplicate classes works out when there in class A is a static field
+		// access C.someField to a nested type B.C, and A has imported B.C.
+		// This forces Spoon to search for the type C with JDTTreeBuilder.searchTypeBinding.
+		// See https://github.com/INRIA/spoon/issues/3707 for details.
+
+		Launcher launcher = new Launcher();
+		launcher.getEnvironment().setIgnoreDuplicateDeclarations(true);
+
+		launcher.addInputResource("src/test/resources/duplicates-in-submodules/moduleA");
+		launcher.addInputResource("src/test/resources/duplicates-in-submodules/moduleB");
+
+		CtModel model = launcher.buildModel();
+
+		Set<String> expectedTypeNames = new HashSet<>(
+				Arrays.asList("AlsoWithNestedEnum", "duplicates.Duplicate", "duplicates.Main", "duplicates.WithNestedEnum"));
+		Set<String> typeNames = model.getAllTypes().stream().map(CtType::getQualifiedName).collect(Collectors.toSet());
+
+		assertEquals(expectedTypeNames, typeNames);
+	}
+
 	private void checkIsSomething(String expectedType, CtType type) {
 		_checkIsSomething(expectedType, type);
 		_checkIsSomething(expectedType, type.getReference());

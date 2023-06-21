@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -10,6 +10,7 @@ package spoon.support.reflect.declaration;
 import spoon.reflect.annotations.MetamodelPropertyField;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtRHSReceiver;
+import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.declaration.CtShadowable;
@@ -88,7 +89,7 @@ public class CtFieldImpl<T> extends CtNamedElementImpl implements CtField<T> {
 	}
 
 	@Override
-	public <C extends CtTypedElement> C setType(CtTypeReference<T> type) {
+	public <C extends CtTypedElement> C setType(CtTypeReference type) {
 		if (type != null) {
 			type.setParent(this);
 		}
@@ -208,5 +209,50 @@ public class CtFieldImpl<T> extends CtNamedElementImpl implements CtField<T> {
 	@Override
 	public boolean isAbstract() {
 		return this.modifierHandler.isAbstract();
+	}
+
+	@Override
+	public boolean isTransient() {
+		return this.modifierHandler.isTransient();
+	}
+
+	@Override
+	public boolean isVolatile() {
+		return this.modifierHandler.isVolatile();
+	}
+
+	@Override
+	public boolean isSynchronized() {
+		return this.modifierHandler.isSynchronized();
+	}
+
+	@Override
+	public boolean isNative() {
+		return this.modifierHandler.isNative();
+	}
+
+	@Override
+	public boolean isStrictfp() {
+		return this.modifierHandler.isStrictfp();
+	}
+
+	@Override
+	public boolean isPartOfJointDeclaration() {
+		if (this.getPosition() instanceof NoSourcePosition) {
+			return  false;
+		}
+		for (Object o : getParent(CtType.class).getFields()) {
+			CtField<?> f = (CtField<?>) o;
+			if (f == this) {
+				continue;
+			}
+			if (f.getPosition() == null || f.getPosition() instanceof NoSourcePosition) {
+				continue;
+			}
+			if (f.getPosition().getSourceStart() == this.getPosition().getSourceStart()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

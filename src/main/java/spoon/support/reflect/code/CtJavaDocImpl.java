@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -85,15 +85,25 @@ public class CtJavaDocImpl extends CtCommentImpl implements CtJavaDoc {
 
 	@Override
 	public String getShortDescription() {
-		int indexEndSentence = this.getContent().indexOf('.');
-		if (indexEndSentence == -1) {
-			indexEndSentence = this.getContent().indexOf('\n');
+		int indexOfFirstSentenceEnd = indexOfFirstSentenceEnd(this.getContent());
+		if (indexOfFirstSentenceEnd == -1) {
+			indexOfFirstSentenceEnd = this.getContent().indexOf('\n');
 		}
-		if (indexEndSentence != -1) {
-			return this.getContent().substring(0, indexEndSentence + 1).trim();
+		if (indexOfFirstSentenceEnd != -1) {
+			return this.getContent().substring(0, indexOfFirstSentenceEnd + 1).trim();
 		} else {
 			return this.getContent().trim();
 		}
+	}
+
+	private int indexOfFirstSentenceEnd(String content) {
+		int index = content.indexOf('.');
+		while (index < content.length() - 1
+				&& !Character.isWhitespace(content.charAt(index + 1))
+				&& index != -1) {
+			index = content.indexOf('.', index + 1);
+		}
+		return index;
 	}
 
 	/**
@@ -114,7 +124,7 @@ public class CtJavaDocImpl extends CtCommentImpl implements CtJavaDoc {
 
 		javadoc = Javadoc.parse(cleanComment(content));
 		for (JavadocBlockTag tag: javadoc.getBlockTags()) {
-			addTag(getFactory().createJavaDocTag(tag.getContent().toText(), CtJavaDocTag.TagType.tagFromName(tag.getTagName())));
+			addTag(getFactory().createJavaDocTag(tag.getContent().toText(), CtJavaDocTag.TagType.tagFromName(tag.getTagName()), tag.getTagRealName()));
 		}
 
 		// we cannot call super.setContent because it calls cleanComment (which has already been done above)

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -234,4 +234,13 @@ public interface CtAnnotation<A extends Annotation> extends CtExpression<A>, CtS
 		}
 		return null;
 	}
+
+	/**
+	 * Returns the class name of the annotation, eg "Deprecated" for @Deprecated.
+	 *
+	 * @return the name of the annotation
+	 */
+	@DerivedProperty
+	String getName();
+
 }

@@ -16,9 +16,8 @@
  */
 package spoon.test.parent;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.TestFactory;
 import spoon.SpoonException;
 import spoon.reflect.code.BinaryOperatorKind;
 import spoon.reflect.code.CtCodeSnippetExpression;
@@ -27,19 +26,18 @@ import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtJavaDocTag;
 import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.declaration.CtClass;
-import spoon.reflect.declaration.ModifierKind;
-import spoon.support.modelobs.ActionBasedChangeListenerImpl;
-import spoon.support.modelobs.action.Action;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.visitor.CtVisitable;
 import spoon.support.DerivedProperty;
 import spoon.support.UnsettableProperty;
+import spoon.support.modelobs.ActionBasedChangeListenerImpl;
+import spoon.support.modelobs.action.Action;
 import spoon.test.SpoonTestHelpers;
 
 import java.lang.reflect.InvocationTargetException;
@@ -50,7 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static spoon.testing.utils.ModelUtils.createFactory;
 
 /**
@@ -58,20 +56,26 @@ import static spoon.testing.utils.ModelUtils.createFactory;
  * - call setParent
  * - trigger a change event
   */
-@RunWith(Parameterized.class)
-public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
+public class ContractOnSettersParametrizedTest {
 
-	private static Factory factory = createFactory();
+	private static final Factory factory = createFactory();
 	private static final List<CtType<? extends CtElement>> allInstantiableMetamodelInterfaces = SpoonTestHelpers.getAllInstantiableMetamodelInterfaces();
+	private ModelChangeListener changeListener = new ModelChangeListener();
 
-	@Parameterized.Parameters(name = "{0}")
-	public static Collection<Object[]> data() {
-		return createReceiverList();
+	@TestFactory
+	public  Collection<DynamicTest> data() {
+		List<DynamicTest> values = new ArrayList<>();
+		for (CtType<?> t : allInstantiableMetamodelInterfaces) {
+			if (!(CtReference.class.isAssignableFrom(t.getActualClass()))) {
+				values.add(DynamicTest.dynamicTest(t.getQualifiedName(), () -> testContract(t)));
+			}
+		}
+		return values;
 	}
 
 	public static Collection<Object[]> createReceiverList() {
 		List<Object[]> values = new ArrayList<>();
-		for (CtType t : allInstantiableMetamodelInterfaces) {
+		for (CtType<?> t : allInstantiableMetamodelInterfaces) {
 			if (!(CtReference.class.isAssignableFrom(t.getActualClass()))) {
 				values.add(new Object[] { t });
 			}
@@ -79,12 +83,9 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 		return values;
 	}
 
-	@Parameterized.Parameter(0)
-	public CtType<?> toTest;
-
-	class ModelChangeListener extends ActionBasedChangeListenerImpl {
+	static class ModelChangeListener extends ActionBasedChangeListenerImpl {
 		int nbCallsToOnAction = 0;
-		List changedElements = new ArrayList();
+		List<CtElement> changedElements = new ArrayList<>();
 		@Override
 		public void onAction(Action action) {
 			super.onAction(action);
@@ -93,7 +94,6 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 		}
 	}
 
-	ModelChangeListener changeListener = new ModelChangeListener();
 
 	public static Object createCompatibleObject(CtTypeReference<?> parameterType) {
 		Class<?> c = parameterType.getActualClass();
@@ -115,17 +115,17 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 
 		// metamodel elements
 		if (parameterType.toString().equals("spoon.reflect.declaration.CtType<?>")) {
-			CtClass fooBar = f.createClass("FooBar");
+			CtClass<?> fooBar = f.createClass("FooBar");
 			fooBar.delete(); // removing from default package
 			return fooBar;   // createNewClass implictly needs a CtClass
 		}
-		for (CtType t : allInstantiableMetamodelInterfaces) {
+		for (CtType<?> t : allInstantiableMetamodelInterfaces) {
 			if (c.isAssignableFrom(t.getActualClass())) {
-				CtElement argument = factory.Core().create(t.getActualClass());
+				CtElement argument = factory.Core().create((Class<? extends CtElement>) t.getActualClass());
 				// an empty package is merged with the existing one
 				// we have to give it a name
 				if (argument instanceof CtPackage) {
-					((CtPackage) argument).setSimpleName(argument.getShortRepresentation());
+					((CtPackage) argument).setSimpleName(t.getClass().getPackage().getName());
 				}
 
 				return argument;
@@ -195,16 +195,16 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 
 		throw new IllegalArgumentException("cannot instantiate "+parameterType);
 	}
-	static int nTotalSetterCalls = 0;
 
-	@Test
-	public void testContract() throws Throwable {
+	private void testContract(CtType<?> toTest) throws Throwable {
 		factory.getEnvironment().setModelChangeListener(changeListener);
+		// we disable errors here because JLSViolations are not really relevant in this testcase
+		factory.getEnvironment().setIgnoreSyntaxErrors(true);
 		int nSetterCalls = 0;
-				int nAssertsOnParent = 0;
+		int nAssertsOnParent = 0;
 		int nAssertsOnParentInList = 0;
 		// contract: all setters/adders must set the parent (not necessarily the direct parent, can be upper in the parent tree, for instance when injecting blocks
-		Object o = factory.Core().create((Class<? extends CtElement>) toTest.getActualClass());
+		CtElement o = factory.Core().create((Class<? extends CtElement>) toTest.getActualClass());
 
 		for (CtMethod<?> setter : SpoonTestHelpers.getAllSetters(toTest)) {
 
@@ -212,7 +212,7 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 
 			try {
 				// we create a fresh object
-				CtElement receiver = ((CtElement) o).clone();
+				CtElement receiver = o.clone();
 
 				// we invoke the setter
 				Method actualMethod = setter.getReference().getActualMethod();
@@ -221,15 +221,14 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 				changeListener.changedElements = new ArrayList<>();
 
 				// here we actually call the setter
-				actualMethod.invoke(receiver, new Object[] { argument });
+				actualMethod.invoke(receiver, argument);
 
 				int nAfter = changeListener.nbCallsToOnAction;
 
 				// contract: at least one change event is well fired (sometimes it is more than one for complex setters)
-				assertTrue(actualMethod.getName(), nBefore < nAfter);
+				assertTrue(nBefore < nAfter, actualMethod.getName());
 
 				nSetterCalls++;
-				nTotalSetterCalls++;
 				// if it's a settable property
 				// we check that setParent has been called
 
@@ -238,7 +237,7 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 					&& setter.getAnnotation(UnsettableProperty.class) == null
 					&& setter.getAnnotation(DerivedProperty.class) == null) {
 					nAssertsOnParent++;
-					assertTrue(setter.getDeclaringType().getQualifiedName() + "#" + setter.getSignature() + " doesn't initializes parent", ((CtElement)argument).hasParent(receiver));
+					assertTrue(((CtElement) (argument)).hasParent(receiver), setter.getDeclaringType().getQualifiedName() + "#" + setter.getSignature() + " doesn't initializes parent");
 				}
 
 				// the element is in a list
@@ -246,12 +245,12 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 						&& setter.getAnnotation(UnsettableProperty.class) == null
 						&& setter.getAnnotation(DerivedProperty.class) == null) {
 					nAssertsOnParentInList++;
-					assertTrue(setter.getDeclaringType().getQualifiedName() + "#" + setter.getSignature() + " doesn't initializes parent", ((CtElement)((Collection)argument).iterator().next()).hasParent(receiver));
+					assertTrue(((CtElement) (((Collection<?>) (argument)).iterator().next())).hasParent(receiver), setter.getDeclaringType().getQualifiedName() + "#" + setter.getSignature() + " doesn't initializes parent");
 				}
 
 
 			} catch (AssertionError e) {
-				System.err.println("one contract failed for " + setter.toString());
+				System.err.println("one contract failed for " + setter);
 				throw e;
 			} catch (InvocationTargetException e) {
 				if (e.getCause() instanceof UnsupportedOperationException) {
@@ -267,6 +266,7 @@ public class ContractOnSettersParametrizedTest<T extends CtVisitable> {
 				}
 			}
 		}
+		factory.getEnvironment().setIgnoreSyntaxErrors(false);
 		assertTrue(nSetterCalls > 0);
 		assertTrue(nAssertsOnParent > 0 || nAssertsOnParentInList > 0);
 	}

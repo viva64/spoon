@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -23,6 +23,7 @@ import spoon.support.DerivedProperty;
 import spoon.reflect.annotations.PropertyGetter;
 import spoon.reflect.annotations.PropertySetter;
 import spoon.support.Experimental;
+import spoon.support.sniper.internal.ElementSourceFragment;
 
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
@@ -248,22 +249,26 @@ public interface CtElement extends FactoryAccessor, CtVisitable, Cloneable, CtQu
 
 	/**
 	 * Gets the first parent that matches the given type.
+	 *
+	 * @return the nearest matching parent; null if no match is found or this element has no parent
 	 */
-	<P extends CtElement> P getParent(Class<P> parentType) throws ParentNotInitializedException;
+	<P extends CtElement> P getParent(Class<P> parentType);
 
 	/**
 	 * Gets the first parent that matches the filter.
-	 * If the receiver (this) matches the filter, it is also returned
+	 *
+	 * @return the nearest matching parent; null if no match is found or this element has no parent
 	 */
-	<E extends CtElement> E getParent(Filter<E> filter) throws ParentNotInitializedException;
+	<E extends CtElement> E getParent(Filter<E> filter);
 
 	/**
 	 * Manually sets the parent element of the current element.
 	 *
-	 * @param parent
-	 * 		parent reference.
+	 * @param parent parent reference.
+	 * @param <E> this element's type
+	 * @return this element
 	 */
-	<E extends CtElement> E setParent(E parent);
+	<E extends CtElement> E setParent(CtElement parent);
 
 	/**
 	 * Tells if this parent has been initialized.
@@ -413,4 +418,7 @@ public interface CtElement extends FactoryAccessor, CtVisitable, Cloneable, CtQu
 	@Experimental
 	String prettyprint();
 
+	// overriding the return type
+	@Override
+	ElementSourceFragment getOriginalSourceFragment();
 }

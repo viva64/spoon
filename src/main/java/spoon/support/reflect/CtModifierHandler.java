@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -41,7 +41,7 @@ public class CtModifierHandler implements Serializable {
 	}
 
 	public CtModifierHandler setExtendedModifiers(Set<CtExtendedModifier> extendedModifiers) {
-		if (extendedModifiers != null && !extendedModifiers.isEmpty()) {
+		if (extendedModifiers != null) {
 			getFactory().getEnvironment().getModelChangeListener().onSetDeleteAll(element, MODIFIER, this.modifiers, new HashSet<>(this.modifiers));
 			if (this.modifiers == CtElementImpl.<CtExtendedModifier>emptySet()) {
 				this.modifiers = new HashSet<>();
@@ -68,11 +68,11 @@ public class CtModifierHandler implements Serializable {
 		if (modifiers == null) {
 			modifiers = Collections.emptySet();
 		}
-			getFactory().getEnvironment().getModelChangeListener().onSetDeleteAll(element, MODIFIER, this.modifiers, new HashSet<>(this.modifiers));
-			this.modifiers.clear();
-			for (ModifierKind modifier : modifiers) {
-				addModifier(modifier);
-			}
+		getFactory().getEnvironment().getModelChangeListener().onSetDeleteAll(element, MODIFIER, this.modifiers, new HashSet<>(this.modifiers));
+		this.modifiers.clear();
+		for (ModifierKind modifier : modifiers) {
+			addModifier(modifier);
+		}
 		return this;
 	}
 
@@ -82,8 +82,8 @@ public class CtModifierHandler implements Serializable {
 		}
 		getFactory().getEnvironment().getModelChangeListener().onSetAdd(element, MODIFIER, this.modifiers, modifier);
 		// we always add explicit modifiers, then we have to remove first implicit one
-		modifiers.remove(new CtExtendedModifier(modifier, true));
-		modifiers.add(new CtExtendedModifier(modifier));
+		modifiers.remove(CtExtendedModifier.implicit(modifier));
+		modifiers.add(CtExtendedModifier.explicit(modifier));
 		return this;
 	}
 
@@ -93,8 +93,8 @@ public class CtModifierHandler implements Serializable {
 		}
 		getFactory().getEnvironment().getModelChangeListener().onSetDelete(element, MODIFIER, modifiers, modifier);
 		// we want to remove implicit OR explicit modifier
-		modifiers.remove(new CtExtendedModifier(modifier));
-		modifiers.remove(new CtExtendedModifier(modifier, true));
+		modifiers.remove(CtExtendedModifier.implicit(modifier));
+		modifiers.remove(CtExtendedModifier.explicit(modifier));
 		return this;
 	}
 
@@ -153,6 +153,26 @@ public class CtModifierHandler implements Serializable {
 
 	public boolean isFinal() {
 		return getModifiers().contains(ModifierKind.FINAL);
+	}
+
+	public boolean isTransient() {
+		return getModifiers().contains(ModifierKind.TRANSIENT);
+	}
+
+	public boolean isVolatile() {
+		return getModifiers().contains(ModifierKind.VOLATILE);
+	}
+
+	public boolean isSynchronized() {
+		return getModifiers().contains(ModifierKind.SYNCHRONIZED);
+	}
+
+	public boolean isNative() {
+		return getModifiers().contains(ModifierKind.NATIVE);
+	}
+
+	public boolean isStrictfp() {
+		return getModifiers().contains(ModifierKind.STRICTFP);
 	}
 
 	@Override

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -41,6 +41,8 @@ public class CtConstructorImpl<T> extends CtExecutableImpl<T> implements CtConst
 	@MetamodelPropertyField(role = CtRole.MODIFIER)
 	private CtModifierHandler modifierHandler = new CtModifierHandler(this);
 
+	@MetamodelPropertyField(role = CtRole.COMPACT_CONSTRUCTOR)
+	private boolean compactConstructor = false;
 	@Override
 	public void accept(CtVisitor visitor) {
 		visitor.visitCtConstructor(this);
@@ -74,7 +76,7 @@ public class CtConstructorImpl<T> extends CtExecutableImpl<T> implements CtConst
 
 	@Override
 	@UnsettableProperty
-	public <C extends CtTypedElement> C setType(CtTypeReference<T> type) {
+	public <C extends CtTypedElement> C setType(CtTypeReference type) {
 		// unsettable property
 		return (C) this;
 	}
@@ -102,7 +104,7 @@ public class CtConstructorImpl<T> extends CtExecutableImpl<T> implements CtConst
 	}
 
 	@Override
-	public <C extends CtFormalTypeDeclarer> C addFormalCtTypeParameter(CtTypeParameter formalTypeParameter) {
+	public <C extends CtFormalTypeDeclarer> C addFormalCtTypeParameterAt(int position, CtTypeParameter formalTypeParameter) {
 		if (formalTypeParameter == null) {
 			return (C) this;
 		}
@@ -111,8 +113,13 @@ public class CtConstructorImpl<T> extends CtExecutableImpl<T> implements CtConst
 			formalCtTypeParameters = new ArrayList<>(TYPE_TYPE_PARAMETERS_CONTAINER_DEFAULT_CAPACITY);
 		}
 		formalTypeParameter.setParent(this);
-		formalCtTypeParameters.add(formalTypeParameter);
+		formalCtTypeParameters.add(position, formalTypeParameter);
 		return (C) this;
+	}
+
+	@Override
+	public <C extends CtFormalTypeDeclarer> C addFormalCtTypeParameter(CtTypeParameter formalTypeParameter) {
+		return addFormalCtTypeParameterAt(formalCtTypeParameters.size(), formalTypeParameter);
 	}
 
 	@Override
@@ -224,4 +231,41 @@ public class CtConstructorImpl<T> extends CtExecutableImpl<T> implements CtConst
 	public boolean isAbstract() {
 		return this.modifierHandler.isAbstract();
 	}
+
+	@Override
+	public boolean isTransient() {
+		return this.modifierHandler.isTransient();
+	}
+
+	@Override
+	public boolean isVolatile() {
+		return this.modifierHandler.isVolatile();
+	}
+
+	@Override
+	public boolean isSynchronized() {
+		return this.modifierHandler.isSynchronized();
+	}
+
+	@Override
+	public boolean isNative() {
+		return this.modifierHandler.isNative();
+	}
+
+	@Override
+	public boolean isStrictfp() {
+		return this.modifierHandler.isStrictfp();
+	}
+
+	@Override
+	public void setCompactConstructor(boolean compactConstructor) {
+		getFactory().getEnvironment().getModelChangeListener().onObjectUpdate(this, CtRole.COMPACT_CONSTRUCTOR, compactConstructor, this.compactConstructor);
+		this.compactConstructor = compactConstructor;
+	}
+
+	@Override
+	public boolean isCompactConstructor() {
+		return compactConstructor;
+	}
+
 }

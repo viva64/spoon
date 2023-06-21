@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -61,7 +61,7 @@ public class MethodTypingContext extends AbstractTypingContext {
 			}
 			if (classTypingContext.getAdaptationScope() != declType) {
 				//the method is declared in different type. We have to adapt it to required classTypingContext
-				if (classTypingContext.isSubtypeOf(declType.getReference()) == false) {
+				if (!classTypingContext.isSubtypeOf(declType.getReference())) {
 					throw new SpoonException("Cannot create MethodTypingContext for method declared in different ClassTypingContext");
 				}
 				/*
@@ -171,17 +171,20 @@ public class MethodTypingContext extends AbstractTypingContext {
 	 */
 	@Override
 	protected CtTypeReference<?> adaptTypeParameter(CtTypeParameter typeParam) {
+		if (typeParam == null) {
+			return null;
+		}
 		CtFormalTypeDeclarer typeParamDeclarer = typeParam.getTypeParameterDeclarer();
 		if (typeParamDeclarer instanceof CtType<?>) {
 			return getEnclosingGenericTypeAdapter().adaptType(typeParam);
 		}
 		//only method to method or constructor to constructor can be adapted
 		if (typeParamDeclarer instanceof CtMethod<?>) {
-			if ((scopeMethod instanceof CtMethod<?>) == false) {
+			if (!(scopeMethod instanceof CtMethod)) {
 				return null;
 			}
 		} else if (typeParamDeclarer instanceof CtConstructor<?>) {
-			if ((scopeMethod instanceof CtConstructor<?>) == false) {
+			if (!(scopeMethod instanceof CtConstructor)) {
 				return null;
 			}
 		} else {
@@ -195,7 +198,7 @@ public class MethodTypingContext extends AbstractTypingContext {
 		 * 2) Where A1, ..., An are the type parameters of M and B1, ..., Bn are the type parameters of N, let T=[B1:=A1, ..., Bn:=An].
 		 * Then, for all i (1 ≤ i ≤ n), the bound of Ai is the same type as T applied to the bound of Bi.
 		 */
-		if (hasSameMethodFormalTypeParameters(typeParamDeclarer) == false) {
+		if (!hasSameMethodFormalTypeParameters(typeParamDeclarer)) {
 			//the methods formal type parameters are different. We cannot adapt such parameters
 			return null;
 		}
@@ -229,7 +232,7 @@ public class MethodTypingContext extends AbstractTypingContext {
 			//the methods has same count of formal parameters
 			//check that bounds of formal type parameters are same after adapting
 			for (int i = 0; i < thisTypeParameters.size(); i++) {
-				if (isSameMethodFormalTypeParameter(thisTypeParameters.get(i), thatTypeParameters.get(i)) == false) {
+				if (!isSameMethodFormalTypeParameter(thisTypeParameters.get(i), thatTypeParameters.get(i))) {
 					return false;
 				}
 			}
@@ -253,23 +256,6 @@ public class MethodTypingContext extends AbstractTypingContext {
 		return scopeBound.getQualifiedName().equals(superBoundAdapted.getQualifiedName());
 	}
 
-	/*
-	 * @param declared
-	 * @param typeRef
-	 * @return index of type parameter in formal type parameters of `declarer` if typeRef is reference refers type parameter of that declarer.
-	 *  Returns -1 if it is not.
-	 */
-	private int getIndexOfTypeParam(CtFormalTypeDeclarer declarer, CtTypeReference<?> typeRef) {
-		if (typeRef instanceof CtTypeParameterReference) {
-			CtTypeParameter typeParam = ((CtTypeParameterReference) typeRef).getDeclaration();
-			if (typeParam != null) {
-				if (declarer == typeParam.getTypeParameterDeclarer()) {
-					return declarer.getFormalCtTypeParameters().indexOf(typeParam);
-				}
-			}
-		}
-		return -1;
-	}
 
 	private static CtTypeReference<?> getBound(CtTypeParameter typeParam) {
 		CtTypeReference<?> bound = typeParam.getSuperclass();

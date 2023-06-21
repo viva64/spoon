@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -30,7 +30,7 @@ public class DirectReferenceFilter<T extends CtReference> extends AbstractFilter
 
 	@Override
 	public boolean matches(T reference) {
-		if (super.matches(reference) == false) {
+		if (!super.matches(reference)) {
 			return false;
 		}
 		return this.reference.equals(reference);

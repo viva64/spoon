@@ -1,25 +1,15 @@
-/**
- * Copyright (C) 2006-2018 INRIA and contributors
- * Spoon - http://spoon.gforge.inria.fr/
+/*
+ * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
- * This software is governed by the CeCILL-C License under French law and
- * abiding by the rules of distribution of free software. You can use, modify
- * and/or redistribute the software under the terms of the CeCILL-C license as
- * circulated by CEA, CNRS and INRIA at http://www.cecill.info.
+ * Copyright (C) 2006-2019 INRIA and contributors
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the CeCILL-C License for more details.
- *
- * The fact that you are presently reading this means that you have had
- * knowledge of the CeCILL-C license and that you accept its terms.
+ * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) of the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
  */
 package spoon.processing;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ComparisonFailure;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.generating.CloneVisitorGenerator;
 import spoon.generating.CtBiScannerGenerator;
@@ -32,6 +22,8 @@ import spoon.reflect.visitor.CtBiScannerDefault;
 import spoon.reflect.visitor.Filter;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
@@ -44,15 +36,16 @@ import static spoon.testing.utils.ModelUtils.build;
 public class CtGenerationTest {
 	private String oldLineSeparator;
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		this.oldLineSeparator = System.getProperty("line.separator", "\n");
 		//use always LINUX line separator, because generated files are committed to Spoon repository which expects that.
 		System.setProperty("line.separator", "\n");
 	}
 
-	@After
+	@AfterEach
 	public void teardown() {
+
 		System.setProperty("line.separator", this.oldLineSeparator);
 	}
 
@@ -88,7 +81,15 @@ public class CtGenerationTest {
 		// cp ./target/generated/spoon/support/visitor/replace/ReplacementVisitor.java ./src/main/java/spoon/support/visitor/replace/ReplacementVisitor.java
 		CtClass<Object> actual = build(new File(launcher.getModelBuilder().getSourceOutputDirectory() + "/spoon/support/visitor/replace/ReplacementVisitor.java")).Class().get("spoon.support.visitor.replace.ReplacementVisitor");
 		CtClass<Object> expected = build(new File("./src/main/java/spoon/support/visitor/replace/ReplacementVisitor.java")).Class().get("spoon.support.visitor.replace.ReplacementVisitor");
+		// checkstyle enforces a newline at the end of the file
+		appendNewLine(new File("./target/generated/spoon/support/visitor/replace/ReplacementVisitor.java"));
 		assertThat(actual).isEqualTo(expected);
+	}
+
+	private void appendNewLine(File file) throws IOException {
+		FileWriter writer = new FileWriter(file, true);
+		writer.append("\n");
+		writer.close();
 	}
 
 	@Test

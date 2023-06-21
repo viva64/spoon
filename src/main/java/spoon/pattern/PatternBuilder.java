@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -107,7 +107,7 @@ public class PatternBuilder {
 			throw new SpoonException("Cannot create a Pattern from an null model");
 		}
 		this.templateTypeRef = getDeclaringTypeRef(template);
-		this.patternModel = Collections.unmodifiableList(new ArrayList<>(template));
+		this.patternModel = List.copyOf(template);
 		this.valueConvertor = new ValueConvertorImpl();
 		patternNodes = ElementNode.create(this.patternModel, patternElementToSubstRequests);
 		patternQuery = new PatternBuilder.PatternQuery(getFactory().Query(), patternModel);
@@ -126,6 +126,7 @@ public class PatternBuilder {
 				t = (CtType) ctElement;
 				type = mergeType(type, t);
 			}
+
 			t = ctElement.getParent(CtType.class);
 			if (t != null) {
 				type = mergeType(type, t);
@@ -196,7 +197,7 @@ public class PatternBuilder {
 			throw new SpoonException("Removing of Node is not supported");
 		}
 		handleConflict(conflictMode, oldNode, newNode, tobeUsedNode -> {
-			if (patternNodes.replaceNode(oldNode, tobeUsedNode) == false) {
+			if (!patternNodes.replaceNode(oldNode, tobeUsedNode)) {
 				if (conflictMode == ConflictResolutionMode.KEEP_OLD_NODE) {
 					//The parent of oldNode was already replaced. OK - Keep that parent old node
 					return;
@@ -232,7 +233,7 @@ public class PatternBuilder {
 	private void handleConflict(ConflictResolutionMode conflictMode, RootNode oldNode, RootNode newNode, Consumer<RootNode> applyNewNode) {
 		if (oldNode != newNode) {
 			if (conflictMode == ConflictResolutionMode.APPEND) {
-				if (oldNode instanceof ListOfNodes == false) {
+				if (!(oldNode instanceof ListOfNodes)) {
 					oldNode = new ListOfNodes(new ArrayList<>(Arrays.asList(oldNode)));
 				}
 				if (newNode instanceof ListOfNodes) {
@@ -302,6 +303,11 @@ public class PatternBuilder {
 		return false;
 	}
 
+	/**
+	 * Builds a Pattern and returns it
+	 * @throws SpoonException if the pattern has been built already
+	 * @return the built pattern
+	 */
 	public Pattern build() {
 		if (built) {
 			throw new SpoonException("The Pattern may be built only once");
@@ -351,7 +357,7 @@ public class PatternBuilder {
 			pb.queryModel().filterChildren(new TypeFilter<>(CtVariableReference.class))
 				.forEach((CtVariableReference<?> varRef) -> {
 					CtVariable<?> var = varRef.getDeclaration();
-					if (var == null || isInModel(var) == false) {
+					if (var == null || !isInModel(var)) {
 						//the varRef has declaration out of the scope of the template. It must be a template parameter.
 						ParameterInfo parameter = pb.parameter(varRef.getSimpleName()).getCurrentParameter();
 						pb.addSubstitutionRequest(parameter, varRef);

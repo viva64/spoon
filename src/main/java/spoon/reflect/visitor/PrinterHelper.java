@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -47,12 +47,6 @@ public class PrinterHelper {
 	 */
 	private int line = 1;
 
-	/**
-	 * Current column number
-	 * Not used yet, but this shows the advantage of encapsulating all sbf.append in calls to {@link #write(char)} or {@link #write(String)}.
-	 * This will be used for sniper mode later
-	 */
-	private int column = 1;
 
 	/**
 	 * Mapping for line numbers.
@@ -70,6 +64,9 @@ public class PrinterHelper {
 	 */
 	private boolean lastCharWasCR = false;
 
+	public PrinterHelper() {
+	}
+
 	public PrinterHelper(Environment env) {
 		this.env = env;
 	}
@@ -81,7 +78,6 @@ public class PrinterHelper {
 		sbf.setLength(0);
 		nbTabs = 0;
 		line = 1;
-		column = 1;
 		shouldWriteTabs = true;
 		//create new map, because clients keeps reference to it
 		lineNumberMapping = new HashMap<>();
@@ -107,8 +103,6 @@ public class PrinterHelper {
 		if (c == '\r') {
 			sbf.append(c);
 			line++;
-			// reset the column index
-			column = 1;
 			shouldWriteTabs = true;
 			lastCharWasCR = true;
 			return this;
@@ -122,8 +116,6 @@ public class PrinterHelper {
 				//increment line only once in sequence of \r\n.
 				//last was NOT \r, so do it now
 				line++;
-				// reset the column index
-				column = 1;
 				shouldWriteTabs = true;
 			}
 			lastCharWasCR = false;
@@ -131,7 +123,6 @@ public class PrinterHelper {
 		}
 		autoWriteTabs();
 		sbf.append(c);
-		column += 1;
 		lastCharWasCR = false;
 		return this;
 	}
@@ -146,14 +137,14 @@ public class PrinterHelper {
 
 	private void writeTabsInternal() {
 		for (int i = 0; i < nbTabs; i++) {
-			if (env.isUsingTabulations()) {
+			if (env != null && env.isUsingTabulations()) {
 				sbf.append('\t');
-				column += 1;
 			} else {
-				for (int j = 0; j < env.getTabulationSize(); j++) {
-					sbf.append(' ');
-					column += 1;
+				int indentationSize = 2;
+				if (env != null) {
+					indentationSize = env.getTabulationSize();
 				}
+				sbf.append(" ".repeat(indentationSize));
 			}
 		}
 	}
@@ -237,8 +228,13 @@ public class PrinterHelper {
 		return this;
 	}
 
+	/**
+	 * writes as many newlines as needed for the current line to match the end line of the passed element
+	 * @param e element whose line number will be preserved by adding newlines
+	 * @return PrinterHelper
+	 */
 	public PrinterHelper adjustEndPosition(CtElement e) {
-		if (env.isPreserveLineNumbers() && e.getPosition().isValidPosition()) {
+		if (env != null && env.isPreserveLineNumbers() && e.getPosition().isValidPosition()) {
 			// let's add lines if required
 			while (line < e.getPosition().getEndLine()) {
 				writeln();
@@ -257,7 +253,7 @@ public class PrinterHelper {
 		SourcePosition sp = e.getPosition();
 		if ((sp.isValidPosition())
 				&& (sp.getCompilationUnit() == unitExpected)
-				&& (sp instanceof PartialSourcePositionImpl) == false) {
+				&& !(sp instanceof PartialSourcePositionImpl)) {
 			// only map elements coming from the source CU
 			putLineNumberMapping(e.getPosition().getLine());
 		} else {
@@ -297,5 +293,9 @@ public class PrinterHelper {
 	/** writes a space ' ' */
 	public void writeSpace() {
 		this.write(' ');
+	}
+
+	public void setShouldWriteTabs(boolean b) {
+		this.shouldWriteTabs = b;
 	}
 }

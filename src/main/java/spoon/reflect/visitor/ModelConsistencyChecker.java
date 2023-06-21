@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,10 +7,10 @@
  */
 package spoon.reflect.visitor;
 
-import org.apache.logging.log4j.Level;
 import spoon.compiler.Environment;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtNamedElement;
+import spoon.support.Level;
 
 import java.util.ArrayDeque;
 import java.util.Deque;

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -208,7 +208,7 @@ public interface CtCompilationUnit extends CtElement {
 
 	@Override
 	@UnsettableProperty
-	<E extends CtElement> E setParent(E parent);
+	<E extends CtElement> E setParent(CtElement parent);
 
 	@Override
 	@UnsettableProperty

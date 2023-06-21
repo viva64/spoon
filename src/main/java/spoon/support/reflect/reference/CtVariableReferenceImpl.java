@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -40,7 +40,7 @@ public abstract class CtVariableReferenceImpl<T> extends CtReferenceImpl impleme
 	}
 
 	@Override
-	public <C extends CtVariableReference<T>> C setType(CtTypeReference<T> type) {
+	public <C extends CtVariableReference<T>> C setType(CtTypeReference type) {
 		if (type != null) {
 			type.setParent(this);
 		}

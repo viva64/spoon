@@ -16,58 +16,29 @@
  */
 package spoon.support.visitor.java;
 
-import com.mysema.query.support.ProjectableQuery;
-import org.junit.Test;
-import spoon.Launcher;
-import spoon.SpoonException;
-import spoon.metamodel.MetamodelConcept;
-import spoon.metamodel.Metamodel;
-import spoon.reflect.code.CtConditional;
-import spoon.reflect.code.CtExpression;
-import spoon.reflect.code.CtLambda;
-import spoon.reflect.code.CtLocalVariable;
-import spoon.reflect.declaration.CtAnnotation;
-import spoon.reflect.declaration.CtAnnotationMethod;
-import spoon.reflect.declaration.CtAnnotationType;
-import spoon.reflect.declaration.CtClass;
-import spoon.reflect.declaration.CtElement;
-import spoon.reflect.declaration.CtEnum;
-import spoon.reflect.declaration.CtEnumValue;
-import spoon.reflect.declaration.CtExecutable;
-import spoon.reflect.declaration.CtField;
-import spoon.reflect.declaration.CtInterface;
-import spoon.reflect.declaration.CtMethod;
-import spoon.reflect.declaration.CtModifiable;
-import spoon.reflect.declaration.CtParameter;
-import spoon.reflect.declaration.CtType;
-import spoon.reflect.declaration.CtTypeMember;
-import spoon.reflect.declaration.CtTypeParameter;
-import spoon.reflect.declaration.ModifierKind;
-import spoon.reflect.declaration.CtConstructor;
-import spoon.reflect.factory.Factory;
-import spoon.reflect.factory.TypeFactory;
-import spoon.reflect.path.CtElementPathBuilder;
-import spoon.reflect.path.CtPathException;
-import spoon.reflect.path.CtRole;
-import spoon.reflect.reference.CtArrayTypeReference;
-import spoon.reflect.reference.CtTypeParameterReference;
-import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.visitor.Root;
-import spoon.support.compiler.FileSystemFile;
-import spoon.support.compiler.jdt.JDTSnippetCompiler;
-import spoon.support.reflect.code.CtAssignmentImpl;
-import spoon.support.reflect.code.CtConditionalImpl;
-import spoon.support.reflect.declaration.CtEnumValueImpl;
-import spoon.support.reflect.declaration.CtFieldImpl;
-import spoon.support.visitor.equals.EqualsChecker;
-import spoon.support.visitor.equals.EqualsVisitor;
-import spoon.test.generics.testclasses3.ComparableComparatorBug;
-
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static spoon.testing.utils.ModelUtils.createFactory;
 import java.io.File;
 import java.io.ObjectInputStream;
 import java.lang.annotation.Retention;
 import java.net.CookieManager;
 import java.net.URLClassLoader;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,14 +51,68 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static spoon.testing.utils.ModelUtils.createFactory;
+import com.mysema.query.support.ProjectableQuery;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import spoon.Launcher;
+import spoon.SpoonException;
+import spoon.metamodel.Metamodel;
+import spoon.metamodel.MetamodelConcept;
+import spoon.reflect.code.CtConditional;
+import spoon.reflect.code.CtExpression;
+import spoon.reflect.code.CtLambda;
+import spoon.reflect.code.CtLocalVariable;
+import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.declaration.CtAnnotation;
+import spoon.reflect.declaration.CtAnnotationMethod;
+import spoon.reflect.declaration.CtAnnotationType;
+import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtConstructor;
+import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtEnum;
+import spoon.reflect.declaration.CtEnumValue;
+import spoon.reflect.declaration.CtExecutable;
+import spoon.reflect.declaration.CtField;
+import spoon.reflect.declaration.CtInterface;
+import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtModifiable;
+import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.declaration.CtParameter;
+import spoon.reflect.declaration.CtRecord;
+import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.CtTypeMember;
+import spoon.reflect.declaration.CtTypeParameter;
+import spoon.reflect.declaration.ModifierKind;
+import spoon.reflect.factory.Factory;
+import spoon.reflect.factory.TypeFactory;
+import spoon.reflect.path.CtElementPathBuilder;
+import spoon.reflect.path.CtPathException;
+import spoon.reflect.path.CtRole;
+import spoon.reflect.reference.CtArrayTypeReference;
+import spoon.reflect.reference.CtTypeParameterReference;
+import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.Root;
+import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.support.compiler.FileSystemFile;
+import spoon.support.compiler.jdt.JDTSnippetCompiler;
+import spoon.support.reflect.CtExtendedModifier;
+import spoon.support.reflect.code.CtAssignmentImpl;
+import spoon.support.reflect.code.CtConditionalImpl;
+import spoon.support.reflect.declaration.CtEnumValueImpl;
+import spoon.support.reflect.declaration.CtFieldImpl;
+import spoon.support.util.compilation.JavacFacade;
+import spoon.support.visitor.equals.EqualsChecker;
+import spoon.support.visitor.equals.EqualsVisitor;
+import spoon.test.GitHubIssue;
+import spoon.test.generics.testclasses3.ComparableComparatorBug;
+import spoon.test.innerclasses.InnerClasses;
+import spoon.test.pkg.PackageTest;
+import spoon.test.pkg.cyclic.Outside;
+import spoon.test.pkg.cyclic.direct.Cyclic;
+import spoon.test.pkg.cyclic.indirect.Indirect;
 
 public class JavaReflectionTreeBuilderTest {
 
@@ -206,7 +231,7 @@ public class JavaReflectionTreeBuilderTest {
 			allProblems.addAll(checkShadowTypeIsEqual(concept.getImplementationClass()));
 			allProblems.addAll(checkShadowTypeIsEqual(concept.getMetamodelInterface()));
 		}
-		assertTrue("Found " + allProblems.size() + " problems:\n" + String.join("\n", allProblems), allProblems.isEmpty());
+		assertTrue(allProblems.isEmpty(), "Found " + allProblems.size() + " problems:\n" + String.join("\n", allProblems));
 	}
 
 	private List<String> checkShadowTypeIsEqual(CtType<?> type) {
@@ -219,6 +244,11 @@ public class JavaReflectionTreeBuilderTest {
 
 		assertFalse(type.isShadow());
 		assertTrue(shadowType.isShadow());
+
+		// Some elements, such as superinterfaces and thrown types, are ordered by their source position if they have
+		// one. As a shadow model has no source positions, but a model built from source does, we must unset the source
+		// positions of the normal model's elements to ensure that there are no ordering discrepancies.
+		type.descendantIterator().forEachRemaining(e -> e.setPosition(SourcePosition.NOPOSITION));
 
 		ShadowEqualsVisitor sev = new ShadowEqualsVisitor(new HashSet<>(Arrays.asList(
 				//shadow classes has no body
@@ -415,7 +445,7 @@ public class JavaReflectionTreeBuilderTest {
 						parentOf = diff.element.getParent();
 						rootOf = type;
 					}
-					differences.add("Diff on path: " + pathBuilder.fromElement(parentOf, rootOf).toString() + "#"
+					differences.add("Diff on path: " + pathBuilder.fromElement(rootOf, parentOf).toString() + "#"
 					+ diff.roles.stream().map(CtRole::getCamelCaseName).collect(Collectors.joining(", ", "[", "]"))
 					+ "\nShadow: " + String.valueOf(diff.other)
 					+ "\nNormal: " + String.valueOf(diff.element) + "\n");
@@ -494,11 +524,11 @@ public class JavaReflectionTreeBuilderTest {
 		CtTypeReference<?> aTypeRef = typeFactory.createReference(CtExpression.class);
 		CtType aType = aTypeRef.getTypeDeclaration();
 		for (CtTypeReference<?> ifaceRef : aType.getSuperInterfaces()) {
-			assertNotNull(ifaceRef.getQualifiedName() + " doesn't exist?", ifaceRef.getActualClass());
+			assertNotNull(ifaceRef.getActualClass(), ifaceRef.getQualifiedName() + " doesn't exist?");
 			assertSame(aType, ifaceRef.getParent());
 		}
 		for (CtTypeReference<?> ifaceRef : aTypeRef.getSuperInterfaces()) {
-			assertNotNull(ifaceRef.getQualifiedName() + " doesn't exist?", ifaceRef.getActualClass());
+			assertNotNull(ifaceRef.getActualClass(), ifaceRef.getQualifiedName() + " doesn't exist?");
 			assertSame(aType, ifaceRef.getParent());
 		}
 	}
@@ -593,10 +623,11 @@ public class JavaReflectionTreeBuilderTest {
 	@Test
 	public void testInnerClassWithConstructorParameterAnnotated() {
 		Launcher launcher = new Launcher();
-		launcher.addInputResource(JavaReflectionTreeBuilderTest.class
+		launcher.addInputResource(URLDecoder.decode(JavaReflectionTreeBuilderTest.class
 				.getClassLoader()
 				.getResource("annotated-parameter-on-nested-class-constructor/Caller.java")
-				.getPath());
+				.getPath(), 
+				StandardCharsets.UTF_8));
 		launcher.getEnvironment().setSourceClasspath(
 				new String[]{
 						"src/test/resources"
@@ -618,4 +649,312 @@ public class JavaReflectionTreeBuilderTest {
 		//contract: the annotation is correctly read
 		assertEquals("Bidon", annotatedParameter.getAnnotations().get(0).getAnnotationType().getSimpleName());
 	}
+
+	@Test
+	public void testInnerClassOfSourceCodeClass() {
+		// contract: JavaReflectionTreeBuilder does not rescan the type if source information is available
+		Launcher launcher = new Launcher();
+		launcher.addInputResource("src/test/java/spoon/support/visitor/java/JavaReflectionTreeBuilderTest.java");
+		launcher.buildModel();
+		CtType ctType = launcher.getFactory().Type().get(Diff.class);
+		assertEquals("Diff", ctType.getSimpleName());
+		assertEquals(false, ctType.isAnonymous());
+		assertEquals(false, ctType.isShadow());
+
+		Class<?> klass = ctType.getActualClass();
+		assertEquals("spoon.support.visitor.java.JavaReflectionTreeBuilderTest$Diff", klass.getName());
+		assertEquals(false, klass.isAnonymousClass());
+
+		CtType<?> ctClass = new JavaReflectionTreeBuilder(launcher.getFactory()).scan(klass);
+		assertEquals("Diff", ctClass.getSimpleName());
+		assertEquals(false, ctClass.isAnonymous());
+		assertEquals(false, ctClass.isShadow());
+		assertEquals("element", ctClass.getFields().toArray(new CtField[0])[0].getSimpleName());
+	}
+
+	@Test
+	public void testPurelyReflectiveInnerClass() {
+		// contract: JavaReflectionTreeBuilder works for named nested classes
+		Launcher launcher = new Launcher();
+		// No resources, as we only want to check the reflection tree builder
+		launcher.buildModel();
+		CtType ctType = launcher.getFactory().Type().get(Diff.class);
+		assertEquals("Diff", ctType.getSimpleName());
+		assertEquals(false, ctType.isAnonymous());
+		assertEquals(true, ctType.isShadow());
+
+		Class<?> klass = ctType.getActualClass();
+		assertEquals("spoon.support.visitor.java.JavaReflectionTreeBuilderTest$Diff", klass.getName());
+		assertEquals(false, klass.isAnonymousClass());
+
+		CtType<?> ctClass = new JavaReflectionTreeBuilder(launcher.getFactory()).scan(klass);
+		assertEquals("Diff", ctClass.getSimpleName());
+		assertEquals(false, ctClass.isAnonymous());
+		assertEquals(true, ctClass.isShadow());
+		Set<String> moduleNames1 = ctClass.getFields().stream()
+				.map(CtField::getSimpleName).collect(Collectors.toSet());
+
+		assertEquals(moduleNames1, Set.of("element", "other", "roles"));
+	}
+
+
+	@Test
+	public void testAnonymousClass() {
+		// contract: JavaReflectionTreeBuilder works on anonymous classes
+
+		// the test object: an anonymous class
+		Object o = new Object() {
+			void foo() {
+
+			}
+		};
+		Launcher launcher = new Launcher();
+		launcher.addInputResource("src/test/java/spoon/support/visitor/java/JavaReflectionTreeBuilderTest.java");
+		launcher.buildModel();
+		CtType ctType = launcher.getModel().getElements(new TypeFilter<CtType>(CtType.class) {
+			@Override
+			public boolean matches(CtType element) {
+				return super.matches(element) && element.isAnonymous();
+			}
+		}).get(0);
+		assertEquals("1", ctType.getSimpleName());
+		assertEquals(true, ctType.isAnonymous());
+		assertEquals(false, ctType.isShadow());
+
+		Class<?> klass = ctType.getActualClass();
+		assertEquals("spoon.support.visitor.java.JavaReflectionTreeBuilderTest$1", klass.getName());
+		assertEquals(true, klass.isAnonymousClass());
+
+		CtType<?> ctClass = new JavaReflectionTreeBuilder(launcher.getFactory()).scan(klass);
+		assertEquals("", ctClass.getSimpleName());
+		assertEquals(true, ctClass.isAnonymous());
+		assertEquals(true, ctClass.isShadow());
+		assertEquals("foo", ctClass.getMethods().toArray(new CtMethod[0])[0].getSimpleName());
+	}
+
+	@Test
+	public void testCannotGetDefaultExpressionBecauseOfException() {
+		/*
+		 * contract:
+		 *    JavaReflectionTreeBuilder can't set defaultExpression for the field (public static primitive),
+		 *    as Reflection API throws the exception ExceptionInInitializerError when attempting to get it.
+		 *    {@link JavaReflectionTreeBuilder#visitField(Filed)} ignores this exception.
+		 */
+		CtType<?> ctType = new JavaReflectionTreeBuilder(createFactory()).scan(spoon.support.visitor.java.testclasses.NPEInStaticInit.class);
+
+		CtField<?> value = ctType.getField("VALUE");
+		// should have gotten '1'
+		assertNull(value.getDefaultExpression());
+
+		/*
+		 * contract:
+		 *    JavaReflectionTreeBuilder can't set defaultExpression for the field (public static primitive),
+		 *    as Reflection API throws the exception UnsatisfiedLinkError when attempting to get it.
+		 *    {@link JavaReflectionTreeBuilder#visitField(Filed)} ignores this exception.
+		 */
+		ctType = new JavaReflectionTreeBuilder(createFactory()).scan(spoon.support.visitor.java.testclasses.UnsatisfiedLinkErrorInStaticInit.class);
+
+		value = ctType.getField("VALUE");
+		// should have gotten '1'
+		assertNull(value.getDefaultExpression());
+	}
+
+	@Test
+	@EnabledForJreRange(min = JRE.JAVA_16)
+	public void testShadowRecords() throws ClassNotFoundException {
+		// contract: records are shadowable.
+		Factory factory = 	createFactory();
+		// we need to do this because this a jdk16+ class
+		Class<?> unixDomainPrincipal = Class.forName("jdk.net.UnixDomainPrincipal");
+		CtType<?> type = factory.Type().get(unixDomainPrincipal);
+		assertNotNull(type);
+		CtRecord unixRecord = (CtRecord) type;
+		assertTrue(unixRecord.isShadow());
+		// UserPrincipal user and GroupPrincipal group
+		assertEquals(2, unixRecord.getRecordComponents().size());
+	}
+
+
+	@Test
+	void testShadowPackage() {
+		// contract: elements of a package with a corresponding CtElement implementation
+		// are visited and built into the model
+		Factory factory = createFactory();
+		CtType<?> type = new JavaReflectionTreeBuilder(factory).scan(PackageTest.class);
+		CtPackage ctPackage = type.getPackage();
+		assertEquals(1, ctPackage.getAnnotations().size());
+		assertEquals(ctPackage.getAnnotations().get(0).getAnnotationType().getQualifiedName(), "java.lang.Deprecated");
+	}
+
+	@Test
+	@EnabledForJreRange(min = JRE.JAVA_17)
+	void testShadowSealedTypes() throws ClassNotFoundException {
+		// contract: sealed/non-sealed types are in the shadow model
+		Factory factory = createFactory();
+		// load a few ConstantDesc types
+		Class<?> constantDesc = Class.forName("java.lang.constant.ConstantDesc"); // since Java 12, sealed since Java 17
+		Class<?> dynamicConstantDesc = Class.forName("java.lang.constant.DynamicConstantDesc"); // since Java 12
+		Class<?> enumDesc = Class.forName("java.lang.Enum$EnumDesc"); // since Java 12
+		CtInterface<?> ctConstantDesc = (CtInterface<?>) factory.Type().get(constantDesc);
+		CtType<?> ctDynamicConstantDesc = factory.Type().get(dynamicConstantDesc);
+		CtType<?> ctEnumDesc = factory.Type().get(enumDesc);
+		CtType<?> ctString = factory.Type().get(String.class);
+
+		// make sure they are loaded correctly
+		assertNotNull(ctConstantDesc);
+		assertNotNull(ctDynamicConstantDesc);
+		assertNotNull(ctEnumDesc);
+		assertNotNull(ctString);
+
+		// ConstDesc is sealed
+		assertThat(ctConstantDesc.getExtendedModifiers(), hasItem(CtExtendedModifier.explicit(ModifierKind.SEALED)));
+		// DynamicConstDesc and String are permitted types
+		assertThat(ctConstantDesc.getPermittedTypes(), hasItems(ctDynamicConstantDesc.getReference(), ctString.getReference()));
+		// EnumDesc extends DynamicConstantDesc, so it should not be added to the permitted types of ConstantDesc
+		assertThat(ctConstantDesc.getPermittedTypes(), not(hasItem(ctEnumDesc.getReference())));
+		// DynamicConstDesc is non-sealed
+		assertThat(ctDynamicConstantDesc.getExtendedModifiers(), hasItem(CtExtendedModifier.explicit(ModifierKind.NON_SEALED)));
+		// EnumDesc extends DynamicConstDesc which is non-sealed, so it is not non-sealed itself
+		assertThat(ctEnumDesc.getModifiers(), not(hasItem(ModifierKind.NON_SEALED)));
+		// String is final and not sealed, so neither sealed nor non-sealed should be applied
+		assertThat(ctString.getModifiers(), not(hasItems(ModifierKind.SEALED, ModifierKind.NON_SEALED)));
+	}
+
+	@Test
+	void testCyclicAnnotationScanning() {
+		// contract: scanning annotations does not cause StackOverflowError
+		// due to recursive package -> annotation -> package -> annotation scanning
+		Factory factory = createFactory();
+		// a simple cycle: package a -> annotation a.A -> package a
+		assertDoesNotThrow(() -> new JavaReflectionTreeBuilder(factory).scan(Cyclic.class));
+		// an indirect cycle: package a -> annotation b.B -> package b -> annotation a.A -> package a
+		assertDoesNotThrow(() -> new JavaReflectionTreeBuilder(factory).scan(Indirect.class));
+		// an independent starting point, causing Cyclic and Indirect to be visited too
+		assertDoesNotThrow(() -> new JavaReflectionTreeBuilder(factory).scan(Outside.class));
+	}
+
+	@Test
+	void testInnerClassesConstructorParameters() {
+		// contract: inner classes have exactly one parameter for the immediately enclosing instance
+		Factory factory = createFactory();
+
+		CtType<InnerClasses> scan = new JavaReflectionTreeBuilder(factory).scan(InnerClasses.class);
+		List<String> inners = List.of("A", "B", "C", "D", "E", "F");
+		CtType<?> current = scan;
+		for (String inner : inners) {
+			current = current.getNestedType(inner);
+		}
+		assertThat(current, instanceOf(CtClass.class));
+		CtClass<?> asClass = (CtClass<?>) current;
+		assertThat(asClass.getConstructors().size(), equalTo(1));
+		assertThat(asClass.getConstructors().iterator().next().getParameters().size(), equalTo(inners.size()));
+	}
+
+	@GitHubIssue(issueNumber = 4972, fixed = true)
+	void parameterNamesAreParsedWhenCompilingWithParametersFlag() throws ClassNotFoundException {
+		ClassLoader loader = JavacFacade.compileFiles(
+			Map.of(
+				"Test",
+				"class Test {\n"
+					+ "  public void foo(String bar) {}\n" +
+					"}\n"
+			),
+			List.of("-parameters")
+		);
+		CtType<?> test = new JavaReflectionTreeBuilder(createFactory()).scan(loader.loadClass("Test"));
+		CtMethod<?> method = test.getMethodsByName("foo").get(0);
+		CtParameter<?> parameter = method.getParameters().get(0);
+
+		assertThat(parameter.getSimpleName(), is("bar"));
+	}
+
+	@Test
+	void testStaticInnerClassConstructorWithEnclosingClassArgument() throws ClassNotFoundException {
+		// contract: Static inner classes can take explicit arguments of the enclosing type
+		ClassLoader loader = JavacFacade.compileFiles(
+			Map.of(
+				"Outer",
+				"class Outer {\n"
+					+ "  static class Inner { public Inner(Outer outer) {} } \n" +
+					"}\n"
+			),
+			List.of()
+		);
+		Class<?> inner = loader.loadClass("Outer$Inner");
+		CtClass<?> ctInner = (CtClass<?>) new JavaReflectionTreeBuilder(createFactory()).scan(inner);
+
+		assertEquals(1, inner.getConstructors().length);
+		assertEquals(1, inner.getConstructors()[0].getParameterCount());
+
+		assertThat(ctInner.getConstructors(), hasSize(1));
+		assertThat(
+			ctInner.getConstructors().iterator().next().getParameters(),
+			hasSize(1)
+		);
+	}
+
+	@Test
+	void testNonStaticInnerClassConstructorWithEnclosingClassArgument() throws ClassNotFoundException {
+		// contract: Non-static inner classes have one implicit argument of the enclosing type
+		ClassLoader loader = JavacFacade.compileFiles(
+			Map.of(
+				"Outer",
+				"class Outer {\n"
+					+ "  class Inner { public Inner(Outer outer) {} } \n" +
+					"}\n"
+			),
+			List.of()
+		);
+		Class<?> inner = loader.loadClass("Outer$Inner");
+		CtClass<?> ctInner = (CtClass<?>) new JavaReflectionTreeBuilder(createFactory()).scan(inner);
+
+		assertEquals(1, inner.getConstructors().length);
+		assertEquals(2, inner.getConstructors()[0].getParameterCount());
+
+		assertThat(ctInner.getConstructors(), hasSize(1));
+		assertThat(
+			ctInner.getConstructors().iterator().next().getParameters(),
+			hasSize(1)
+		);
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
+		"class Victim {}",
+		"enum Victim {;}",
+		"interface Victim {}",
+		"@interface Victim {}"
+	})
+	void testInnerClassesAreNotAddedToPackage(String collider) throws ClassNotFoundException {
+		// contract: Inner classes are not added to their package
+		ClassLoader loader = JavacFacade.compileFiles(
+			Map.of(
+				"First.java",
+				"class First {\n"
+					+ collider +
+					"}\n",
+				"Victim.java",
+				"class Victim {\n" +
+					"  class Inner {\n" +
+					"    int bar;\n" +
+					"  }\n" +
+					"}\n"
+			),
+			List.of()
+		);
+		Factory factory = createFactory();
+		// Load the victim
+		factory.Type().get(loader.loadClass("Victim"));
+		// Let it get replaced by First$Collider
+		factory.Type().get(loader.loadClass("First"));
+
+		// This will throw if the replacement was successful
+		CtType<?> victim = assertDoesNotThrow(() -> factory.Type().get(loader.loadClass("Victim$Inner")));
+
+		// Make sure we got the right class, but this should be fine now in any case
+		assertNotNull(victim.getField("bar"));
+		assertNull(victim.getField("foo"));
+	}
+
+
 }

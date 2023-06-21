@@ -16,7 +16,6 @@
  */
 package spoon.test.serializable;
 
-import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -25,13 +24,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import spoon.Launcher;
+import spoon.reflect.CtModel;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
 import spoon.support.SerializationModelStreamer;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SourcePositionTest {
 
@@ -70,5 +72,19 @@ public class SourcePositionTest {
 		CtField<?> elem1 = type.getField("a");
 		CtField<?> elem2 = typeFromFile.getField("a");
 		assertTrue(elem1.getPosition().getFile().equals(elem2.getPosition().getFile()));
+	}
+
+	@Test
+	public void test_sourcePositionOfTypeInFieldExists() {
+		// contract: the type reference of type of the field should have a source position
+		final Launcher launcher = new Launcher();
+		launcher.addInputResource("src/test/resources/spoon/test/sourcePosition/FieldType.java");
+		launcher.addInputResource("src/test/resources/spoon/test/sourcePosition/SourcePartitionValidator.java");
+		CtModel model = launcher.buildModel();
+
+		CtField<?> field = (CtField<?>) model.getElements(
+				element -> element instanceof CtField &&
+						((CtField<?>) element).getSimpleName().equals("pleaseAttachSourcePositionToMyType")).stream().findFirst().get();
+		assertTrue(field.getType().getPosition().isValidPosition(), "Source position unknown for type of field");
 	}
 }

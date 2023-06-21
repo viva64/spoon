@@ -1,7 +1,7 @@
 package spoon.test.architecture;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.SpoonAPI;
 import spoon.processing.AbstractProcessor;
@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DecompilerArchitectureTest {
 
@@ -107,7 +107,7 @@ public class DecompilerArchitectureTest {
 				return super.matches(element) && element.getAnnotation(Test.class) != null;
 			}
 		})) {
-			assertTrue("naming contract violated for " + meth.getParent(CtClass.class).getSimpleName(), meth.getParent(CtClass.class).getSimpleName().startsWith("Test") || meth.getParent(CtClass.class).getSimpleName().endsWith("Test"));
+			assertTrue(meth.getParent(CtClass.class).getSimpleName().startsWith("Test") || meth.getParent(CtClass.class).getSimpleName().endsWith("Test"), "naming contract violated for " + meth.getParent(CtClass.class).getSimpleName());
 		}
 
 		// contract: the Spoon test suite does not depend on Junit 3 classes and methods
@@ -137,7 +137,7 @@ public class DecompilerArchitectureTest {
 						&& element.getElements(new TypeFilter<>(CtMethod.class)).stream().allMatch(x -> x.hasModifier(ModifierKind.STATIC));
 			}
 		})) {
-			assertTrue("Utility class " + klass.getQualifiedName() + " is missing private constructor", klass.getElements(new TypeFilter<>(CtConstructor.class)).stream().allMatch(x -> x.hasModifier(ModifierKind.PRIVATE)));
+			assertTrue(klass.getElements(new TypeFilter<>(CtConstructor.class)).stream().allMatch(x -> x.hasModifier(ModifierKind.PRIVATE)), "Utility class " + klass.getQualifiedName() + " is missing private constructor");
 		}
 	}
 
@@ -146,7 +146,7 @@ public class DecompilerArchitectureTest {
 		// contract: when a pull-request introduces a new package, it is made explicit during code review
 		// when a pull-request introduces a new package, this test fails and the author has to explicitly declare the new package here
 
-		Set<String> officialPackages = new TreeSet<>();
+		Set<String> officialPackages = new HashSet<>();
 		officialPackages.add("spoon.decompiler");
 		officialPackages.add("spoon");
 		officialPackages.add(""); // root package
@@ -154,7 +154,7 @@ public class DecompilerArchitectureTest {
 		SpoonAPI spoon = new Launcher();
 		spoon.addInputResource("src/main/java/");
 		spoon.buildModel();
-		final Set<String> currentPackages = new TreeSet<>();
+		final Set<String> currentPackages = new HashSet<>();
 		spoon.getModel().processWith(new AbstractProcessor<CtPackage>() {
 			@Override
 			public void process(CtPackage element) {

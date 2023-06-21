@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,17 +7,29 @@
  */
 package spoon.reflect.declaration;
 
+import spoon.reflect.code.CtStatement;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.support.UnsettableProperty;
 
 /**
  * This element defines an interface declaration.
+ *
+ * <pre>
+ *     // an interface definition
+ *     interface Foo {
+ *        void bar();
+ *     }
+ * </pre>
  */
-public interface CtInterface<T> extends CtType<T> {
+public interface CtInterface<T> extends CtType<T>, CtStatement, CtSealable {
 	@Override
 	CtInterface<T> clone();
 
 	@Override
 	@UnsettableProperty
 	<C extends CtType<T>> C setSuperclass(CtTypeReference<?> superClass);
+
+	@Override
+	@UnsettableProperty
+	String getLabel();
 }

@@ -16,7 +16,6 @@
  */
 package spoon.test.serializable;
 
-import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,8 +25,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import spoon.Launcher;
 import spoon.reflect.declaration.CtElement;
@@ -36,30 +36,33 @@ import spoon.reflect.visitor.Filter;
 import spoon.support.CompressionType;
 import spoon.support.SerializationModelStreamer;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class ModelStreamerTest {
 
 	private static final String SOURCE_DIRECTORY = "./src/main/java/spoon/reflect/declaration";
-	private static final String OUTPUT_FILENAME = "./src/test/resources/serialization/factory.ser";
+	private static final String OUTPUT_FILENAME = "./target/factory.ser";
 	private static File outputFile;
 	private static Factory factory;
 
-	@BeforeClass
+	@BeforeAll
     public static void setUp() {
-		System.out.println("Testing factory serialization with different "
-						 + "compressors with source folder: " + SOURCE_DIRECTORY);
 		Launcher launcher = new Launcher();
 		launcher.addInputResource(SOURCE_DIRECTORY);
 		launcher.buildModel();
 		factory = launcher.getFactory();
 		outputFile = new File(OUTPUT_FILENAME);
-		outputFile.deleteOnExit();
     }
+
+	@AfterEach
+	public void tearDown() {
+		outputFile.delete();
+	}
 
 	@Test
 	public void testDefaultCompressionType() throws IOException {
 		new SerializationModelStreamer().save(factory, new FileOutputStream(outputFile));
 		FileInputStream in = new FileInputStream(outputFile);
-		System.out.println(in.getChannel().size() + " bytes for default");
 		Factory factoryFromFile = new SerializationModelStreamer().load(in);
 		compareFactoryModels(factory, factoryFromFile);
 	}
@@ -69,7 +72,6 @@ public class ModelStreamerTest {
 		factory.getEnvironment().setCompressionType(CompressionType.GZIP);
 		new SerializationModelStreamer().save(factory, new FileOutputStream(outputFile));
 		FileInputStream in = new FileInputStream(outputFile);
-		System.out.println(in.getChannel().size() + " bytes for " + CompressionType.GZIP);
 		Factory factoryFromFile = new SerializationModelStreamer().load(in);
 		compareFactoryModels(factory, factoryFromFile);
 	}
@@ -79,7 +81,6 @@ public class ModelStreamerTest {
 		factory.getEnvironment().setCompressionType(CompressionType.BZIP2);
 		new SerializationModelStreamer().save(factory, new FileOutputStream(outputFile));
 		FileInputStream in = new FileInputStream(outputFile);
-		System.out.println(in.getChannel().size() + " bytes for " + CompressionType.BZIP2);
 		Factory factoryFromFile = new SerializationModelStreamer().load(in);
 		compareFactoryModels(factory, factoryFromFile);
 	}
@@ -89,7 +90,6 @@ public class ModelStreamerTest {
 		factory.getEnvironment().setCompressionType(CompressionType.NONE);
 		new SerializationModelStreamer().save(factory, new FileOutputStream(outputFile));
 		FileInputStream in = new FileInputStream(outputFile);
-		System.out.println(in.getChannel().size() + " bytes for " + CompressionType.NONE);
 		Factory factoryFromFile = new SerializationModelStreamer().load(in);
 		compareFactoryModels(factory, factoryFromFile);
 	}
@@ -99,7 +99,6 @@ public class ModelStreamerTest {
 		factory.getEnvironment().setCompressionType(CompressionType.LZMA);
 		new SerializationModelStreamer().save(factory, new FileOutputStream(outputFile));
 		FileInputStream in = new FileInputStream(outputFile);
-		System.out.println(in.getChannel().size() + " bytes for " + CompressionType.LZMA);
 		Factory factoryFromFile = new SerializationModelStreamer().load(in);
 		compareFactoryModels(factory, factoryFromFile);
 	}
@@ -114,8 +113,7 @@ public class ModelStreamerTest {
 		List<CtElement> elementsFactory = factory.getModel().getRootPackage().filterChildren(filter).list();
 		List<CtElement> elementsFactoryFromFile = factoryFromFile.getModel().getRootPackage().filterChildren(filter).list();
 
-		assertTrue("Model before & after serialization must have the same number of elements", 
-				elementsFactory.size() == elementsFactoryFromFile.size());
+		assertTrue(elementsFactory.size() == elementsFactoryFromFile.size(), "Model before & after serialization must have the same number of elements");
 
 		List<String> st1 = elementsFactory.stream().map(CtElement::toString).collect(Collectors.toList());
 		List<String> st2 = elementsFactoryFromFile.stream().map(CtElement::toString).collect(Collectors.toList());
@@ -123,8 +121,7 @@ public class ModelStreamerTest {
 		Collections.sort(st2);
 
 		for (int i = 0; i < st1.size(); i++) {
-			assertTrue("All CtElement of the model should be striclty identical before & after serialization",
-					st1.get(i).equals(st2.get(i)));
+			assertTrue(st1.get(i).equals(st2.get(i)), "All CtElement of the model should be striclty identical before & after serialization");
 		}
 	}
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -13,6 +13,7 @@ import org.eclipse.jdt.internal.compiler.ast.AllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ExplicitConstructorCall;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.LambdaExpression;
@@ -22,6 +23,7 @@ import org.eclipse.jdt.internal.compiler.ast.ParameterizedQualifiedTypeReference
 import org.eclipse.jdt.internal.compiler.ast.ParameterizedSingleTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedNameReference;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedTypeReference;
+import org.eclipse.jdt.internal.compiler.ast.ReferenceExpression;
 import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
@@ -43,8 +45,10 @@ import org.eclipse.jdt.internal.compiler.lookup.LookupEnvironment;
 import org.eclipse.jdt.internal.compiler.lookup.MethodBinding;
 import org.eclipse.jdt.internal.compiler.lookup.MethodScope;
 import org.eclipse.jdt.internal.compiler.lookup.MissingTypeBinding;
+import org.eclipse.jdt.internal.compiler.lookup.ModuleBinding;
 import org.eclipse.jdt.internal.compiler.lookup.PackageBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ParameterizedTypeBinding;
+import org.eclipse.jdt.internal.compiler.lookup.PlainPackageBinding;
 import org.eclipse.jdt.internal.compiler.lookup.PolyTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ProblemBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ProblemMethodBinding;
@@ -59,6 +63,7 @@ import org.eclipse.jdt.internal.compiler.lookup.TypeVariableBinding;
 import org.eclipse.jdt.internal.compiler.lookup.VariableBinding;
 import org.eclipse.jdt.internal.compiler.lookup.VoidTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.WildcardBinding;
+import spoon.NoClasspathWorkaround;
 import spoon.reflect.code.CtLambda;
 import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtPackage;
@@ -78,40 +83,41 @@ import spoon.reflect.reference.CtTypeParameterReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.reference.CtWildcardReference;
+import spoon.support.Level;
 import spoon.support.reflect.CtExtendedModifier;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static spoon.support.compiler.jdt.JDTTreeBuilderQuery.searchPackage;
 import static spoon.support.compiler.jdt.JDTTreeBuilderQuery.searchType;
 import static spoon.support.compiler.jdt.JDTTreeBuilderQuery.searchTypeBinding;
 
 public class ReferenceBuilder {
+	private static final Set<CtExtendedModifier> PUBLIC_PROTECTED = Set.of(
+			CtExtendedModifier.explicit(ModifierKind.PUBLIC),
+			CtExtendedModifier.explicit(ModifierKind.PROTECTED)
+	);
 
 	// Allow to detect circular references and to avoid endless recursivity
 	// when resolving parameterizedTypes (e.g. Enum<E extends Enum<E>>)
 	private Map<TypeBinding, CtTypeReference> exploringParameterizedBindings = new HashMap<>();
 
-	private boolean bounds = false;
-
 	private final JDTTreeBuilder jdtTreeBuilder;
 
 	ReferenceBuilder(JDTTreeBuilder jdtTreeBuilder) {
 		this.jdtTreeBuilder = jdtTreeBuilder;
-	}
-
-	private CtTypeReference<?> getBoundedTypeReference(TypeBinding binding) {
-		bounds = true;
-		CtTypeReference<?> ref = getTypeReference(binding);
-		bounds = false;
-		return ref;
 	}
 
 	/**
@@ -263,8 +269,7 @@ public class ReferenceBuilder {
 	 * @return a type reference.
 	 */
 	<T> CtTypeReference<T> getQualifiedTypeReference(char[][] tokens, TypeBinding receiverType, ReferenceBinding enclosingType, JDTTreeBuilder.OnAccessListener listener) {
-		final List<CtExtendedModifier> listPublicProtected = Arrays.asList(new CtExtendedModifier(ModifierKind.PUBLIC), new CtExtendedModifier(ModifierKind.PROTECTED));
-		if (enclosingType != null && Collections.disjoint(listPublicProtected, JDTTreeBuilderQuery.getModifiers(enclosingType.modifiers, false, false))) {
+		if (enclosingType != null && Collections.disjoint(PUBLIC_PROTECTED, JDTTreeBuilderQuery.getModifiers(enclosingType.modifiers, false, ModifierTarget.NONE))) {
 			String access = "";
 			int i = 0;
 			final CompilationUnitDeclaration[] units = ((TreeBuilderCompiler) this.jdtTreeBuilder.getContextBuilder().compilationunitdeclaration.scope.environment.typeRequestor).unitsToProcess;
@@ -358,8 +363,18 @@ public class ReferenceBuilder {
 						if (packageBinding == null || packageBinding instanceof ProblemPackageBinding) {
 							// Big crisis here. We are already in noclasspath mode but JDT doesn't support always
 							// creation of a package in this mode. So, if we are in this brace, we make the job of JDT...
-							packageBinding = new PackageBinding(chars, null, environment, environment.module);
-						}
+							packageBinding = new PackageBinding(chars, null, environment, environment.module) {
+								// PackageBinding was a class instead of abstract class in earlier jdt versions.
+								// To circumvent this change to an abstract class, an anonymous class is used here.
+								@Override
+								public PlainPackageBinding getIncarnation(ModuleBinding arg0) {
+									// this method returns always null, because we dont know the enclosingModule here.
+									// Link to original method from PlainPackageBinding:
+									// https://github.com/eclipse/eclipse.jdt.core/blob/master/org.eclipse.jdt.core/compiler/org/eclipse/jdt/internal/compiler/lookup/PlainPackageBinding.java#L43
+									return null;
+								}
+							};
+													}
 						return getPackageReference(packageBinding);
 					}
 				}
@@ -368,12 +383,34 @@ public class ReferenceBuilder {
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
-	<T> CtExecutableReference<T> getExecutableReference(MethodBinding exec) {
+	<T> CtExecutableReference<T> getExecutableReference(ReferenceExpression referenceExpression) {
+		return getExecutableReference(
+			referenceExpression.binding,
+			getExecutableRefSourceStart(referenceExpression.typeArguments, referenceExpression.nameSourceStart),
+			referenceExpression.nameSourceEnd()
+		);
+	}
+
+	<T> CtExecutableReference<T> getExecutableReference(ExplicitConstructorCall explicitConstructor) {
+		CtExecutableReference<T> ref = getExecutableReference(explicitConstructor.binding);
+		if (ref != null) {
+			ref.setImplicit(true);
+		}
+		return ref;
+	}
+
+	private <T> CtExecutableReference<T> getExecutableReference(MethodBinding exec) {
+		return getExecutableReference(exec, -1, -1);
+	}
+
+	<T> CtExecutableReference<T> getExecutableReference(MethodBinding exec, int sourceStart, int sourceEnd) {
 		if (exec == null) {
 			return null;
 		}
-		final CtExecutableReference ref = this.jdtTreeBuilder.getFactory().Core().createExecutableReference();
+		final CtExecutableReference<T> ref = this.jdtTreeBuilder.getFactory().Core().createExecutableReference();
+		if (sourceStart >= 0 && sourceEnd >= 0) {
+			ref.setPosition(jdtTreeBuilder.getPositionBuilder().buildPosition(sourceStart, sourceEnd));
+		}
 		if (exec.isConstructor()) {
 			ref.setSimpleName(CtExecutableReference.CONSTRUCTOR_NAME);
 
@@ -437,12 +474,17 @@ public class ReferenceBuilder {
 		CtExecutableReference<T> ref;
 		if (allocationExpression.binding != null) {
 			ref = getExecutableReference(allocationExpression.binding);
+			// in some cases the binding is not null but points wrong to object type see #4643
+			if (isIncorrectlyBoundExecutableInNoClasspath(ref, allocationExpression)) {
+				adjustExecutableAccordingToResolvedType(ref, allocationExpression);
+			}
 		} else {
 			ref = jdtTreeBuilder.getFactory().Core().createExecutableReference();
 			ref.setSimpleName(CtExecutableReference.CONSTRUCTOR_NAME);
 			ref.setDeclaringType(getTypeReference(null, allocationExpression.type));
 
-			final List<CtTypeReference<?>> parameters = new ArrayList<>(allocationExpression.argumentTypes.length);
+			final List<CtTypeReference<?>> parameters =
+					new ArrayList<>(allocationExpression.argumentTypes.length);
 			for (TypeBinding b : allocationExpression.argumentTypes) {
 				parameters.add(getTypeReference(b, true));
 			}
@@ -451,16 +493,65 @@ public class ReferenceBuilder {
 		if (allocationExpression.type == null) {
 			ref.setType(this.<T>getTypeReference(allocationExpression.expectedType(), true));
 		}
+		ref.setImplicit(true);
 		return ref;
+	}
+
+	/**
+	 * Checks if the given executable reference is incorrectly bound to the Object type and noclasspath is set.
+	 * @param ref  the executable reference to check
+	 * @param allocationExpression  the allocation expression that contains the executable reference of jdt.
+	 * @return  true if the executable reference is incorrectly bound to the Object type and noclasspath is set.
+	 */
+	@NoClasspathWorkaround(reason =  "https://github.com/INRIA/spoon/issues/4643")
+	private boolean isIncorrectlyBoundExecutableInNoClasspath(CtExecutableReference<?> ref,
+			AllocationExpression allocationExpression) {
+		boolean noClasspath = ref.getFactory().getEnvironment().getNoClasspath();
+		return noClasspath && ref.getType().equals(ref.getFactory().Type().objectType())
+				&& allocationExpression.resolvedType != null;
+	}
+
+	/**
+	 * Adjusts the executable reference according to the resolved type. This is needed because the binding is not correct in no classpath.
+	 * @param ref the executable reference to adjust
+	 * @param allocationExpression  the allocation expression that contains the executable reference of jdt.
+	 */
+	@NoClasspathWorkaround(reason =  "https://github.com/INRIA/spoon/issues/4643")
+	@SuppressWarnings("unchecked")
+	private void adjustExecutableAccordingToResolvedType(CtExecutableReference ref,
+			AllocationExpression allocationExpression) {
+		CtTypeReference<?> resolvedTypeRef = getTypeReference(allocationExpression.resolvedType);
+		ref.setType(resolvedTypeRef);
+		ref.getExecutableDeclaration().setType(resolvedTypeRef);
+		ref.setDeclaringType(resolvedTypeRef);
+	}
+
+	private static int getExecutableRefSourceStart(TypeReference[] typeArguments, int start) {
+		int sourceStart = start;
+		if (typeArguments != null) {
+			for (TypeReference typeArgument : typeArguments) {
+				// We want to include the `<` to preserve symmetry with `>`
+				sourceStart = Math.min(typeArgument.sourceStart() - 1, sourceStart);
+			}
+		}
+		return sourceStart;
 	}
 
 	<T> CtExecutableReference<T> getExecutableReference(MessageSend messageSend) {
 		if (messageSend.binding != null) {
-			return getExecutableReference(messageSend.binding);
+			return getExecutableReference(
+				messageSend.binding,
+				getExecutableRefSourceStart(messageSend.typeArguments, messageSend.nameSourceStart()),
+				messageSend.nameSourceEnd()
+			);
 		}
 		CtExecutableReference<T> ref = jdtTreeBuilder.getFactory().Core().createExecutableReference();
 		ref.setSimpleName(CharOperation.charToString(messageSend.selector));
 		ref.setType(this.<T>getTypeReference(messageSend.expectedType(), true));
+		ref.setPosition(jdtTreeBuilder.getPositionBuilder().buildPosition(
+			getExecutableRefSourceStart(messageSend.typeArguments, messageSend.nameSourceStart()),
+			messageSend.nameSourceEnd()
+		));
 		if (messageSend.receiver.resolvedType == null) {
 			// It is crisis dude! static context, we don't have much more information.
 			ref.setStatic(true);
@@ -556,6 +647,50 @@ public class ReferenceBuilder {
 				}
 			}
 		}
+
+		if (original.isParameterizedTypeReference() && !type.isParameterized()) {
+			tryRecoverTypeArguments(type);
+		}
+	}
+
+	/**
+	 * In noclasspath mode, empty diamonds in constructor calls on generic types can be lost. This happens if any
+	 * of the following apply:
+	 *
+	 * <ul>
+	 *     <li>The generic type is not on the classpath.</li>
+	 *     <li>The generic type is used in a context where the type arguments cannot be inferred, such as in an
+	 *     unresolved method
+	 *     </li>
+	 * </ul>
+	 *
+	 * See #3360 for details.
+	 */
+	private void tryRecoverTypeArguments(CtTypeReference<?> type) {
+		final Deque<ASTPair> stack = jdtTreeBuilder.getContextBuilder().stack;
+		if (stack.peek() == null || !(stack.peek().node instanceof AllocationExpression)) {
+			// have thus far only ended up here with a generic array type,
+			// don't know if we want or need to deal with those
+			return;
+		}
+
+		AllocationExpression alloc = (AllocationExpression) stack.peek().node;
+		if (alloc.expectedType() instanceof ParameterizedTypeBinding) {
+			ParameterizedTypeBinding expectedType = (ParameterizedTypeBinding) alloc.expectedType();
+			if (expectedType.typeArguments() != null) {
+				// type arguments can be recovered from the expected type
+				for (TypeBinding binding : expectedType.typeArguments()) {
+					CtTypeReference<?> typeArgRef = getTypeReference(binding);
+					typeArgRef.setImplicit(true);
+					type.addActualTypeArgument(typeArgRef);
+				}
+			}
+			return;
+		}
+
+		// the expected type is not available/parameterized if the constructor call occurred in e.g. an unresolved
+		// method, or in a method that did not expect a parameterized argument
+		type.addActualTypeArgument(jdtTreeBuilder.getFactory().Type().OMITTED_TYPE_ARG_TYPE.clone());
 	}
 
 	/**
@@ -599,7 +734,7 @@ public class ReferenceBuilder {
 			CtPackageReference packageReference = index >= 0 ? packageFactory.getOrCreate(concatSubArray(namesParameterized, index)).getReference() : packageFactory.topLevel();
 			inner.setPackage(packageReference);
 		}
-		if (!res.toStringDebug().replace(", ?", ",?").endsWith(nameParameterized)) {
+		if (!res.toStringDebug().replace(", ", ",").endsWith(nameParameterized)) {
 			// verify that we did not match a class that have the same name in a different package
 			return this.jdtTreeBuilder.getFactory().Type().createReference(typeName);
 		}
@@ -702,231 +837,31 @@ public class ReferenceBuilder {
 		if (binding instanceof RawTypeBinding) {
 			ref = getTypeReference(((ParameterizedTypeBinding) binding).genericType());
 		} else if (binding instanceof ParameterizedTypeBinding) {
-			if (binding.actualType() != null && binding.actualType() instanceof LocalTypeBinding) {
-				// When we define a nested class in a method and when the enclosing class of this method
-				// is a parameterized type binding, JDT give a ParameterizedTypeBinding for the nested class
-				// and hide the real class in actualType().
-				ref = getTypeReference(binding.actualType());
-			} else {
-				ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-				this.exploringParameterizedBindings.put(binding, ref);
-				if (binding.isAnonymousType()) {
-					ref.setSimpleName("");
-				} else {
-					ref.setSimpleName(String.valueOf(binding.sourceName()));
-					if (binding.enclosingType() != null) {
-						ref.setDeclaringType(getTypeReference(binding.enclosingType()));
-					} else {
-						ref.setPackage(getPackageReference(binding.getPackage()));
-					}
-				}
-			}
-			if (binding.actualType() instanceof MissingTypeBinding) {
-				ref = getTypeReference(binding.actualType());
-			}
-
-			if (((ParameterizedTypeBinding) binding).arguments != null) {
-				for (TypeBinding b : ((ParameterizedTypeBinding) binding).arguments) {
-					if (bindingCache.containsKey(b)) {
-						ref.addActualTypeArgument(getCtCircularTypeReference(b));
-					} else {
-						if (!this.exploringParameterizedBindings.containsKey(b)) {
-							this.exploringParameterizedBindings.put(b, null);
-							CtTypeReference typeRefB = getTypeReference(b);
-							this.exploringParameterizedBindings.put(b, typeRefB);
-							ref.addActualTypeArgument(typeRefB);
-						} else {
-							CtTypeReference typeRefB = this.exploringParameterizedBindings.get(b);
-							if (typeRefB != null) {
-								ref.addActualTypeArgument(typeRefB.clone());
-							}
-						}
-					}
-				}
-			}
+			ref = getParameterizedTypeReference((ParameterizedTypeBinding) binding);
 		} else if (binding instanceof MissingTypeBinding) {
-			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-			ref.setSimpleName(new String(binding.sourceName()));
-			ref.setPackage(getPackageReference(binding.getPackage()));
-			if (!this.jdtTreeBuilder.getContextBuilder().ignoreComputeImports) {
-				final CtReference declaring = this.getDeclaringReferenceFromImports(binding.sourceName());
-				if (declaring instanceof CtPackageReference) {
-					ref.setPackage((CtPackageReference) declaring);
-				} else if (declaring instanceof CtTypeReference) {
-					ref.setDeclaringType((CtTypeReference) declaring);
-				}
-			}
+			ref = getTypeReferenceFromMissingTypeBinding((MissingTypeBinding) binding);
 		} else if (binding instanceof BinaryTypeBinding) {
-			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-			if (binding.enclosingType() != null) {
-				ref.setDeclaringType(getTypeReference(binding.enclosingType()));
-			} else {
-				CtPackageReference packageReference = getPackageReference(binding.getPackage());
-				packageReference.setImplicit(true);
-				ref.setPackage(packageReference);
-			}
-			ref.setSimpleName(new String(binding.sourceName()));
+			ref = getTypeReferenceFromBinaryTypeBinding((BinaryTypeBinding) binding);
 		} else if (binding instanceof TypeVariableBinding) {
-			boolean oldBounds = bounds;
-
-			if (binding instanceof CaptureBinding) {
-				ref = this.jdtTreeBuilder.getFactory().Core().createWildcardReference();
-				bounds = true;
-			} else {
-				TypeVariableBinding typeParamBinding = (TypeVariableBinding) binding;
-				if (resolveGeneric) {
-					//it is called e.g. by ExecutableReference, which must not use CtParameterTypeReference
-					//but it needs it's bounding type instead
-					ReferenceBinding superClass = typeParamBinding.superclass;
-					ReferenceBinding[] superInterfaces = typeParamBinding.superInterfaces();
-
-					CtTypeReference refSuperClass = null;
-
-					// if the type parameter has a super class other than java.lang.Object, we get it
-					// superClass.superclass() is null if it's java.lang.Object
-					if (superClass != null && !(superClass.superclass() == null)) {
-
-						// this case could happen with Enum<E extends Enum<E>> for example:
-						// in that case we only want to have E -> Enum -> E
-						// to conserve the same behavior as JavaReflectionTreeBuilder
-						if (!(superClass instanceof ParameterizedTypeBinding) || !this.exploringParameterizedBindings.containsKey(superClass)) {
-							refSuperClass = this.getTypeReference(superClass, resolveGeneric);
-						}
-
-					// if the type parameter has a super interface, then we'll get it too, as a superclass
-					// type parameter can only extends an interface or a class, so we don't make the distinction
-					// in Spoon. Moreover we can only have one extends in a type parameter.
-					} else if (superInterfaces != null && superInterfaces.length == 1) {
-						refSuperClass = this.getTypeReference(superInterfaces[0], resolveGeneric);
-					}
-					if (refSuperClass == null) {
-						refSuperClass = this.jdtTreeBuilder.getFactory().Type().getDefaultBoundingType();
-					}
-					ref = refSuperClass.clone();
-				} else {
-					ref = this.jdtTreeBuilder.getFactory().Core().createTypeParameterReference();
-					ref.setSimpleName(new String(binding.sourceName()));
-				}
-			}
-			TypeVariableBinding b = (TypeVariableBinding) binding;
-			if (bounds) {
-				if (b instanceof CaptureBinding && ((CaptureBinding) b).wildcard != null) {
-					bounds = oldBounds;
-					return getTypeReference(((CaptureBinding) b).wildcard, resolveGeneric);
-				} else if (b.superclass != null && b.firstBound == b.superclass) {
-					bounds = false;
-					bindingCache.put(binding, ref);
-					if (ref instanceof CtWildcardReference) {
-						((CtWildcardReference) ref).setBoundingType(getTypeReference(b.superclass, resolveGeneric));
-					}
-					bounds = oldBounds;
-				}
-			}
-			if (bounds && b.superInterfaces != null && b.superInterfaces != Binding.NO_SUPERINTERFACES) {
-				bindingCache.put(binding, ref);
-				List<CtTypeReference<?>> bounds = new ArrayList<>();
-				CtTypeParameterReference typeParameterReference = (CtTypeParameterReference) ref;
-				if (!(typeParameterReference.isDefaultBoundingType())) { // if it's object we can ignore it
-					bounds.add(typeParameterReference.getBoundingType());
-				}
-				for (ReferenceBinding superInterface : b.superInterfaces) {
-					bounds.add(getTypeReference(superInterface, resolveGeneric));
-				}
-				if (ref instanceof CtWildcardReference) {
-					((CtWildcardReference) ref).setBoundingType(this.jdtTreeBuilder.getFactory().Type().createIntersectionTypeReferenceWithBounds(bounds));
-				}
-			}
-			if (binding instanceof CaptureBinding) {
-				bounds = false;
-			}
+			ref = getTypeReferenceFromTypeVariableBinding((TypeVariableBinding) binding, resolveGeneric);
 		} else if (binding instanceof BaseTypeBinding) {
-			String name = new String(binding.sourceName());
-			//always create new TypeReference, because clonning from a cache clones invalid SourcePosition
-			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-			ref.setSimpleName(name);
+			ref = getTypeReferenceFromBaseTypeBinding((BaseTypeBinding) binding);
 		} else if (binding instanceof WildcardBinding) {
-			WildcardBinding wildcardBinding = (WildcardBinding) binding;
-			CtWildcardReference wref = this.jdtTreeBuilder.getFactory().Core().createWildcardReference();
-			ref = wref;
-
-			if (wildcardBinding.boundKind == Wildcard.SUPER) {
-				wref.setUpper(false);
-			}
-
-			if (wildcardBinding.bound != null) {
-				if (bindingCache.containsKey(wildcardBinding.bound)) {
-					wref.setBoundingType(getCtCircularTypeReference(wildcardBinding.bound));
-				} else {
-					wref.setBoundingType(getTypeReference(((WildcardBinding) binding).bound));
-				}
-			}
+			ref = getTypeReferenceFromWildcardBinding((WildcardBinding) binding);
 		} else if (binding instanceof LocalTypeBinding) {
-			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-			if (binding.isAnonymousType()) {
-				ref.setSimpleName(JDTTreeBuilderHelper.computeAnonymousName(((SourceTypeBinding) binding).constantPoolName()));
-				ref.setDeclaringType(getTypeReference(binding.enclosingType()));
-			} else {
-				ref.setSimpleName(new String(binding.sourceName()));
-				if (((LocalTypeBinding) binding).enclosingMethod == null && binding.enclosingType() != null && binding.enclosingType() instanceof LocalTypeBinding) {
-					ref.setDeclaringType(getTypeReference(binding.enclosingType()));
-				} else if (binding.enclosingMethod() != null) {
-					ref.setSimpleName(JDTTreeBuilderHelper.computeAnonymousName(((SourceTypeBinding) binding).constantPoolName()));
-					ref.setDeclaringType(getTypeReference(binding.enclosingType()));
-				}
-			}
+			ref = getTypeReferenceFromLocalTypeBinding((LocalTypeBinding) binding);
 		} else if (binding instanceof SourceTypeBinding) {
-			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-			if (binding.isAnonymousType()) {
-				ref.setSimpleName(JDTTreeBuilderHelper.computeAnonymousName(((SourceTypeBinding) binding).constantPoolName()));
-				ref.setDeclaringType(getTypeReference(binding.enclosingType()));
-			} else {
-				ref.setSimpleName(new String(binding.sourceName()));
-				if (binding.enclosingType() != null) {
-					ref.setDeclaringType(getTypeReference(binding.enclosingType()));
-				} else {
-					ref.setPackage(getPackageReference(binding.getPackage()));
-				}
-			}
+			ref = getTypeReferenceFromSourceTypeBinding((SourceTypeBinding) binding);
 		} else if (binding instanceof ArrayBinding) {
-			CtArrayTypeReference<Object> arrayref;
-			arrayref = this.jdtTreeBuilder.getFactory().Core().createArrayTypeReference();
-			ref = arrayref;
-			for (int i = 1; i < binding.dimensions(); i++) {
-				CtArrayTypeReference<Object> tmp = this.jdtTreeBuilder.getFactory().Core().createArrayTypeReference();
-				arrayref.setComponentType(tmp);
-				arrayref = tmp;
-			}
-			arrayref.setComponentType(getTypeReference(binding.leafComponentType(), resolveGeneric));
+			ref = getTypeReferenceFromArrayBinding((ArrayBinding) binding, resolveGeneric);
 		} else if (binding instanceof PolyTypeBinding) {
 			// JDT can't resolve the type of this binding and we only have a string.
 			// In this case, we return a type Object because we can't know more about it.
 			ref = this.jdtTreeBuilder.getFactory().Type().objectType();
 		} else if (binding instanceof ProblemReferenceBinding) {
-			// Spoon is able to analyze also without the classpath
-			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-			char[] readableName = binding.readableName();
-			StringBuilder sb = new StringBuilder();
-			for (int i = readableName.length - 1; i >= 0; i--) {
-				char c = readableName[i];
-				if (c == '.') {
-					break;
-				}
-				sb.append(c);
-			}
-			sb.reverse();
-			ref.setSimpleName(sb.toString());
-			final CtReference declaring = this.getDeclaringReferenceFromImports(binding.sourceName());
-			setPackageOrDeclaringType(ref, declaring);
-		} else if (binding instanceof JDTTreeBuilder.SpoonReferenceBinding) {
-			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
-			ref.setSimpleName(new String(binding.sourceName()));
-			ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+			ref = getTypeReferenceFromProblemReferenceBinding((ProblemReferenceBinding) binding);
 		} else if (binding instanceof IntersectionTypeBinding18) {
-			List<CtTypeReference<?>> bounds = new ArrayList<>();
-			for (ReferenceBinding superInterface : binding.getIntersectingTypes()) {
-				bounds.add(getTypeReference(superInterface));
-			}
-			ref = this.jdtTreeBuilder.getFactory().Type().createIntersectionTypeReferenceWithBounds(bounds);
+			ref = getTypeReferenceFromIntersectionTypeBinding((IntersectionTypeBinding18) binding);
 		} else {
 			throw new RuntimeException("Unknown TypeBinding: " + binding.getClass() + " " + binding);
 		}
@@ -935,22 +870,302 @@ public class ReferenceBuilder {
 		return (CtTypeReference<T>) ref;
 	}
 
-	private CtTypeReference<?> getCtCircularTypeReference(TypeBinding b) {
-		return bindingCache.get(b).clone();
+	private static boolean isParameterizedProblemReferenceBinding(TypeBinding binding) {
+		String sourceName = String.valueOf(binding.sourceName());
+		return binding instanceof ProblemReferenceBinding && typeRefContainsTypeArgs(sourceName);
 	}
 
-	@SuppressWarnings("unchecked")
-	<T> CtVariableReference<T> getVariableReference(MethodBinding methbin) {
-		CtFieldReference<T> ref = this.jdtTreeBuilder.getFactory().Core().createFieldReference();
-		ref.setSimpleName(new String(methbin.selector));
-		ref.setType(getTypeReference(methbin.returnType));
+	private static boolean typeRefContainsTypeArgs(String typeRef) {
+		return !typeRef.startsWith("<") && typeRef.endsWith(">");
+	}
 
-		if (methbin.declaringClass != null) {
-			ref.setDeclaringType(getTypeReference(methbin.declaringClass));
+	/**
+	 * Create a parameterized type reference based on the provided binding.
+	 */
+	private CtTypeReference<?> getParameterizedTypeReference(ParameterizedTypeBinding binding) {
+		CtTypeReference<?> ref;
+		if (binding.actualType() instanceof LocalTypeBinding) {
+			// When we define a nested class in a method and when the enclosing class of this method
+			// is a parameterized type binding, JDT give a ParameterizedTypeBinding for the nested class
+			// and hide the real class in actualType().
+			ref = getTypeReference(binding.actualType());
 		} else {
-			ref.setDeclaringType(ref.getType());
+			ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
+			this.exploringParameterizedBindings.put(binding, ref);
+			if (binding.isAnonymousType()) {
+				ref.setSimpleName("");
+			} else {
+				ref.setSimpleName(String.valueOf(binding.sourceName()));
+				if (binding.enclosingType() != null) {
+					ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+				} else {
+					ref.setPackage(getPackageReference(binding.getPackage()));
+				}
+			}
 		}
+		if (binding.actualType() instanceof MissingTypeBinding) {
+			ref = getTypeReference(binding.actualType());
+		}
+
+		getTypeArguments(binding).forEach(ref::addActualTypeArgument);
 		return ref;
+	}
+
+	/**
+	 * Get the type arguments from the binding, or an empty list if no type arguments can be found.
+	 */
+	private List<CtTypeReference<?>> getTypeArguments(ParameterizedTypeBinding binding) {
+		return binding.arguments == null
+				? Collections.emptyList()
+				: Arrays.stream((binding.arguments))
+					.map(this::getTypeReferenceFromTypeArgument)
+					.filter(Objects::nonNull)
+					.collect(Collectors.toList());
+	}
+
+	/**
+	 * Get the type reference for a type argument binding. May return null when called recursively.
+	 */
+	private CtTypeReference<?> getTypeReferenceFromTypeArgument(TypeBinding typeArgBinding) {
+		if (bindingCache.containsKey(typeArgBinding)) {
+			return getCtCircularTypeReference(typeArgBinding);
+		} else if (exploringParameterizedBindings.containsKey(typeArgBinding)) {
+			// note: can be null if this method is called recursively
+			CtTypeReference<?> typeRefBeingExplored = exploringParameterizedBindings.get(typeArgBinding);
+			return typeRefBeingExplored == null ? null : typeRefBeingExplored.clone();
+		} else {
+			this.exploringParameterizedBindings.put(typeArgBinding, null);
+			CtTypeReference<?> typeRefB = getTypeReference(typeArgBinding);
+			this.exploringParameterizedBindings.put(typeArgBinding, typeRefB);
+			return typeRefB;
+		}
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromMissingTypeBinding(MissingTypeBinding binding) {
+		CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
+		ref.setSimpleName(new String(binding.sourceName()));
+		ref.setPackage(getPackageReference(binding.getPackage()));
+
+		if (!this.jdtTreeBuilder.getContextBuilder().ignoreComputeImports) {
+			final CtReference declaring = this.getDeclaringReferenceFromImports(binding.sourceName());
+			if (declaring instanceof CtPackageReference) {
+				ref.setPackage((CtPackageReference) declaring);
+			} else if (declaring instanceof CtTypeReference) {
+				ref.setDeclaringType((CtTypeReference) declaring);
+			}
+		}
+
+		return ref;
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromBinaryTypeBinding(BinaryTypeBinding binding) {
+		CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
+		if (binding.enclosingType() != null) {
+			ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+		} else {
+			CtPackageReference packageReference = getPackageReference(binding.getPackage());
+			ref.setPackage(packageReference);
+		}
+		ref.setSimpleName(new String(binding.sourceName()));
+
+		return ref;
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromTypeVariableBinding(
+			TypeVariableBinding binding, boolean resolveGeneric) {
+		if (binding instanceof CaptureBinding && ((CaptureBinding) binding).wildcard != null) {
+			return getTypeReference(((CaptureBinding) binding).wildcard, resolveGeneric);
+		} else if (binding instanceof CaptureBinding) {
+			CtWildcardReference wildcard = this.jdtTreeBuilder.getFactory().Core().createWildcardReference();
+			setBoundingTypeOnWildcardIfExists(wildcard, binding, resolveGeneric);
+			return wildcard;
+		} else if (resolveGeneric) {
+			//it is called e.g. by ExecutableReference, which must not use CtParameterTypeReference
+			//but it needs it's bounding type instead
+			return getTypeReferenceOfBoundingType(binding).clone();
+		} else {
+			CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeParameterReference();
+			ref.setSimpleName(new String(binding.sourceName()));
+			return ref;
+		}
+	}
+
+	private CtTypeReference<?> getTypeReferenceOfBoundingType(TypeVariableBinding binding) {
+		final boolean resolveGeneric = true;
+
+		ReferenceBinding superClass = binding.superclass;
+		ReferenceBinding[] superInterfaces = binding.superInterfaces();
+
+		if (isViableAsBoundingType(superClass)) {
+			return getTypeReference(superClass, resolveGeneric);
+		} else if (superInterfaces != null && superInterfaces.length == 1) {
+			// if the type parameter has a super interface, then we'll get it too, as a superclass
+			// type parameter can only extends an interface or a class, so we don't make the distinction
+			// in Spoon. Moreover we can only have one extends in a type parameter.
+			return getTypeReference(superInterfaces[0], resolveGeneric);
+		} else {
+			return jdtTreeBuilder.getFactory().Type().getDefaultBoundingType();
+		}
+	}
+
+	private boolean isViableAsBoundingType(ReferenceBinding binding) {
+		return binding != null
+				&& !"java.lang.Object".equals(CharOperation.toString(binding.compoundName))
+				&& !isParameterizedBindingCurrentlyBeingExplored(binding);
+	}
+
+	private boolean isParameterizedBindingCurrentlyBeingExplored(ReferenceBinding binding) {
+		// this case could happen with Enum<E extends Enum<E>> for example:
+		// in that case we only want to have E -> Enum -> E
+		// to conserve the same behavior as JavaReflectionTreeBuilder
+		return binding instanceof ParameterizedTypeBinding
+				&& exploringParameterizedBindings.containsKey(binding);
+	}
+
+	private void setBoundingTypeOnWildcardIfExists(
+			CtWildcardReference wildcard, TypeVariableBinding binding, boolean resolveGeneric) {
+		bindingCache.put(binding, wildcard);
+
+		if (binding.superclass != null && binding.firstBound == binding.superclass) {
+			CtTypeReference<?> boundingType = getTypeReference(binding.superclass, resolveGeneric);
+			wildcard.setBoundingType(boundingType);
+		} else if (binding.superInterfaces != null && binding.superInterfaces != Binding.NO_SUPERINTERFACES) {
+			setSuperInterfaceDerivedBoundingTypeOnWildcard(wildcard, binding, resolveGeneric);
+		}
+	}
+
+	private void setSuperInterfaceDerivedBoundingTypeOnWildcard(
+			CtWildcardReference wildcard, TypeVariableBinding binding, boolean resolveGeneric) {
+		List<CtTypeReference<?>> boundingTypes = new ArrayList<>();
+		if (!(wildcard.isDefaultBoundingType())) { // if it's object we can ignore it
+			boundingTypes.add(wildcard.getBoundingType());
+		}
+		for (ReferenceBinding superInterface : binding.superInterfaces) {
+			boundingTypes.add(getTypeReference(superInterface, resolveGeneric));
+		}
+		wildcard.setBoundingType(this.jdtTreeBuilder.getFactory().Type()
+				.createIntersectionTypeReferenceWithBounds(boundingTypes));
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromBaseTypeBinding(BaseTypeBinding binding) {
+		String name = new String(binding.sourceName());
+		//always create new TypeReference, because clonning from a cache clones invalid SourcePosition
+		CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
+		ref.setSimpleName(name);
+		return ref;
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromWildcardBinding(WildcardBinding binding) {
+		CtWildcardReference wref = this.jdtTreeBuilder.getFactory().Core().createWildcardReference();
+
+		if (binding.boundKind == Wildcard.SUPER) {
+			wref.setUpper(false);
+		}
+
+		if (binding.bound != null) {
+			if (bindingCache.containsKey(binding.bound)) {
+				wref.setBoundingType(getCtCircularTypeReference(binding.bound));
+			} else {
+				wref.setBoundingType(getTypeReference(binding.bound));
+			}
+		}
+
+		return wref;
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromLocalTypeBinding(LocalTypeBinding binding) {
+		CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
+		if (binding.isAnonymousType()) {
+			ref.setSimpleName(JDTTreeBuilderHelper.computeAnonymousName(binding.constantPoolName()));
+			ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+		} else {
+			ref.setSimpleName(new String(binding.sourceName()));
+			if (binding.enclosingMethod == null && binding.enclosingType() != null && binding.enclosingType() instanceof LocalTypeBinding) {
+				ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+			} else if (binding.enclosingMethod() != null) {
+				ref.setSimpleName(JDTTreeBuilderHelper.computeAnonymousName(binding.constantPoolName()));
+				ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+			}
+		}
+
+		return ref;
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromSourceTypeBinding(SourceTypeBinding binding) {
+		CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
+		if (binding.isAnonymousType()) {
+			ref.setSimpleName(JDTTreeBuilderHelper.computeAnonymousName(binding.constantPoolName()));
+			ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+		} else {
+			ref.setSimpleName(new String(binding.sourceName()));
+			if (binding.enclosingType() != null) {
+				ref.setDeclaringType(getTypeReference(binding.enclosingType()));
+			} else {
+				ref.setPackage(getPackageReference(binding.getPackage()));
+			}
+		}
+
+		return ref;
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromArrayBinding(ArrayBinding binding, boolean resolveGeneric) {
+		CtArrayTypeReference<Object> ref = this.jdtTreeBuilder.getFactory().Core().createArrayTypeReference();
+		CtTypeReference<?> outermostRef = ref;
+		for (int i = 1; i < binding.dimensions(); i++) {
+			CtArrayTypeReference<Object> tmp = this.jdtTreeBuilder.getFactory().Core().createArrayTypeReference();
+			ref.setComponentType(tmp);
+			ref = tmp;
+		}
+		ref.setComponentType(getTypeReference(binding.leafComponentType(), resolveGeneric));
+
+		return outermostRef;
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromProblemReferenceBinding(ProblemReferenceBinding binding) {
+		// Spoon is able to analyze also without the classpath
+		String readableName = String.valueOf(binding.readableName());
+		if (isParameterizedProblemReferenceBinding(binding)) {
+			// on some rare occasions, such as the one explained in #3951, the name of the problem
+			// binding contains type arguments. We currently ignore the type arguments themselves
+			// as parsing them is a massive pain, but we must strip them from the name.
+			readableName = readableName.substring(0, readableName.indexOf('<'));
+			jdtTreeBuilder.getFactory().getEnvironment().report(
+					null,
+					Level.WARN,
+					"Ignoring type parameters for problem binding: " + binding);
+		}
+
+		CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
+		ref.setSimpleName(stripPackageName(readableName));
+		final CtReference declaring = this.getDeclaringReferenceFromImports(binding.sourceName());
+		setPackageOrDeclaringType(ref, declaring);
+
+		return ref;
+	}
+
+	private static String stripPackageName(String fullyQualifiedName) {
+		// strip package name, assuming package names start with a lowercase letter
+		int s = 0;
+		while (Character.isLowerCase(fullyQualifiedName.charAt(s))) {
+			int idx = fullyQualifiedName.indexOf('.', s);
+			if (idx < 0) {
+				break;
+			}
+			s = idx + 1;
+		}
+		return fullyQualifiedName.substring(s);
+	}
+
+	private CtTypeReference<?> getTypeReferenceFromIntersectionTypeBinding(IntersectionTypeBinding18 binding) {
+		List<CtTypeReference<?>> boundingTypes = new ArrayList<>();
+		for (ReferenceBinding superInterface : binding.getIntersectingTypes()) {
+			boundingTypes.add(getTypeReference(superInterface));
+		}
+		return this.jdtTreeBuilder.getFactory().Type().createIntersectionTypeReferenceWithBounds(boundingTypes);
+	}
+
+	private CtTypeReference<?> getCtCircularTypeReference(TypeBinding b) {
+		return bindingCache.get(b).clone();
 	}
 
 	<T> CtFieldReference<T> getVariableReference(FieldBinding varbin) {
@@ -1021,14 +1236,6 @@ public class ReferenceBuilder {
 		return ref;
 	}
 
-	List<CtTypeReference<?>> getBoundedTypesReferences(TypeBinding[] genericTypeArguments) {
-		List<CtTypeReference<?>> res = new ArrayList<>(genericTypeArguments.length);
-		for (TypeBinding tb : genericTypeArguments) {
-			res.add(getBoundedTypeReference(tb));
-		}
-		return res;
-	}
-
 	/**
 	 * Sets {@code declaring} as inner of {@code ref}, as either the package or the declaring type
 	 */
@@ -1047,12 +1254,49 @@ public class ReferenceBuilder {
 				javaLangPackageReference.setSimpleName("java.lang");
 				ref.setPackage(javaLangPackageReference);
 			} catch (NoClassDefFoundError | ClassNotFoundException e) {
-				// in that case we consider the package should be the same as the current one. Fix #1293
-				ref.setPackage(jdtTreeBuilder.getContextBuilder().compilationUnitSpoon.getDeclaredPackage().getReference());
+				assert jdtTreeBuilder.getFactory().getEnvironment().getNoClasspath();
+				ContextBuilder ctx = jdtTreeBuilder.getContextBuilder();
+				if (containsStarImport(ctx.compilationunitdeclaration.imports)) {
+					// If there is an unresolved star import in noclasspath,
+					// we can't tell which package the type belongs to (#3337)
+					CtPackageReference pkgRef = jdtTreeBuilder.getFactory().Core().createPackageReference();
+					pkgRef.setImplicit(true);
+					ref.setPackage(pkgRef);
+				} else {
+					// otherwise the type must belong to the CU's package (#1293)
+					ref.setPackage(ctx.compilationUnitSpoon.getDeclaredPackage().getReference());
+				}
 			}
 		} else {
 			throw new AssertionError("unexpected declaring type: " + declaring.getClass() + " of " + declaring);
 		}
+	}
+
+	/**
+	 * Same as {@link #setPackageOrDeclaringType(CtTypeReference, CtReference)}, but ensures that the set declaring
+	 * type or package reference is made implicit.
+	 *
+	 * NOTE: Only a package/declaring type that's set by this method is made implicit, pre-existing references are
+	 * not modified (but they may be replaced).
+	 */
+	void setImplicitPackageOrDeclaringType(CtTypeReference<?> ref, CtReference declaring) {
+		CtTypeReference<?> oldDeclaring = ref.getDeclaringType();
+		CtPackageReference oldPackage = ref.getPackage();
+
+		setPackageOrDeclaringType(ref, declaring);
+		CtTypeReference<?> currentDeclaring = ref.getDeclaringType();
+		CtPackageReference currentPackage = ref.getPackage();
+
+		if (currentDeclaring != oldDeclaring) {
+			currentDeclaring.setImplicit(true);
+		}
+		if (currentPackage != oldPackage) {
+			currentPackage.setImplicit(true);
+		}
+	}
+
+	private static boolean containsStarImport(ImportReference[] imports) {
+		return imports != null && Arrays.stream(imports).anyMatch(imp -> imp.toString().endsWith("*"));
 	}
 
 	/**

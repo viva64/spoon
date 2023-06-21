@@ -22,7 +22,7 @@
 
 package fr.inria.controlflow;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.processing.AbstractProcessor;
 import spoon.processing.ProcessingManager;
 import spoon.reflect.declaration.CtMethod;
@@ -33,7 +33,7 @@ import java.io.PrintWriter;
 
 import static fr.inria.controlflow.BranchKind.BRANCH;
 import static fr.inria.controlflow.BranchKind.STATEMENT;
-import static junit.framework.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Created by marodrig on 14/10/2015.
@@ -161,7 +161,13 @@ public class ForwardFlowBuilderVisitorTest {
 	//Test some mixed conditions
 	@Test
 	public void testSwitch() throws Exception {
-		testMethod("switchTest", false, 1, 13, 28);
+		testMethod("switchTest", false, 1, 13, 29);
+	}
+
+	//Test fall-through of last switch case
+	@Test
+	public void testSwitchFallThrough() throws Exception {
+		testMethod("lastCaseFallThrough", false, 1, 4, 12);
 	}
 
 	//Test some mixed conditions

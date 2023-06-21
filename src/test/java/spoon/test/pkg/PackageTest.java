@@ -16,18 +16,35 @@
  */
 package spoon.test.pkg;
 
-import org.junit.Test;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.OutputType;
 import spoon.SpoonModelBuilder;
 import spoon.compiler.Environment;
 import spoon.compiler.SpoonResourceHelper;
+import spoon.reflect.CtModel;
 import spoon.reflect.code.CtComment;
+import spoon.reflect.code.CtTypeAccess;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtAnnotationType;
 import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtField;
+import spoon.reflect.declaration.CtInterface;
 import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtPackageReference;
 import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
@@ -38,23 +55,21 @@ import spoon.test.annotation.testclasses.GlobalAnnotation;
 import spoon.test.pkg.name.PackageTestClass;
 import spoon.test.pkg.processors.ElementProcessor;
 import spoon.test.pkg.testclasses.Foo;
+import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.nio.file.Files;
-import java.util.Collections;
-import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.Assert.assertThat;
 import static spoon.testing.utils.ModelUtils.canBeBuilt;
+import static spoon.testing.utils.ModelUtils.createFactory;
 
 public class PackageTest {
 
@@ -144,6 +159,22 @@ public class PackageTest {
 
 		assertThat(aPackage).isEqualTo(ModelUtils.build(new File("./target/spooned/package/spoon/test/pkg/testclasses/internal")).Package().get("spoon.test.pkg.testclasses.internal"));
 	}
+
+	@Test
+	public void testHandlesDuplicatePackageInfo(){
+		// contract: with setIgnoreDuplicateDeclarations(true), duplicated package-info.java files should be allowed
+
+		final Launcher launcher = new Launcher();
+		launcher.getEnvironment().setIgnoreDuplicateDeclarations(true);
+		launcher.addInputResource("./src/test/resources/duplicate-package-info");
+		launcher.run();
+
+		List<CtCompilationUnit> compilationUnits = new ArrayList<>(launcher.getFactory().CompilationUnit().getMap().values());
+
+		org.hamcrest.MatcherAssert.assertThat(compilationUnits.size(), equalTo(2));
+		compilationUnits.forEach(
+				cu -> org.hamcrest.MatcherAssert.assertThat(cu.getFile().getName(), equalTo("package-info.java")));
+	}
 	
 	@Test
 	public void testAnnotationInPackageInfoWhenTemplatesCompiled() throws Exception {
@@ -160,40 +191,31 @@ public class PackageTest {
 		canBeBuilt("./target/spooned/packageAndTemplate/spoon/test/pkg/package-info.java", 8);
 	}
 
-	@Test
-	public void testRenamePackageAndPrettyPrint() {
-		final Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/java/spoon/test/pkg/testclasses/Foo.java");
-		spoon.buildModel();
-
-		CtPackage ctPackage = spoon.getModel().getElements(new NamedElementFilter<>(CtPackage.class, "spoon")).get(0);
+	@ModelTest("./src/test/java/spoon/test/pkg/testclasses/Foo.java")
+	public void testRenamePackageAndPrettyPrint(CtModel model, Launcher launcher, Factory factory) {
+		CtPackage ctPackage = model.getElements(new NamedElementFilter<>(CtPackage.class, "spoon")).get(0);
 		ctPackage.setSimpleName("otherName");
 
-		CtClass foo = spoon.getModel().getElements(new NamedElementFilter<>(CtClass.class, "Foo")).get(0);
+		CtClass foo = model.getElements(new NamedElementFilter<>(CtClass.class, "Foo")).get(0);
 		assertEquals("otherName.test.pkg.testclasses.Foo", foo.getQualifiedName());
 
-		PrettyPrinter prettyPrinter = new DefaultJavaPrettyPrinter(spoon.getEnvironment());
-		prettyPrinter.calculate(spoon.getFactory().CompilationUnit().getOrCreate("./src/test/java/spoon/test/pkg/testclasses/Foo.java"), Collections.singletonList(foo));
+		PrettyPrinter prettyPrinter = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
+		prettyPrinter.calculate(factory.CompilationUnit().getOrCreate("./src/test/java/spoon/test/pkg/testclasses/Foo.java"), Collections.singletonList(foo));
 		String result = prettyPrinter.getResult();
 
 		assertTrue(result.contains("package otherName.test.pkg.testclasses;"));
 	}
 
-	@Test
-	public void testRenamePackageAndPrettyPrintNoclasspath() {
-		final Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/resources/noclasspath/app/Test.java");
-		spoon.getEnvironment().setNoClasspath(true);
-		spoon.buildModel();
-
-		CtPackage ctPackage = spoon.getModel().getElements(new NamedElementFilter<>(CtPackage.class, "app")).get(0);
+	@ModelTest("./src/test/resources/noclasspath/app/Test.java")
+	public void testRenamePackageAndPrettyPrintNoclasspath(CtModel model, Launcher launcher, Factory factory) {
+		CtPackage ctPackage = model.getElements(new NamedElementFilter<>(CtPackage.class, "app")).get(0);
 		ctPackage.setSimpleName("otherName");
 
-		CtClass foo = spoon.getModel().getElements(new NamedElementFilter<>(CtClass.class, "Test")).get(0);
+		CtClass foo = model.getElements(new NamedElementFilter<>(CtClass.class, "Test")).get(0);
 		assertEquals("otherName.Test", foo.getQualifiedName());
 
-		PrettyPrinter prettyPrinter = new DefaultJavaPrettyPrinter(spoon.getEnvironment());
-		prettyPrinter.calculate(spoon.getFactory().CompilationUnit().getOrCreate("./src/test/resources/noclasspath/app/Test.java"), Collections.singletonList(foo));
+		PrettyPrinter prettyPrinter = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
+		prettyPrinter.calculate(factory.CompilationUnit().getOrCreate("./src/test/resources/noclasspath/app/Test.java"), Collections.singletonList(foo));
 		String result = prettyPrinter.getResult();
 
 		assertTrue(result.contains("package otherName;"));
@@ -220,27 +242,17 @@ public class PackageTest {
 		}
 	}
 
-	@Test
-	public void testRenameRootPackage() {
-		final Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/resources/noclasspath/app/Test.java");
-		spoon.getEnvironment().setNoClasspath(true);
-		spoon.buildModel();
-
-		CtPackage rootPackage = spoon.getFactory().Package().getRootPackage();
+	@ModelTest("./src/test/resources/noclasspath/app/Test.java")
+	public void testRenameRootPackage(Factory factory) {
+		CtPackage rootPackage = factory.Package().getRootPackage();
 		String rootPackageName = rootPackage.getSimpleName();
 		rootPackage.setSimpleName("test");
 		assertEquals(rootPackageName, rootPackage.getSimpleName());
 	}
 
-	@Test
-	public void testRenameRootPackageWithNullOrEmpty() {
-		final Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/resources/noclasspath/app/Test.java");
-		spoon.getEnvironment().setNoClasspath(true);
-		spoon.buildModel();
-
-		CtPackage rootPackage = spoon.getFactory().Package().getRootPackage();
+	@ModelTest("./src/test/resources/noclasspath/app/Test.java")
+	public void testRenameRootPackageWithNullOrEmpty(Factory factory) {
+		CtPackage rootPackage = factory.Package().getRootPackage();
 		String rootPackageName = rootPackage.getSimpleName();
 		assertEquals(CtPackage.TOP_LEVEL_PACKAGE_NAME, rootPackageName);
 
@@ -251,25 +263,19 @@ public class PackageTest {
 		assertEquals(CtPackage.TOP_LEVEL_PACKAGE_NAME, rootPackageName);
 	}
 
-	@Test
-	public void testAddAnnotationToPackage() throws Exception {
+	@ModelTest(value = "./src/test/java/spoon/test/pkg/testclasses/Foo.java", autoImport = true)
+	public void testAddAnnotationToPackage(Launcher launcher, Factory factory) throws Exception {
 		// contract: Created package-info should used imports in auto-import
-		final Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/java/spoon/test/pkg/testclasses/Foo.java");
-		spoon.getEnvironment().setAutoImports(true);
 		File outputDir = new File("./target/spoon-packageinfo");
-		spoon.getEnvironment().setSourceOutputDirectory(outputDir);
+		launcher.getEnvironment().setSourceOutputDirectory(outputDir);
 
-		spoon.buildModel();
-
-		CtAnnotationType annotationType = (CtAnnotationType)spoon.getFactory().Annotation().get(GlobalAnnotation.class);
-		CtAnnotation annotation = spoon.getFactory().Core().createAnnotation();
+		CtAnnotationType annotationType = (CtAnnotationType) factory.Annotation().get(GlobalAnnotation.class);
+		CtAnnotation annotation = factory.Core().createAnnotation();
 		annotation.setAnnotationType(annotationType.getReference());
-		CtPackage ctPackage = spoon.getFactory().Package().get("spoon.test.pkg.testclasses");
+		CtPackage ctPackage = factory.Package().get("spoon.test.pkg.testclasses");
 		ctPackage.addAnnotation(annotation);
 
-
-		JavaOutputProcessor outputProcessor = spoon.createOutputWriter();
+		JavaOutputProcessor outputProcessor = launcher.createOutputWriter();
 		outputProcessor.process(ctPackage);
 
 		File packageInfo = new File(outputDir, "spoon/test/pkg/testclasses/package-info.java");
@@ -292,13 +298,25 @@ public class PackageTest {
 	}
 
 	@Test
-	public void testGetFQNSimple() {
-		// contract: CtPackageReference simple name is also the fully qualified name of its referenced package
-		final Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/java/spoon/test/pkg/testclasses/Foo.java");
-		spoon.buildModel();
+	public void testNoPackageAssumptionWithStarImportNoClasspath() {
+		// contract: The package of a type not on the classpath should not guessed if there is an unresolved star import
+		final Launcher launcher = new Launcher();
+		launcher.getEnvironment().setNoClasspath(true);
+		launcher.addInputResource("./src/test/resources/noclasspath/TypeAccessStarImport.java");
+		CtModel model = launcher.buildModel();
 
-		CtClass fooClass = spoon.getFactory().Class().get(Foo.class);
+		List<CtTypeAccess<?>> typeAccesses = model.getElements(e -> e.getAccessedType().getSimpleName().equals("SomeClass"));
+		assertEquals(1, typeAccesses.size(), "There should only be a single type access in the test source code");
+		CtPackageReference pkgRef = typeAccesses.get(0).getAccessedType().getPackage();
+
+		assertTrue(pkgRef.getSimpleName().isEmpty());
+		assertTrue(pkgRef.isImplicit());
+	}
+
+	@ModelTest("./src/test/java/spoon/test/pkg/testclasses/Foo.java")
+	public void testGetFQNSimple(Factory factory) {
+		// contract: CtPackageReference simple name is also the fully qualified name of its referenced package
+		CtClass fooClass = factory.Class().get(Foo.class);
 		CtField field = fooClass.getField("fieldList");
 		CtPackageReference fieldPkg = field.getType().getPackage();
 
@@ -306,20 +324,132 @@ public class PackageTest {
 		assertEquals("java.util", fieldPkg.getQualifiedName());
 	}
 
-	@Test
-	public void testGetFQNInNoClassPath() {
+	@ModelTest("./src/test/resources/noclasspath/TorIntegration.java")
+	public void testGetFQNInNoClassPath(Factory factory) {
 		// contract: CtPackageReference simple name is also the fully qualified name of its referenced package, even in noclasspath
-		final Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/resources/noclasspath/TorIntegration.java");
-		spoon.getEnvironment().setNoClasspath(true);
-		spoon.buildModel();
-
-		CtClass torClass = spoon.getFactory().Class().get("com.duckduckgo.mobile.android.util.TorIntegration");
+		CtClass torClass = factory.Class().get("com.duckduckgo.mobile.android.util.TorIntegration");
 
 		CtField field = torClass.getField("orbotHelper");
 		CtPackageReference fieldPkg = field.getType().getPackage();
 
 		assertEquals("info.guardianproject.onionkit.ui", fieldPkg.getSimpleName());
 		assertEquals("info.guardianproject.onionkit.ui", fieldPkg.getQualifiedName());
+	}
+
+	@Test
+	public void testAddTypeOverwritingSameName() {
+		// contract: Adding a type with the same name as an existing type to a package overwrites the existing
+		// See discussion in https://github.com/INRIA/spoon/pull/4076 for more information.
+		Factory factory = createFactory();
+		CtClass<?> barClass = factory.Class().create("test.Bar");
+		CtPackage thePackage = factory.Package().get(barClass.getPackage().getQualifiedName());
+
+		// The class is in there currently
+		assertSame(barClass, thePackage.getType("Bar"));
+
+		// Implicitly add an interface with the same name
+		CtInterface<?> barInterface = factory.Interface().create(barClass.getQualifiedName());
+		// The last type wins, so we now find the interface
+		assertSame(barInterface, thePackage.getType("Bar"));
+
+		// Re-add the class
+		thePackage.addType(barClass);
+		// The last type wins, so we now find the class again
+		assertSame(barClass, thePackage.getType("Bar"));
+	}
+
+	@Test
+	public void testTypeRename() {
+		// contract: Renaming a type removes the old one and keeps the new one.
+		// See discussion in https://github.com/INRIA/spoon/pull/4076 for more information.
+		Factory factory = createFactory();
+		CtClass<?> barClass = factory.Class().create("test.Bar");
+		CtPackage thePackage = factory.Package().get(barClass.getPackage().getQualifiedName());
+
+		// The class is in there currently
+		assertSame(barClass, thePackage.getType("Bar"));
+
+		barClass.setSimpleName("Foo");
+
+		assertNull(thePackage.getType("Bar"));
+		assertSame(barClass, thePackage.getType("Foo"));
+	}
+
+	@Test
+	public void testPackageRename() {
+		// contract: Renaming a package removes the old one and keeps the new one.
+		// See discussion in https://github.com/INRIA/spoon/pull/4076 for more information.
+		Factory factory = createFactory();
+		CtPackage rootPackage = factory.Package().create(null, "root");
+		CtPackage childPackage = factory.Package().create(rootPackage, "child");
+
+		// The class is in there currently
+		assertSame(childPackage, rootPackage.getPackage("child"));
+
+		childPackage.setSimpleName("renamed");
+
+		assertNull(rootPackage.getType("child"));
+		assertSame(childPackage, rootPackage.getPackage("renamed"));
+	}
+
+	@Test
+	public void testTypeRenameReplaceExisting() {
+		// contract: Renaming a type to an already existing type should replace the existing
+		// See discussion in https://github.com/INRIA/spoon/pull/4076 for more information.
+		Factory factory = createFactory();
+		CtClass<?> survivingClass = factory.Class().create("test.Surviving");
+		CtClass<?> overwrittenClass = factory.Class().create("test.Overwritten");
+		CtPackage thePackage = survivingClass.getPackage();
+
+		// In the beginning both are there, all is well
+		assertSame(survivingClass, thePackage.getType("Surviving"));
+		assertSame(overwrittenClass, thePackage.getType("Overwritten"));
+
+		// Rename to existing class! This is a conflict
+		survivingClass.setSimpleName(overwrittenClass.getSimpleName());
+
+		// Only the original class that was renamed remains
+		assertNull(thePackage.getType("Surviving"));
+		// This check is necessary as the old implementation kept both classes around but the query
+		// interface only exposed one.
+		assertEquals(Collections.singleton(survivingClass), thePackage.getTypes());
+		// The type can be found under its new name
+		assertSame(survivingClass, thePackage.getType("Overwritten"));
+	}
+
+	@Test
+	public void testPackageRenameReplaceExisting() {
+		// contract: Renaming a package to an already existing type should replace the existing
+		Factory factory = createFactory();
+		CtPackage rootPackage = factory.Package().create(null, "root");
+		CtPackage survivingPackage = factory.Package().create(rootPackage, "Surviving");
+		CtPackage overwrittenPackage = factory.Package().create(rootPackage, "Overwritten");
+
+		// In the beginning both are there, all is well
+		assertSame(survivingPackage, rootPackage.getPackage("Surviving"));
+		assertSame(overwrittenPackage, rootPackage.getPackage("Overwritten"));
+
+		// Rename to existing package! This is a conflict
+		survivingPackage.setSimpleName(overwrittenPackage.getSimpleName());
+
+		// Only the original package that was renamed remains
+		assertNull(rootPackage.getPackage("Surviving"));
+		// This check is necessary as the old implementation kept both packages around but the query
+		// interface only exposed one.
+		assertEquals(Collections.singleton(survivingPackage), rootPackage.getPackages());
+		// The package can be found under its new name
+		assertSame(survivingPackage, rootPackage.getPackage("Overwritten"));
+	}
+
+
+	@ModelTest("./src/test/resources/noclasspath/MultipleClasses.java")
+	public void testGetTypesReturnsTypesInDeclarationOrder(CtModel model) {
+		// contract: Types should be stored in declaration order. This is important for the
+		// sniper printer to produce consistent output.
+
+		var types = model.getRootPackage().getTypes();
+
+		var typeNames = types.stream().map(CtType::getSimpleName).collect(Collectors.toList());
+		assertEquals(typeNames, List.of("A", "D", "C", "B"));
 	}
 }

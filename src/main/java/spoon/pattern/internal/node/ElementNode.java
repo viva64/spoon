@@ -14,7 +14,6 @@ import spoon.metamodel.MetamodelProperty;
 import spoon.pattern.Quantifier;
 import spoon.pattern.internal.DefaultGenerator;
 import spoon.pattern.internal.ResultHolder;
-import spoon.pattern.internal.matcher.Matchers;
 import spoon.pattern.internal.matcher.TobeMatched;
 import spoon.pattern.internal.parameter.ParameterInfo;
 import spoon.reflect.declaration.CtElement;
@@ -122,7 +121,6 @@ public class ElementNode extends AbstractPrimitiveMatcher {
 		List<MapEntryNode> constantMatchers = new ArrayList<>(map.size());
 		//collect Entries with variable matcher keys
 		List<MapEntryNode> variableMatchers = new ArrayList<>();
-		Matchers last = null;
 		for (Map.Entry<?, ?> entry : map.entrySet()) {
 			MapEntryNode mem = new MapEntryNode(
 					create(entry.getKey(), patternElementToSubstRequests),
@@ -266,6 +264,7 @@ public class ElementNode extends AbstractPrimitiveMatcher {
 		@SuppressWarnings("rawtypes")
 		CtElement clone = generator.getFactory().Core().create((Class) elementType.getMetamodelInterface().getActualClass());
 		generateSingleNodeAttributes(generator, clone, parameters);
+		clone.setAllMetadata(templateElement.getAllMetadata());
 		generator.applyGeneratedBy(clone, generator.getGeneratedByComment(templateElement));
 		result.addResult((U) clone);
 	}
@@ -320,7 +319,7 @@ public class ElementNode extends AbstractPrimitiveMatcher {
 	}
 
 	protected ImmutableMap matchesRole(ImmutableMap parameters, CtElement target, MetamodelProperty mmField, RootNode attrNode) {
-		if (isMatchingRole(mmField.getRole(), elementType.getMetamodelInterface().getActualClass()) == false) {
+		if (!isMatchingRole(mmField.getRole(), elementType.getMetamodelInterface().getActualClass())) {
 			return parameters;
 		}
 		TobeMatched tobeMatched;

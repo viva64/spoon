@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -101,6 +101,7 @@ public enum CtRole {
 	COMMENT_CONTENT,
 	COMMENT_TYPE,
 	DOCUMENTATION_TYPE,
+	DOCUMENTATION_TYPE_REALNAME,
 	JAVADOC_TAG_VALUE,
 	POSITION,
 	SNIPPET,
@@ -117,7 +118,10 @@ public enum CtRole {
 	IS_INFERRED,
 	TYPE_REF,
 	LITERAL_BASE,
-	CASE_KIND;
+	CASE_KIND,
+	RECORD_COMPONENT,
+	COMPACT_CONSTRUCTOR,
+	PERMITTED_TYPE;
 
 	private final CtRole superRole;
 	private final List<CtRole> subRoles;

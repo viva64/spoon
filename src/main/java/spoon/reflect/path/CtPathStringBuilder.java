@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -27,8 +27,6 @@ import java.util.regex.Pattern;
  */
 public class CtPathStringBuilder {
 
-	private final Pattern pathPattern = Pattern.compile("([/.#])([^/.#\\[]+)(\\[([^/.#]*)\\])?");
-	private final Pattern argumentPattern = Pattern.compile("(\\w+)=([^=\\]]+)");
 
 
 	private Class load(String name) throws CtPathException {

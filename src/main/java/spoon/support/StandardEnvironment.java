@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -8,8 +8,7 @@
 package spoon.support;
 
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 import spoon.Launcher;
 import spoon.OutputType;
 import spoon.SpoonException;
@@ -19,7 +18,6 @@ import spoon.compiler.SpoonFile;
 import spoon.compiler.SpoonFolder;
 import spoon.compiler.builder.EncodingProvider;
 import spoon.processing.FileGenerator;
-import spoon.processing.ProblemFixer;
 import spoon.processing.ProcessingManager;
 import spoon.processing.Processor;
 import spoon.processing.ProcessorProperties;
@@ -27,7 +25,6 @@ import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtType;
-import spoon.reflect.declaration.ParentNotInitializedException;
 import spoon.reflect.visitor.DefaultImportComparator;
 import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
 import spoon.reflect.visitor.ForceFullyQualifiedProcessor;
@@ -44,12 +41,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -99,7 +100,7 @@ public class StandardEnvironment implements Serializable, Environment {
 
 	private transient  Logger logger = Launcher.LOGGER;
 
-	private Level level = Level.OFF;
+	private Level level = Level.ERROR;
 
 	private boolean shouldCompile = false;
 
@@ -121,11 +122,13 @@ public class StandardEnvironment implements Serializable, Environment {
 
 	private Boolean noclasspath = null;
 
-	private transient SpoonProgress spoonProgress = null;
+	private Boolean ignoreSyntaxErrors = false;
+
+	private transient SpoonProgress spoonProgress = new SpoonProgress() { /*anonymous class with empty methods*/ };
 
 	private CompressionType compressionType = CompressionType.GZIP;
 
-	private boolean sniperMode = false;
+	private boolean useLegacyTypeAdaption;
 
 	private boolean ignoreDuplicateDeclarations = false;
 
@@ -150,7 +153,7 @@ public class StandardEnvironment implements Serializable, Environment {
 
 	@Override
 	public void setAutoImports(boolean autoImports) {
-		if (autoImports == true) {
+		if (autoImports) {
 			prettyPrintingMode = PRETTY_PRINTING_MODE.AUTOIMPORT;
 		} else {
 			prettyPrintingMode = PRETTY_PRINTING_MODE.FULLYQUALIFIED;
@@ -196,7 +199,13 @@ public class StandardEnvironment implements Serializable, Environment {
 		if (level == null || level.isEmpty()) {
 			throw new SpoonException("Wrong level given at Spoon.");
 		}
-		return Level.toLevel(level, Level.ALL);
+		Level levelEnum;
+		try {
+			levelEnum = Level.valueOf(level);
+		} catch (IllegalArgumentException e) {
+			return Level.TRACE;
+		}
+		return levelEnum;
 	}
 
 	@Override
@@ -244,31 +253,37 @@ public class StandardEnvironment implements Serializable, Environment {
 		buffer.append(message);
 
 		// Add sourceposition (javac format)
-		try {
-			CtType<?> type = (element instanceof CtType) ? (CtType<?>) element : element.getParent(CtType.class);
-			SourcePosition sp = element.getPosition();
+		CtType<?> type = (element instanceof CtType) ? (CtType<?>) element : element.getParent(CtType.class);
+		SourcePosition sp = element.getPosition();
 
-			if (sp == null) {
-				buffer.append(" (Unknown Source)");
+		if (sp == null) {
+			buffer.append(" (Unknown Source)");
+		} else {
+			if (type != null) {
+				buffer.append(" at ")
+							.append(type.getQualifiedName())
+							.append(".");
 			} else {
-				buffer.append(" at " + type.getQualifiedName() + ".");
-				CtExecutable<?> exe = (element instanceof CtExecutable) ? (CtExecutable<?>) element : element.getParent(CtExecutable.class);
-				if (exe != null) {
-					buffer.append(exe.getSimpleName());
-				}
-				buffer.append("(" + sp.getFile().getName() + ":" + sp.getLine() + ")");
+				buffer.append("at (?).");
 			}
-		} catch (ParentNotInitializedException e) {
-			buffer.append(" (invalid parent)");
+			CtExecutable<?> exe = (element instanceof CtExecutable) ? (CtExecutable<?>) element : element.getParent(CtExecutable.class);
+			if (exe != null) {
+				buffer.append(exe.getSimpleName());
+			}
+			if (sp.getFile() != null) {
+				buffer.append("(")
+							.append(sp.getFile().getName())
+							.append(":")
+							.append(sp.getLine())
+							.append(")");
+			} else {
+				buffer.append("(?:?)");
+			}
 		}
 
 		print(buffer.toString(), level);
 	}
 
-	@Override
-	public void report(Processor<?> processor, Level level, CtElement element, String message, ProblemFixer<?>... fixes) {
-		report(processor, level, element, message);
-	}
 
 	@Override
 	public void report(Processor<?> processor, Level level, String message) {
@@ -281,8 +296,18 @@ public class StandardEnvironment implements Serializable, Environment {
 	}
 
 	private void print(String message, Level messageLevel) {
-		if (messageLevel.isMoreSpecificThan(this.level)) {
-			logger.log(messageLevel, message);
+		if (this.level != Level.OFF && messageLevel.toInt() <= this.level.toInt()) {
+			switch (messageLevel) {
+				case ERROR: logger.error(message);
+					break;
+				case WARN: logger.warn(message);
+					break;
+				case INFO: logger.info(message);
+					break;
+				case DEBUG: logger.debug(message);
+					break;
+				case TRACE: logger.trace(message);
+			}
 		}
 	}
 
@@ -414,14 +439,17 @@ private transient  ClassLoader inputClassloader;
 				if (onlyFileURLs) {
 					List<String> classpath = new ArrayList<>();
 					for (URL url : urls) {
-						classpath.add(url.getPath());
+						try {
+							classpath.add(Path.of(url.toURI()).toAbsolutePath().toString());
+						} catch (URISyntaxException | FileSystemNotFoundException | IllegalArgumentException ignored) {
+							classpath.add(URLDecoder.decode(url.getPath(), StandardCharsets.UTF_8));
+						}
 					}
 					setSourceClasspath(classpath.toArray(new String[0]));
 				} else {
 					throw new SpoonException("Spoon does not support a URLClassLoader containing other resources than local file.");
 				}
 			}
-			return;
 		}
 		this.classloader = aClassLoader;
 	}
@@ -520,6 +548,16 @@ private transient  ClassLoader inputClassloader;
 			this.noclasspath = true;
 		}
 		return noclasspath;
+	}
+
+	@Override
+	public void setIgnoreSyntaxErrors(boolean ignoreSyntaxErrors) {
+		this.ignoreSyntaxErrors = ignoreSyntaxErrors;
+	}
+
+	@Override
+	public boolean getIgnoreSyntaxErrors() {
+		return ignoreSyntaxErrors;
 	}
 
 	@Override
@@ -651,7 +689,7 @@ private transient  ClassLoader inputClassloader;
 	@Override
 	public PrettyPrinter createPrettyPrinterAutoImport() {
 		DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(this);
-		List<Processor<CtElement>> preprocessors = Collections.unmodifiableList(Arrays.<Processor<CtElement>>asList(
+		List<Processor<CtElement>> preprocessors = List.of(
 				//try to import as much types as possible
 				new ForceImportProcessor(),
 				//remove unused imports first. Do not add new imports at time when conflicts are not resolved
@@ -660,7 +698,7 @@ private transient  ClassLoader inputClassloader;
 				new ImportConflictDetector(),
 				//compute final imports
 				new ImportCleaner().setImportComparator(new DefaultImportComparator())
-		));
+		);
 		printer.setIgnoreImplicit(false);
 		printer.setPreprocessors(preprocessors);
 		return printer;
@@ -675,20 +713,19 @@ private transient  ClassLoader inputClassloader;
 
 
 			if (PRETTY_PRINTING_MODE.DEBUG.equals(prettyPrintingMode)) {
-				DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(this);
-				return printer;
+				return new DefaultJavaPrettyPrinter(this);
 			}
 
 			if (PRETTY_PRINTING_MODE.FULLYQUALIFIED.equals(prettyPrintingMode)) {
 				DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(this);
-				List<Processor<CtElement>> preprocessors = Collections.unmodifiableList(Arrays.<Processor<CtElement>>asList(
+				List<Processor<CtElement>> preprocessors = List.of(
 						//force fully qualified
 						new ForceFullyQualifiedProcessor(),
 						//solve conflicts, the current imports are relevant too
 						new ImportConflictDetector(),
 						//compute final imports
 						new ImportCleaner().setImportComparator(new DefaultImportComparator())
-				));
+				);
 				printer.setIgnoreImplicit(false);
 				printer.setPreprocessors(preprocessors);
 				return printer;
@@ -703,6 +740,18 @@ private transient  ClassLoader inputClassloader;
 	@Override
 	public void setPrettyPrinterCreator(Supplier<PrettyPrinter> creator) {
 		this.prettyPrinterCreator = creator;
+	}
+
+	@SuppressWarnings("removal")
+	@Override
+	public boolean useLegacyTypeAdaption() {
+		return useLegacyTypeAdaption;
+	}
+
+	@SuppressWarnings("removal")
+	@Override
+	public void setUseLegacyTypeAdaption(boolean useLegacyTypeAdaption) {
+		this.useLegacyTypeAdaption = useLegacyTypeAdaption;
 	}
 
 	@Override

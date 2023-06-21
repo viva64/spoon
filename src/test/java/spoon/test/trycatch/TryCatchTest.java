@@ -16,26 +16,6 @@
  */
 package spoon.test.trycatch;
 
-import org.apache.commons.lang3.StringUtils;
-import org.junit.Test;
-import spoon.Launcher;
-import spoon.SpoonModelBuilder;
-import spoon.reflect.CtModel;
-import spoon.reflect.code.CtCatch;
-import spoon.reflect.code.CtCatchVariable;
-import spoon.reflect.code.CtTry;
-import spoon.reflect.code.CtTryWithResource;
-import spoon.reflect.declaration.CtClass;
-import spoon.reflect.declaration.CtMethod;
-import spoon.reflect.declaration.ModifierKind;
-import spoon.reflect.factory.Factory;
-import spoon.reflect.reference.CtCatchVariableReference;
-import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.visitor.filter.AbstractFilter;
-import spoon.reflect.visitor.filter.TypeFilter;
-import spoon.support.reflect.CtExtendedModifier;
-import spoon.test.trycatch.testclasses.Foo;
-import spoon.test.trycatch.testclasses.Main;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,12 +25,46 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.commons.lang3.StringUtils;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import spoon.Launcher;
+import spoon.SpoonModelBuilder;
+import spoon.reflect.CtModel;
+import spoon.reflect.code.CtCatch;
+import spoon.reflect.code.CtCatchVariable;
+import spoon.reflect.code.CtResource;
+import spoon.reflect.code.CtTry;
+import spoon.reflect.code.CtTryWithResource;
+import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtVariable;
+import spoon.reflect.declaration.ModifierKind;
+import spoon.reflect.factory.Factory;
+import spoon.reflect.reference.CtCatchVariableReference;
+import spoon.reflect.reference.CtLocalVariableReference;
+import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.filter.AbstractFilter;
+import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.support.reflect.CtExtendedModifier;
+import spoon.test.trycatch.testclasses.Foo;
+import spoon.test.trycatch.testclasses.Main;
+import spoon.testing.utils.ModelTest;
+import spoon.testing.utils.LineSeparatorExtension;
+
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.ModelUtils.build;
 import static spoon.testing.utils.ModelUtils.createFactory;
 
@@ -171,7 +185,7 @@ public class TryCatchTest {
 				new TypeFilter<>(CtTryWithResource.class)).get(0);
 
 		// Checks try has only one resource.
-		assertTrue(ctTryWithResource.getResources().size() == 1);
+		assertEquals(1, ctTryWithResource.getResources().size());
 	}
 
 	@Test
@@ -291,7 +305,7 @@ public class TryCatchTest {
 		Set<CtExtendedModifier> extendedModifierSet = catchVariable.getExtendedModifiers();
 		assertEquals(1, extendedModifierSet.size());
 
-		assertEquals(new CtExtendedModifier(ModifierKind.FINAL, false), extendedModifierSet.iterator().next());
+		assertEquals(CtExtendedModifier.explicit(ModifierKind.FINAL), extendedModifierSet.iterator().next());
 
 		launcher = new Launcher();
 		launcher.addInputResource(inputResource);
@@ -319,5 +333,163 @@ public class TryCatchTest {
 		assertNotNull(catches.get(0).getParameter().getType()); // catch with single UnknownException
 		assertNull(catches.get(1).getParameter().getType()); // multicatch with UnknownException
 		assertNull(catches.get(2).getParameter().getType()); // multicatch with UnknownException
+	}
+
+	@Test
+	public void testCatchQualifiedReferenceNoClasspath() {
+		Launcher launcher = new Launcher();
+		launcher.getEnvironment().setNoClasspath(true);
+		launcher.addInputResource("./src/test/resources/noclasspath/CatchQualifiedReference.java");
+		CtModel model = launcher.buildModel();
+
+		List<CtCatch> catchers = model.getElements(e -> true);
+
+		assertEquals(1, catchers.size(), "There should only be one catch statement, check the resource");
+		CtTypeReference<?> caughtType = catchers.get(0).getParameter().getType();
+
+		assertEquals("CustomException", caughtType.getSimpleName());
+		assertEquals("some.neat.pkg.CustomException", caughtType.getQualifiedName());
+	}
+
+	@Test
+	public void testCatchUnqualifiedReferenceIsMarkedSimplyQualified() throws Exception {
+		// contract: An unqualified type reference in a catch clause should have its package marked implicit
+
+		CtClass<?> clazz = build("spoon.test.trycatch.testclasses", "CatchWithUnqualifiedType");
+		List<CtCatch> catches = clazz.getElements(e -> true);
+		assertEquals(1, catches.size());
+
+		CtCatch targetCatch = catches.get(0);
+		CtTypeReference<?> catchParamType = targetCatch.getParameter().getType();
+		assertTrue(catchParamType.isSimplyQualified());
+	}
+
+	@Test
+	public void testCatchUnqualifiedReferenceMarkedSimplyQualifiedWhenMultipleTypesAreSpecified() throws Exception {
+		// contract: Unqualified type references should have implicit packages when there are
+		// multiple types in a single catcher
+
+		CtClass<?> clazz = build(
+				"spoon.test.trycatch.testclasses", "MultipleUnqualifiedTypesInSingleCatcher");
+		List<CtCatch> catches = clazz.getElements(e -> true);
+		assertEquals(1, catches.size());
+
+		CtCatch targetCatch = catches.get(0);
+		List<CtTypeReference<?>> paramTypes = targetCatch.getParameter().getMultiTypes();
+		assertThat(paramTypes.size(), equalTo(2));
+		assertTrue(paramTypes.get(0).isSimplyQualified(), "first type reference is fully qualified");
+		assertTrue(paramTypes.get(1).isSimplyQualified(), "second type reference is fully qualified");
+	}
+
+	@Test
+	public void testCatchWithQualifiedAndUnqualifiedTypeReferencesInSameCatcher() throws Exception {
+		// contract: It should be possible for qualified and unqualified type references to exist in
+		// the same catcher
+
+		CtClass<?> clazz = build(
+				"spoon.test.trycatch.testclasses", "CatcherWithQualifiedAndUnqualifiedTypeRefs");
+		List<CtCatch> catches = clazz.getElements(e -> true);
+		assertEquals(1, catches.size());
+
+		CtCatch targetCatch = catches.get(0);
+		List<CtTypeReference<?>> paramTypes = targetCatch.getParameter().getMultiTypes();
+		assertThat(paramTypes.size(), equalTo(2));
+		assertTrue(paramTypes.get(0).isSimplyQualified(), "first type reference should be unqualified");
+		assertFalse(paramTypes.get(1).isSimplyQualified(), "second type reference should be qualified");
+	}
+
+	@ModelTest("src/test/resources/NonClosableGenericInTryWithResources.java")
+	public void testNonCloseableGenericTypeInTryWithResources(CtModel model) {
+		// contract: When a non-closeable generic type is used in a try-with-resources, it's type
+		// becomes a problem type in JDT, with the type parameters included in the compound name.
+		// This is as opposed to a parameterized type, so we need to take special care in parsing
+		// these problem types to make sure they are properly identified as parameterized types.
+		//
+		// Currently, we do NOT extract type references to type arguments for such bindings.
+		//
+		// This previously caused a crash, see https://github.com/INRIA/spoon/issues/3951
+
+		CtLocalVariableReference<?> varRef = model.filterChildren(CtLocalVariableReference.class::isInstance).first();
+
+		assertThat(varRef.getType().getQualifiedName(), equalTo("NonClosableGenericInTryWithResources.GenericType"));
+
+		// We don't extract the type arguments
+		assertThat(varRef.getType().getActualTypeArguments().size(), equalTo(0));
+	}
+
+	@ExtendWith(LineSeparatorExtension.class)
+	@Test
+	public void testTryWithVariableAsResource() {
+		Factory factory = createFactory();
+		factory.getEnvironment().setComplianceLevel(9);
+
+		// contract: a try with resource is modeled with CtTryWithResource
+		CtTryWithResource tryStmt = factory.Code().createCodeSnippetStatement("class A { public void m() throws Exception {" +
+				"java.lang.AutoCloseable resource = null;" +
+				"try(resource){}}}"
+			).compile().getElements(new TypeFilter<>(CtTryWithResource.class)).get(0);
+		List<CtResource<?>> resources = tryStmt.getResources();
+		assertEquals(1, resources.size());
+		final CtResource<?> ctResource = resources.get(0);
+		assertTrue(ctResource instanceof CtVariable);
+		assertEquals("resource", ((CtVariable<?>) ctResource).getSimpleName());
+
+		// contract: pretty-printing of existing resources works
+		assertEquals("try (resource) {\n}", tryStmt.toString());
+
+		// contract: removeResource does remove the resource
+		tryStmt.removeResource(ctResource);
+		assertEquals(0, tryStmt.getResources().size());
+		// contract: removeResource of nothing is graceful and accepts it
+		tryStmt.removeResource(ctResource);
+
+	}
+
+	@Nested
+	class AddCatcherAt {
+		@Test
+		void addsCatcherAtTheSpecifiedPosition() {
+			// contract: the catcher should be added at the specified position
+			// arrange
+			Factory factory = createFactory();
+
+			CtTry tryStatement = factory.createTry();
+
+			CtCatch first = createCatch(factory, IOException.class);
+			CtCatch second = createCatch(factory, ExceptionInInitializerError.class);
+			CtCatch third = createCatch(factory, NoSuchMethodException.class);
+
+			// act
+			tryStatement
+				.addCatcherAt(0, third)
+				.addCatcherAt(0, first)
+				.addCatcherAt(1, second);
+
+			// assert
+			assertThat(tryStatement.getCatchers(), contains(first, second, third));
+		}
+
+		@Test
+		void throwsOutOfBoundsException_whenPositionIsOutOfBounds() {
+			// contract: `addCatcherAt` should throw an out-of-bounds exception when the specified position is out of
+			// bounds of the catcher collection
+
+			// arrange
+			Factory factory = createFactory();
+
+			CtTry tryStatement = factory.createTry();
+			CtCatch catcherAtWrongPosition = createCatch(factory, Exception.class);
+
+			// act & assert
+			assertThrows(IndexOutOfBoundsException.class,
+					() -> tryStatement.addCatcherAt(1, catcherAtWrongPosition));
+		}
+
+		private <T extends Throwable> CtCatch createCatch(Factory factory, Class<T> typeToCatch) {
+			CtTypeReference<T> typeReference = factory.Type().createReference(typeToCatch);
+			return factory.createCatch().setParameter(
+					factory.createCatchVariable().setType(typeReference)
+			);
+		}
 	}
 }

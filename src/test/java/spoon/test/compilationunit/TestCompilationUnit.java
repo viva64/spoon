@@ -16,8 +16,18 @@
  */
 package spoon.test.compilationunit;
 
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.SpoonException;
 import spoon.compiler.SpoonFile;
@@ -36,21 +46,16 @@ import spoon.reflect.visitor.CtScanner;
 import spoon.support.reflect.cu.position.PartialSourcePositionImpl;
 import spoon.test.api.testclasses.Bar;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 /**
@@ -130,6 +135,22 @@ public class TestCompilationUnit {
 			// do nothing
 		}
 	}
+
+	@Test
+	public void testCompilationUnitInNamedModuleHasDeclaredTypes() {
+		// contract: Compilation units in named modules should have the expected declared types
+
+		final Launcher launcher = new Launcher();
+		launcher.getEnvironment().setComplianceLevel(9);
+		launcher.addInputResource("./src/test/resources/spoon/test/module/simple_module_with_code");
+		launcher.buildModel();
+
+		CtType<?> expectedType = launcher.getFactory().Type().get("fr.simplemodule.pack.SimpleClass");
+		CtCompilationUnit cu = launcher.getFactory().CompilationUnit().getOrCreate(expectedType);
+
+		assertThat(cu.getDeclaredTypes(), equalTo(Collections.singletonList(expectedType)));
+	}
+
 
 	@Test
 	public void testCompilationUnitSourcePosition() throws IOException {

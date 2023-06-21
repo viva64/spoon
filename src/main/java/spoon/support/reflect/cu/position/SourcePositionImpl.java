@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -15,13 +15,13 @@ import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.cu.position.NoSourcePosition;
 
 import java.io.File;
-import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * This immutable class represents the position of a Java program element in a source
  * file.
  */
-public class SourcePositionImpl implements SourcePosition, Serializable {
+public class SourcePositionImpl implements SourcePosition {
 
 	private static final long serialVersionUID = 1L;
 
@@ -227,7 +227,7 @@ public class SourcePositionImpl implements SourcePosition, Serializable {
 				throw new SpoonException("SourcePosition value must not be negative");
 			}
 			if (last > value) {
-				throw new SpoonException("SourcePosition values must be ascending or equal");
+				throw new SpoonException("SourcePosition values must be ascending or equal " + Arrays.toString(values));
 			}
 			last = value;
 		}

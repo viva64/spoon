@@ -16,29 +16,20 @@
  */
 package spoon.test.ctClass;
 
-import static org.hamcrest.CoreMatchers.notNullValue;
-
-import static org.hamcrest.core.Is.is;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-
-import static spoon.testing.utils.ModelUtils.build;
-import static spoon.testing.utils.ModelUtils.buildClass;
-import static spoon.testing.utils.ModelUtils.canBeBuilt;
 
 import java.io.File;
 import java.util.Set;
 
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
 
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
-import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtFieldAccess;
@@ -46,20 +37,38 @@ import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtNewClass;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.code.CtTypeAccess;
+import spoon.reflect.cu.position.NoSourcePosition;
+import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtConstructor;
+import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtArrayTypeReference;
-import spoon.reflect.reference.CtFieldReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
 import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.test.SpoonTestHelpers;
 import spoon.test.ctClass.testclasses.AnonymousClass;
 import spoon.test.ctClass.testclasses.Foo;
 import spoon.test.ctClass.testclasses.Pozole;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static spoon.test.SpoonTestHelpers.contentEquals;
+import static spoon.testing.utils.ModelUtils.build;
+import static spoon.testing.utils.ModelUtils.buildClass;
+import static spoon.testing.utils.ModelUtils.canBeBuilt;
 
 public class CtClassTest {
 
@@ -83,12 +92,12 @@ public class CtClassTest {
 		typeStringArrayArray.setComponentType(typeStringArray);
 		constructor = foo.getConstructor(typeStringArrayArray);
 		assertEquals(typeStringArrayArray, constructor.getParameters().get(0).getType());
-
 		// contract: one could add a type member that already exists (equals but not same) and modify it afterwards
 		// this adds some flexibility for client code
 		// see https://github.com/INRIA/spoon/issues/1862
 		CtConstructor cons = foo.getConstructors().toArray(new CtConstructor[0])[0].clone();
 		foo.addConstructor(cons);
+		int position = foo.getTypeMembers().indexOf(cons);
 		// as long as we have not changed the signature, getConstructors, which is based on signatures,
 		// thinks there is one single constructor (and that's OK)
 		assertEquals(3, foo.getConstructors().size());
@@ -96,7 +105,7 @@ public class CtClassTest {
 		// now that we have changed the signature we can call getConstructors safely
 		assertEquals(4, foo.getConstructors().size());
 		// we cloned the first constructor, so it has the same position, and comes before the 2nd and 3rd constructor
-		assertSame(cons, foo.getTypeMembers().get(1));
+		assertSame(cons, foo.getTypeMembers().get(position));
 		// the parent is set (the core problem described in the issue has been fixed)
 		assertSame(foo, cons.getParent());
 
@@ -107,6 +116,13 @@ public class CtClassTest {
 		foo.addConstructor(cons2);
 		// without position, it has been addded at the end
 		assertSame(cons2, foo.getTypeMembers().get(4));
+
+		// contract: setPositions sets the position of all children
+		NoSourcePosition position1 = new NoSourcePosition();
+		cons2.setPositions(position1);
+		for(CtElement el: cons2.getDirectChildren()) {
+			assertSame(position1, el.getPosition());
+		}
 	}
 
 	@Test
@@ -342,5 +358,68 @@ public class CtClassTest {
 		assertFalse(newClassInvocationCloned.toString().isEmpty());
 
 		assertEquals(newClassInvocation.toString(), newClassInvocationCloned.toString());
+	}
+
+	@Test
+	@Timeout(unit = TimeUnit.MILLISECONDS, value = 5000L)
+	public void test_buildParameterizedClass_withTypeParameterUsedInQualifiedName() {
+		// contract: It should be possible to build a generic class when one of the type parameters
+		// is used in the qualified name of another type.
+        //
+		// See https://github.com/INRIA/spoon/issues/3903
+
+		CtClass<?> cls = Launcher.parseClass(
+				"public class Main<T extends java.util.Map<String, String>> { "
+				// Here we add a field with type `T.Entry`, i.e. T is used in a qualified type name
+				+ "T.Entry<String, String> entry; }");
+
+		CtField<?> field = cls.getField("entry");
+		assertThat(field.getType().getQualifiedName(), equalTo("T$Entry"));
+		assertThat(field.getType().isSimplyQualified(), is(false));
+	}
+
+	@Test
+	public void testRemoveAnnotation() {
+		// contract: removeAnnotation returns true after removing an annotation of a class containing a single
+		// annotation, and returns false when a non existing annotation is tried to be removed
+
+		// arrange
+		CtClass<?> annotatedClass = Launcher.parseClass("@SuppressWarnings(\"unchecked\") class Annotated { }");
+		assertEquals(1, annotatedClass.getAnnotations().size());
+		CtAnnotation<?> annotationToBeRemoved = annotatedClass.getAnnotations().get(0);
+
+		// act
+		boolean firstRemovalSuccessful = annotatedClass.removeAnnotation(annotationToBeRemoved);
+		boolean secondRemovalSuccessful = annotatedClass.removeAnnotation(annotationToBeRemoved);
+
+		// assert
+		assertEquals(0, annotatedClass.getAnnotations().size());
+		assertTrue(firstRemovalSuccessful);
+		assertFalse(secondRemovalSuccessful);
+	}
+
+	@org.junit.jupiter.api.Test
+	void testLocalClassExists() {
+		// contract: local classes and their members are part of the model
+		String code = SpoonTestHelpers.wrapLocal(
+				"		class MyClass {\n" +
+						"			private int field = 2;\n" +
+						"			public void doNothing() { }\n" +
+						"		}\n"
+		);
+		CtModel model = SpoonTestHelpers.createModelFromString(code, 5);
+		CtBlock<?> block = SpoonTestHelpers.getBlock(model);
+
+		MatcherAssert.assertThat("The local class does not exist in the model", block.getStatements().size(), CoreMatchers.is(1));
+
+		CtStatement statement = block.getStatement(0);
+		Assertions.assertTrue(statement instanceof CtClass<?>);
+		CtClass<?> clazz = (CtClass<?>) statement;
+
+		MatcherAssert.assertThat(clazz.isLocalType(), CoreMatchers.is(true));
+		MatcherAssert.assertThat(clazz.getSimpleName(), CoreMatchers.is("1MyClass"));
+		MatcherAssert.assertThat(clazz.getFields().size(), CoreMatchers.is(1));
+		MatcherAssert.assertThat(clazz.getMethods().size(), CoreMatchers.is(1));
+		MatcherAssert.assertThat(clazz.getExtendedModifiers(), contentEquals());
 	}
 }

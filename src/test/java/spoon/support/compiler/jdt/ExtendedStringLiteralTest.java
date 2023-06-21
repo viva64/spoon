@@ -16,12 +16,12 @@
  */
 package spoon.support.compiler.jdt;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.env.INameEnvironment;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import spoon.Launcher;
 import spoon.SpoonModelBuilder;
@@ -29,6 +29,7 @@ import spoon.compiler.SpoonResourceHelper;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtField;
+import spoon.support.Level;
 import spoon.support.compiler.jdt.testclasses.ExtendedStringLiteralTestClass;
 
 public class ExtendedStringLiteralTest {
@@ -58,9 +59,8 @@ public class ExtendedStringLiteralTest {
 								compilerOptions.parseLiteralExpressionsAsConstants = true;
 
 								TreeBuilderCompiler treeBuilderCompiler = new TreeBuilderCompiler(
-										environment, getHandlingPolicy(), compilerOptions,
-										this.jdtCompiler.requestor, getProblemFactory(), this.out,
-										null);
+										environment, getHandlingPolicy(), compilerOptions, this.jdtCompiler.requestor,
+										getProblemFactory(), this.out, false, Level.ERROR, null);
 								return treeBuilderCompiler.buildUnits(getCompilationUnits());
 							}
 						};

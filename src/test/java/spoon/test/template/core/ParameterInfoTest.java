@@ -1,10 +1,10 @@
 package spoon.test.template.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import spoon.pattern.internal.parameter.ListParameterInfo;
 import spoon.pattern.internal.parameter.MapParameterInfo;
@@ -39,10 +39,10 @@ public class ParameterInfoTest {
 		assertEquals("year", ((ParameterInfo) new MapParameterInfo("year").setContainerKind(ContainerKind.LIST)).getName());
 		assertEquals("year", new ListParameterInfo(new MapParameterInfo("year")).getName());
 		assertEquals("year", new ListParameterInfo(new MapParameterInfo("year").setContainerKind(ContainerKind.LIST)).getName());
-		assertEquals("year[7]", new ListParameterInfo(7, new MapParameterInfo("year")).getName());
-		assertEquals("year[7]", new ListParameterInfo(new ListParameterInfo(7, new MapParameterInfo("year"))).getName());
-		assertEquals("year[7][2]", new ListParameterInfo(2, new ListParameterInfo(7, new MapParameterInfo("year"))).getName());
-		assertEquals("year[7][2].age", new MapParameterInfo("age", new ListParameterInfo(2, new ListParameterInfo(7, new MapParameterInfo("year")))).getName());
+		assertEquals("year_7_", new ListParameterInfo(7, new MapParameterInfo("year")).getName());
+		assertEquals("year_7_", new ListParameterInfo(new ListParameterInfo(7, new MapParameterInfo("year"))).getName());
+		assertEquals("year_7__2_", new ListParameterInfo(2, new ListParameterInfo(7, new MapParameterInfo("year"))).getName());
+		assertEquals("year_7__2_.age", new MapParameterInfo("age", new ListParameterInfo(2, new ListParameterInfo(7, new MapParameterInfo("year")))).getName());
 		
 		assertEquals("year", ((ParameterInfo) new MapParameterInfo("year").setContainerKind(ContainerKind.SET)).getName());
 		assertEquals("year", new SetParameterInfo(new MapParameterInfo("year")).getName());

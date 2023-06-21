@@ -16,7 +16,16 @@
  */
 package spoon.test.type;
 
-import org.junit.Test;
+
+import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.BinaryOperatorKind;
@@ -42,22 +51,15 @@ import spoon.support.SpoonClassNotFoundException;
 import spoon.test.type.testclasses.Mole;
 import spoon.test.type.testclasses.Pozole;
 import spoon.test.type.testclasses.TypeMembersOrder;
+import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.ModelUtils.buildClass;
 import static spoon.testing.utils.ModelUtils.canBeBuilt;
 import static spoon.testing.utils.ModelUtils.createFactory;
@@ -111,16 +113,9 @@ public class TypeTest {
 		assertFalse(op.getRightHandOperand().getType().isPrimitive());
 	}
 
-	@Test
-	public void testTypeAccessForTypeAccessInInstanceOf() {
+	@ModelTest("./src/test/java/spoon/test/type/testclasses")
+	public void testTypeAccessForTypeAccessInInstanceOf(Launcher launcher) {
 		// contract: the right hand operator must be a CtTypeAccess.
-		final String target = "./target/type";
-		final Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/java/spoon/test/type/testclasses");
-		launcher.setSourceOutputDirectory(target);
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.run();
-
 		final CtClass<Pozole> aPozole = launcher.getFactory().Class().get(Pozole.class);
 		final CtMethod<?> eat = aPozole.getMethodsByName("eat").get(0);
 
@@ -182,14 +177,9 @@ public class TypeTest {
 		assertFalse(typeAccesses.getAccessedType().isImplicit());
 	}
 
-	@Test
-	public void test() {
-		final Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/noclasspath/TorIntegration.java");
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.buildModel();
-
-		CtType<?> ctType = launcher.getFactory().Class().getAll().get(0);
+	@ModelTest("./src/test/resources/noclasspath/TorIntegration.java")
+	public void test(Factory factory) {
+		CtType<?> ctType = factory.Class().getAll().get(0);
 		List<CtNewClass> elements = ctType.getElements(new TypeFilter<>(CtNewClass.class));
 		assertEquals(4, elements.size());
 		for (CtNewClass ctNewClass : elements) {
@@ -327,21 +317,16 @@ public class TypeTest {
 		assertNotNull(factory.Enum().create("fr.inria.ETest").getReference().getDeclaration());
 	}
 
-	@Test
-	public void testPolyTypBindingInTernaryExpression() {
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/noclasspath/ternary-bug");
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.buildModel();
-
-		CtType<Object> aType = launcher.getFactory().Type().get("de.uni_bremen.st.quide.persistence.transformators.IssueTransformator");
+	@ModelTest("./src/test/resources/noclasspath/ternary-bug")
+	public void testPolyTypBindingInTernaryExpression(Factory factory) {
+		CtType<Object> aType = factory.Type().get("de.uni_bremen.st.quide.persistence.transformators.IssueTransformator");
 		CtConstructorCall ctConstructorCall = aType.getElements(new TypeFilter<CtConstructorCall>(CtConstructorCall.class) {
 			@Override
 			public boolean matches(CtConstructorCall element) {
 				return "TOIssue".equals(element.getExecutable().getType().getSimpleName()) && super.matches(element);
 			}
 		}).get(0);
-		assertEquals(launcher.getFactory().Type().objectType(), ctConstructorCall.getExecutable().getParameters().get(9));
+		assertEquals(factory.Type().objectType(), ctConstructorCall.getExecutable().getParameters().get(9));
 	}
 
 	@Test
@@ -401,17 +386,9 @@ public class TypeTest {
 
 	}
 
-	@Test
-	public void testTypeMemberOrder() {
-		// contract: The TypeMembers keeps order of members same like in source file 
-		final String target = "./target/type";
-		final Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/java/spoon/test/type/testclasses/TypeMembersOrder.java");
-		launcher.setSourceOutputDirectory(target);
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.run();
-
-		Factory f = launcher.getFactory();
+	@ModelTest("./src/test/java/spoon/test/type/testclasses/TypeMembersOrder.java")
+	public void testTypeMemberOrder(Factory f) {
+		// contract: The TypeMembers keeps order of members same like in source file
 		final CtClass<?> aTypeMembersOrder = f.Class().get(TypeMembersOrder.class);
 		{
 			List<String> typeMemberNames = new ArrayList<>();

@@ -16,8 +16,13 @@
  */
 package spoon.test.annotation;
 
-import org.junit.Test;
+import java.lang.annotation.Annotation;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
+import spoon.SpoonAPI;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtFieldAccess;
@@ -30,17 +35,16 @@ import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
+import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.test.annotation.testclasses.AnnotationValues;
 import spoon.test.annotation.testclasses.BoundNumber;
+import spoon.test.annotation.testclasses.Summary;
 
-import java.lang.annotation.Annotation;
-import java.util.HashSet;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.test.annotation.AnnotationValuesTest.Request.on;
 import static spoon.testing.utils.ModelUtils.buildClass;
 import static spoon.testing.utils.ModelUtils.createFactory;
@@ -142,8 +146,10 @@ public class AnnotationValuesTest {
 		launcher.getEnvironment().setCommentEnabled(false); // avoid getting the comment for the equals
 		launcher.buildModel();
 
-		assertEquals(strCtClassOracle,
-				launcher.getFactory().Class().getAll().get(0).getElements(new TypeFilter<>(CtClass.class)).get(2).toString());
+		assertEquals(
+				strCtClassOracle,
+				launcher.getFactory().Class().getAll().get(0).getElements(new TypeFilter<>(CtClass.class)).get(2).toString()
+		);
 	}
 
 	private static final String nl = System.lineSeparator();
@@ -175,7 +181,7 @@ public class AnnotationValuesTest {
 		}
 
 		public Request giveMeAnnotationValue(String key) {
-			assertTrue("Element given in the method on should be an CtAnnotation.", element instanceof CtAnnotation);
+			assertTrue(element instanceof CtAnnotation, "Element given in the method on should be an CtAnnotation.");
 			CtAnnotation<?> ctAnnotation = (CtAnnotation<?>) element;
 			CtExpression value = null;
 			try {
@@ -201,5 +207,23 @@ public class AnnotationValuesTest {
 			assertEquals(0, element.getAnnotations().size());
 			return myself;
 		}
+	}
+
+	@Test
+	public void testIssue3639() {
+		SpoonAPI spoon = new Launcher();
+
+		CtTypeReference<Summary> typeRef = spoon.getFactory().createCtTypeReference(Summary.class);
+		CtAnnotation<Summary> annotation = spoon.getFactory().createAnnotation(typeRef);
+
+		annotation.addValue("title", "First summary");
+		annotation.addValue("date", "2020-10-05");
+
+		//contract: All added values are added to the annotations
+		assertEquals(2, annotation.getAllValues().size());
+		assertTrue(annotation.getAllValues().containsKey("title"));
+		assertTrue(annotation.getAllValues().containsKey("date"));
+		assertEquals("\"First summary\"", annotation.getAllValues().get("title").toString());
+		assertEquals("\"2020-10-05\"", annotation.getAllValues().get("date").toString());
 	}
 }

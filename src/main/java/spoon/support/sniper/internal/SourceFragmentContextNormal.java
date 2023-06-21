@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -55,6 +55,6 @@ public class SourceFragmentContextNormal extends AbstractSourceFragmentPrinter {
 	public void onFinished() {
 		//we are at the end of this element. Printer just tries to print something out of this context.
 		//print fragment suffix
-		printSpaces(childFragments.size());
+		printSpaces(childFragmentIdx + 1, childFragments.size());
 	}
 }

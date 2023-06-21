@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -124,6 +124,11 @@ public class CtConstructorCallImpl<T> extends CtTargetedExpressionImpl<T, CtExpr
 	}
 
 	@Override
+	public <C extends CtAbstractInvocation<T>> C addArgumentAt(int position, CtExpression<?> argument) {
+		return addArgument(position, argument);
+	}
+
+	@Override
 	public void removeArgument(CtExpression<?> argument) {
 		if (arguments == CtElementImpl.<CtExpression<?>>emptyList()) {
 			return;
@@ -190,7 +195,7 @@ public class CtConstructorCallImpl<T> extends CtTargetedExpressionImpl<T, CtExpr
 
 	@Override
 	@DerivedProperty
-	public <C extends CtTypedElement> C setType(CtTypeReference<T> type) {
+	public <C extends CtTypedElement> C setType(CtTypeReference type) {
 		if (type != null) {
 			type.setParent(this);
 		}

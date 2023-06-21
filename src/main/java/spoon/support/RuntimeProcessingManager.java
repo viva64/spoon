@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,7 +7,6 @@
  */
 package spoon.support;
 
-import org.apache.logging.log4j.Level;
 import spoon.processing.ProcessInterruption;
 import spoon.processing.ProcessingManager;
 import spoon.processing.Processor;

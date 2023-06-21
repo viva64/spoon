@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -52,6 +52,10 @@ public class ForceFullyQualifiedProcessor extends ImportAnalyzer<LexicalScope> {
 			if (isSupertypeOfNewClass(reference)) {
 				//it is a super type of new anonymous class
 				//do not use FQ names for that
+				return;
+			}
+			if (role == CtRole.PERMITTED_TYPE) {
+				// implicit permitted types are present in the same CU and don't need to be imported
 				return;
 			}
 			//force fully qualified name

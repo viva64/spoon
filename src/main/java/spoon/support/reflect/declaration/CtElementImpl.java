@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,17 +7,18 @@
  */
 package spoon.support.reflect.declaration;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import spoon.reflect.ModelElementContainerDefaultCapacities;
 import spoon.reflect.annotations.MetamodelPropertyField;
+import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtComment;
-import spoon.reflect.cu.CompilationUnit;
+import spoon.reflect.code.CtStatement;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtAnnotation;
+import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtNamedElement;
-import spoon.reflect.declaration.CtShadowable;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.ParentNotInitializedException;
 import spoon.reflect.factory.Factory;
@@ -52,9 +53,8 @@ import spoon.support.visitor.TypeReferenceScanner;
 import spoon.support.visitor.equals.CloneHelper;
 import spoon.support.visitor.equals.EqualsVisitor;
 import spoon.support.visitor.replace.ReplacementVisitor;
-
-import java.io.Serializable;
 import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -70,9 +70,9 @@ import static spoon.reflect.visitor.CommentHelper.printComment;
  * Contains the default implementation of most CtElement methods.
  *
  */
-public abstract class CtElementImpl implements CtElement, Serializable {
+public abstract class CtElementImpl implements CtElement {
 	private static final long serialVersionUID = 1L;
-	protected static final Logger LOGGER = LogManager.getLogger();
+	protected static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 	public static final String ERROR_MESSAGE_TO_STRING = "Error in printing the node. One parent isn't initialized!";
 	private static final Factory DEFAULT_FACTORY = new FactoryImpl(new DefaultCoreFactory(), new StandardEnvironment());
 
@@ -89,7 +89,10 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 		return list.isEmpty() ? Collections.<T>emptyList() : Collections.unmodifiableList(list);
 	}
 
-	Factory factory;
+	/** this field `factory` must be transient in order to allow proper serialization
+	 * the factory is restored in all AST nodes in {@link spoon.support.SerializationModelStreamer}
+	 */
+	protected transient Factory factory;
 
 	protected CtElement parent;
 
@@ -123,7 +126,7 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 		boolean ret = EqualsVisitor.equals(this, (CtElement) o);
 		// neat online testing of core Java contract
 		if (ret && !factory.getEnvironment().checksAreSkipped() && this.hashCode() != o.hashCode()) {
-			throw new IllegalStateException("violation of equal/hashcode contract between \n" + this.toString() + "\nand\n" + o.toString() + "\n");
+			throw new IllegalStateException("violation of equal/hashcode contract between \n" + this + "\nand\n" + o + "\n");
 		}
 		return ret;
 	}
@@ -164,9 +167,6 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 
 	@Override
 	public List<CtAnnotation<? extends Annotation>> getAnnotations() {
-		if (this instanceof CtShadowable) {
-			CtShadowable shadowable = (CtShadowable) this;
-		}
 		return unmodifiableList(annotations);
 	}
 
@@ -198,6 +198,7 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 	@Override
 	public <E extends CtElement> E setAnnotations(List<CtAnnotation<? extends Annotation>> annotations) {
 		if (annotations == null || annotations.isEmpty()) {
+			getFactory().getEnvironment().getModelChangeListener().onListDeleteAll(this, CtRole.ANNOTATION, this.annotations, new ArrayList<>(this.annotations));
 			this.annotations = emptyList();
 			return (E) this;
 		}
@@ -364,7 +365,7 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 	}
 
 	@Override
-	public <E extends CtElement> E setParent(E parent) {
+	public <E extends CtElement> E setParent(CtElement parent) {
 		this.parent = parent;
 		return (E) this;
 	}
@@ -375,36 +376,33 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public <P extends CtElement> P getParent(Class<P> parentType) throws ParentNotInitializedException {
-		if (parent == null) {
-			return null;
+	public <P extends CtElement> P getParent(Class<P> parentType) {
+		CtElement current = this;
+		while (current.isParentInitialized()) {
+			current = current.getParent();
+			if (parentType.isAssignableFrom(current.getClass())) {
+				return parentType.cast(current);
+			}
 		}
-		if (parentType.isAssignableFrom(getParent().getClass())) {
-			return (P) getParent();
-		}
-		return getParent().getParent(parentType);
+
+		return null;
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <E extends CtElement> E getParent(Filter<E> filter) throws ParentNotInitializedException {
-		E current = (E) getParent();
-		while (true) {
+	public <E extends CtElement> E getParent(Filter<E> filter) {
+		CtElement current = this;
+		while (current.isParentInitialized()) {
+			current = current.getParent();
 			try {
-				while (current != null && !filter.matches(current)) {
-					current = (E) current.getParent();
+				if (filter.matches((E) current)) {
+					return (E) current;
 				}
-				break;
-			} catch (ClassCastException e) {
+			} catch (ClassCastException ignored) {
 				// expected, some elements are not of type
-				current = (E) current.getParent();
 			}
 		}
 
-		if (current != null && filter.matches(current)) {
-			return current;
-		}
 		return null;
 	}
 
@@ -507,7 +505,7 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 	@Override
 	public Set<String> getMetadataKeys() {
 		if (metadata == null) {
-			return Collections.EMPTY_SET;
+			return Collections.emptySet();
 		}
 		return metadata.keySet();
 	}
@@ -591,12 +589,31 @@ public abstract class CtElementImpl implements CtElement, Serializable {
 	@Override
 	public ElementSourceFragment getOriginalSourceFragment() {
 		SourcePosition sp = this.getPosition();
-		CompilationUnit compilationUnit = sp.getCompilationUnit();
+		CtCompilationUnit compilationUnit = sp.getCompilationUnit();
 		if (compilationUnit != null) {
 			ElementSourceFragment rootFragment = compilationUnit.getOriginalSourceFragment();
 			return rootFragment.getSourceFragmentOf(this, sp.getSourceStart(), sp.getSourceEnd() + 1);
 		} else {
 			return ElementSourceFragment.NO_SOURCE_FRAGMENT;
+		}
+	}
+
+	/**
+	 * Replace the statement with a CtComment having the statement as text
+	 */
+	public void comment() {
+		if (this instanceof CtStatement && getParent() instanceof CtBlock) {
+			if (this instanceof CtComment) {
+				return;
+			}
+			final String stmt = toString();
+			if (stmt.contains(CtComment.LINE_SEPARATOR)) {
+				this.replace(getFactory().Code().createComment(stmt, CtComment.CommentType.BLOCK)); // Multi line comment
+			} else {
+				this.replace(getFactory().Code().createInlineComment(stmt + ';')); // Single line comment
+			}
+		} else {
+			throw new UnsupportedOperationException("Only CtStatement within CtBlock or CtBlock as a method body can be commented out");
 		}
 	}
 

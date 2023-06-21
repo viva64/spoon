@@ -16,8 +16,7 @@
  */
 package spoon.test.initializers;
 
-import org.junit.Test;
-import spoon.Launcher;
+import org.junit.jupiter.api.Test;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtLiteral;
@@ -28,10 +27,11 @@ import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.test.imports.ImportTest;
+import spoon.testing.utils.ModelTest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static spoon.testing.utils.ModelUtils.build;
 
 public class InitializerTest {
@@ -46,11 +46,6 @@ public class InitializerTest {
 		CtAnonymousExecutable staticBlock = type.getElements(new TypeFilter<>(CtAnonymousExecutable.class)).get(0);
 		assertTrue(staticBlock.getModifiers().contains(ModifierKind.STATIC));
 		assertEquals(1, staticBlock.getBody().getStatements().size());
-
-		// this fails: regression or known bug?
-		// RP: this look OK. Spoon adds the full path
-		// assertEquals("InternalClass.tmp = \"nop\"",
-		// staticBlock.getBody().getStatements().get(0).toString());
 	}
 
 	@Test
@@ -79,13 +74,8 @@ public class InitializerTest {
 		assertEquals("x = 3", ex.getBody().getStatements().get(0).toString());
 	}
 
-	@Test
-	public void testModelBuildingInitializerNoclasspath() {
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/noclasspath/initializer/Utf8HttpResponse.java");
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.getEnvironment().setAutoImports(true);
-		CtModel model = launcher.buildModel();
+	@ModelTest(value = "./src/test/resources/noclasspath/initializer/Utf8HttpResponse.java", autoImport = true)
+	public void testModelBuildingInitializerNoclasspath(CtModel model) {
 		CtClass<?> ctClass = model.getElements(new NamedElementFilter<>(CtClass.class, "Utf8HttpResponse")).get(0);
 
 		CtAnonymousExecutable ex = ctClass.getElements(new TypeFilter<>(CtAnonymousExecutable.class)).get(0);

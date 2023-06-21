@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -14,11 +14,13 @@ import java.util.Objects;
 import spoon.SpoonException;
 import spoon.reflect.code.CtComment;
 import spoon.reflect.cu.SourcePositionHolder;
+import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.path.CtRole;
 
 import static spoon.support.sniper.internal.ElementSourceFragment.findIndexOfNextFragment;
 import static spoon.support.sniper.internal.ElementSourceFragment.filter;
 import static spoon.support.sniper.internal.ElementSourceFragment.checkCollectionItems;
+import static spoon.support.sniper.internal.ElementSourceFragment.isCommentFragment;
 import static spoon.support.sniper.internal.ElementSourceFragment.isSpaceFragment;
 
 /**
@@ -33,7 +35,7 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 	protected final List<SourceFragment> childFragments;
 	protected final ChangeResolver changeResolver;
 	//no child fragment is current at the beginning
-	private int childFragmentIdx = -1;
+	protected int childFragmentIdx = -1;
 	//this list of skipped tokens, which writes spaces and EOL.
 	//If next element is in origin, then use origin separator actions and ignore this list
 	//If next element is new, then run collected separator actions to print DJPP separators
@@ -47,17 +49,16 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 
 	@Override
 	public void print(PrinterEvent event) {
+		if (mutableTokenWriter.isMuted()) {
+			return;
+		}
+
 		int prevIndex = childFragmentIdx;
 		int index = update(event);
 		if (index != -1) { // means we have found a source code fragment corresponding to this event
 
-			// handling of spaces
-			// hacky but works for now
-			// TODO a refactoring of printSpaces would be better
-			// but there are other bugs of higher priority now
-			childFragmentIdx = prevIndex;
-			printSpaces(index);
-			childFragmentIdx = index;
+			// we print all spaces and comments before this fragment
+			printSpaces(getLastNonSpaceNonCommentBefore(index, prevIndex), index);
 
 			SourceFragment fragment = childFragments.get(index);
 			event.printSourceFragment(fragment, isFragmentModified(fragment));
@@ -75,12 +76,12 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 				//but may be it is not good idea
 
 				//send all inc/dec tab to printer helper to have configured expected indentation
-				event.print();
+				event.printSourceFragment(null, ModificationStatus.UNKNOWN);
 				return -1;
 			}
 			if (tpe.getType().isWhiteSpace()) {
 				//collect all DJPP separators for future use or ignore
-				separatorActions.add(() -> event.print());
+				separatorActions.add(() -> event.printSourceFragment(null, ModificationStatus.UNKNOWN));
 				return -1;
 			}
 		}
@@ -90,8 +91,8 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 			 * the token did not exist in origin sources. Print spaces made by DJPP
 			 * It can happen e.g. when type parameter like &lt;T&gt; was added. Then bracket tokens are not in origin sources
 			 */
-			printSpaces(-1);
-			event.print();
+			printSpaces(childFragmentIdx, -1);
+			event.printSourceFragment(null, ModificationStatus.UNKNOWN);
 			return -1;
 		}
 		// case 2: it's an element printer
@@ -101,6 +102,11 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 			//so skip printing of this comment
 			//comment will be printed at place where it belongs to - together with spaces
 			return -1;
+		} else if (event.getRole() == CtRole.DECLARED_IMPORT && fragmentIndex == 0) {
+			// this is the first pre-existing import statement, and so we must print all newline
+			// events unconditionally to avoid placing it on the same line as a newly added import
+			// statement. See PR #3702 for details
+			printStandardSpaces();
 		}
 		setChildFragmentIdx(fragmentIndex);
 		return fragmentIndex;
@@ -115,15 +121,16 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 	 * Prints spaces before fragment with index `fragmentIndex`
 	 * @param fragmentIndex index of fragment whose prefix spaces has to be printed or -1 if origin source fragment was not found
 	 */
-	protected void printSpaces(int fragmentIndex) {
+	protected void printSpaces(int fromIndex, int fragmentIndex) {
 		if (fragmentIndex < 0) {
 			/*
 			 * the token did not exist in origin sources. Print spaces made by DJPP
 			 * It can happen e.g. when type parameter like &lt;T&gt; was added. Then bracket tokens are not in origin sources
 			 */
+
 			printStandardSpaces();
 		} else {
-			printOriginSpacesUntilFragmentIndex(fragmentIndex);
+			printOriginSpacesUntilFragmentIndex(fromIndex, fragmentIndex);
 		}
 	}
 
@@ -131,44 +138,36 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 	 * @param fragment
 	 * @return true if at least part of `fragment` is modified.
 	 * 	false if whole `fragment` is not modified.
-	 * 	null if it is not possible to detect it here. Then it will be detected later.
+	 * 	ModificationStatus.UNKNOWN if it is not possible to detect it here. Then it will be detected later.
 	 */
-	protected Boolean isFragmentModified(SourceFragment fragment) {
+	protected ModificationStatus isFragmentModified(SourceFragment fragment) {
 		if (fragment instanceof TokenSourceFragment) {
 			switch (((TokenSourceFragment) fragment).getType()) {
 			//we do not know the role of the identifier token, so we do not know whether it is modified or not
 			case IDENTIFIER:
-				return null;
+				return ModificationStatus.UNKNOWN;
 			case COMMENT:
-				return null;
+				return ModificationStatus.UNKNOWN;
 			default:
 				//all others are constant tokens, which cannot be modified
-				return Boolean.FALSE;
+				return ModificationStatus.NOT_MODIFIED;
 			}
 		} else if (fragment instanceof ElementSourceFragment) {
-			return changeResolver.isRoleModified(((ElementSourceFragment) fragment).getRoleInParent());
+			return ModificationStatus.fromBoolean(changeResolver.isRoleModified(((ElementSourceFragment) fragment).getRoleInParent()));
 		} else if (fragment instanceof CollectionSourceFragment) {
 			CollectionSourceFragment csf = (CollectionSourceFragment) fragment;
 			for (SourceFragment sourceFragment : csf.getItems()) {
-				Boolean modified = isFragmentModified(sourceFragment);
-				if (!Boolean.FALSE.equals(modified)) {
+				ModificationStatus modified = isFragmentModified(sourceFragment);
+				if (!ModificationStatus.NOT_MODIFIED.equals(modified)) {
 					return modified;
 				}
 			}
-			return Boolean.FALSE;
+			return ModificationStatus.NOT_MODIFIED;
 		} else {
 			throw new SpoonException("Unexpected SourceFragment type " + fragment.getClass());
 		}
 	}
 
-	/**
-	 * Prints origin whitespaces including comments which prefixes the fragment on index `index`,
-	 * starting with not yet processed spaces
-	 * @param index of non white space fragment
-	 */
-	protected void printOriginSpacesUntilFragmentIndex(int index) {
-		printOriginSpacesUntilFragmentIndex(childFragmentIdx + 1, index);
-	}
 
 	/**
 	 * Prints origin whitespaces including comments which prefixes the fragment on index `index`,
@@ -193,7 +192,7 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 							mutableTokenWriter.writeComment(comment);
 						} else {
 							//comment is not modified write origin sources
-							mutableTokenWriter.getPrinterHelper().directPrint(fragment.getSourceCode());
+							mutableTokenWriter.write(fragment.getSourceCode());
 						}
 						//we printed the comment, so we can print next space too
 						canPrintSpace = true;
@@ -205,7 +204,7 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 				}
 			} else if (isSpaceFragment(fragment) && canPrintSpace) {
 				if (!skipSpaceAfterDeletedElement) {
-					mutableTokenWriter.getPrinterHelper().directPrint(fragment.getSourceCode());
+					mutableTokenWriter.write(fragment.getSourceCode());
 				} else {
 					skipSpaceAfterDeletedElement = false;
 				}
@@ -217,7 +216,6 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 				skipSpaceAfterDeletedElement = true;
 			}
 		}
-		setChildFragmentIdx(toIndex - 1);
 		separatorActions.clear();
 	}
 
@@ -279,10 +277,13 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 	protected int findIFragmentIndexCorrespondingToEvent(PrinterEvent event) {
 		CtRole role = event.getRole();
 		if (role != null) {
-			if (role == CtRole.COMMENT) {
-				return findIndexOfNextChildTokenOfElement(event.getElement());
+			if ((event.getElement() instanceof CtModifiable && event.getElement().getPosition().isValidPosition())
+					|| role == CtRole.MODIFIER || role == CtRole.TYPE) {
+				// using only roles for handling modifiers and preexisting modifiables correctly
+				return findIndexOfNextChildTokenOfRole(childFragmentIdx + 1, role);
 			}
-			return findIndexOfNextChildTokenOfRole(childFragmentIdx + 1, role);
+			return findIndexOfNextChildTokenOfElement(event.getElement());
+
 		}
 		if (event instanceof TokenPrinterEvent) {
 			TokenPrinterEvent tpe = (TokenPrinterEvent) event;
@@ -291,7 +292,7 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 			}
 			return findIndexOfNextChildTokenByValue(tpe.getToken());
 		} else {
-			throw new SpoonException("Unexpected PrintEvent: " + event.getClass());
+			return -1;
 		}
 	}
 
@@ -304,6 +305,39 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 			runnable.run();
 		}
 		separatorActions.clear();
+	}
+
+	private int getLastNonSpaceNonCommentBefore(int index, int prevIndex) {
+		for (int i = index - 1; i >= 0; i--) {
+			SourceFragment fragment = childFragments.get(i);
+			if (isSpaceFragment(fragment)
+					|| isCommentFragment(fragment)
+					|| isRecentlySkippedModifierCollectionFragment(i, prevIndex)) {
+				continue;
+			}
+			return i + 1;
+		}
+		return 0;
+	}
+
+	/**
+	 * Determines if the fragment at index is a "recently skipped" collection fragment
+	 * containing modifiers. "Recently skipped" entails that the modifier fragment has not been
+	 * printed, and that the last printed fragment occurs before the modifier fragment.
+	 *
+	 * It is necessary to detect such fragments as whitespace and comments may otherwise be lost
+	 * when completely removing modifier lists. See issue #3732 for details.
+	 *
+	 * @param index Index of the fragment.
+	 * @param prevIndex Index of the last printed fragment.
+	 * @return true if the fragment is a recently skipped collection fragment with modifiers.
+	 */
+	private boolean isRecentlySkippedModifierCollectionFragment(int index, int prevIndex) {
+		SourceFragment fragment = childFragments.get(index);
+		return prevIndex < index
+				&& fragment instanceof CollectionSourceFragment
+				&& ((CollectionSourceFragment) fragment).getItems().stream()
+						.anyMatch(ElementSourceFragment::isModifierFragment);
 	}
 
 	@Override

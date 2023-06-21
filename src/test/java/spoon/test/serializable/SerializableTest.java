@@ -16,7 +16,11 @@
  */
 package spoon.test.serializable;
 
-import org.junit.Test;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+
+import org.junit.jupiter.api.Test;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
@@ -26,13 +30,10 @@ import spoon.support.SerializationModelStreamer;
 import spoon.support.StandardEnvironment;
 import spoon.support.util.ByteSerialization;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static spoon.testing.utils.ModelUtils.build;
 
 public class SerializableTest {
@@ -50,10 +51,8 @@ public class SerializableTest {
 		String sigBef = sta2.getShortRepresentation();
 		String sigAf = deserializedSta2.getShortRepresentation();
 
-		CtType<?> typeBef = sta2.getParent(CtType.class);
-
 		// sta2 comes from a snippet, and snippets have no parent (#2318)
-		assertNull(typeBef);
+		assertFalse(sta2.isParentInitialized());
 
 		assertEquals(sigBef, sigAf);
 
@@ -63,10 +62,7 @@ public class SerializableTest {
 
 		assertEquals(toSBef, toSgAf);
 
-		CtType<?> typeDes = deserializedSta2.getParent(CtType.class);
-
 		// typeDes comes from a serialized snippet, and snippets have no parent (#2318)
-		assertNull(typeDes);
 		assertFalse(deserializedSta2.isParentInitialized());
 	}
 

@@ -16,54 +16,60 @@
  */
 package spoon.test.module;
 
-import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import spoon.Launcher;
 import spoon.SpoonException;
+import spoon.SpoonModelBuilder;
+import spoon.compiler.SpoonFile;
+import spoon.compiler.builder.ComplianceOptions;
+import spoon.compiler.builder.JDTBuilderImpl;
+import spoon.compiler.builder.SourceOptions;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.CtComment;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtModuleDirective;
+import spoon.reflect.declaration.CtModuleRequirement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtPackageExport;
-import spoon.reflect.declaration.CtModuleRequirement;
 import spoon.reflect.declaration.CtProvidedService;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtUsedService;
 import spoon.reflect.reference.CtModuleReference;
-import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
+import spoon.support.compiler.jdt.JDTBatchCompiler;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestModule {
 	private static final String MODULE_RESOURCES_PATH = "./src/test/resources/spoon/test/module";
 
-	private void checkJavaVersion() {
-		String property = System.getProperty("java.version");
-		if (property != null && !property.isEmpty()) {
-
-			// java 8 and less are versionning "1.X" where 9 and more are directly versioned "X"
-			Assume.assumeFalse(property.startsWith("1."));
-		}
-	}
-
-	@BeforeClass
+	@BeforeAll
 	public static void setUp() throws IOException {
 		File directory = new File(MODULE_RESOURCES_PATH);
 		try (Stream<Path> paths = Files.walk(directory.toPath())) {
@@ -79,7 +85,7 @@ public class TestModule {
 		}
 	}
 
-	@AfterClass
+	@AfterAll
 	public static void tearDown() throws IOException {
 		File directory = new File(MODULE_RESOURCES_PATH);
 		try (Stream<Path> paths = Files.walk(directory.toPath())) {
@@ -293,8 +299,31 @@ public class TestModule {
 	}
 
 	@Test
+	public void testModuleNames() {
+		// contract: JDTBatchCompiler sets correct names to modules
+		Launcher launcher = new Launcher();
+		launcher.getEnvironment().setComplianceLevel(9);
+		launcher.addInputResource("./src/test/resources/spoon/test/module/code-multiple-modules");
+		launcher.buildModel();
+		JDTBasedSpoonCompiler spoonCompiler = (JDTBasedSpoonCompiler) launcher.getModelBuilder();
+
+		JDTBatchCompiler batchCompiler = new JDTBatchCompiler(spoonCompiler);
+		SpoonModelBuilder.InputType.FILES.initializeCompiler(batchCompiler);
+		List<SpoonFile> sourceFiles = Collections.unmodifiableList(spoonCompiler.getSource().getAllJavaFiles());
+		String[] args = new JDTBuilderImpl()
+				.complianceOptions(new ComplianceOptions().compliance(9))
+				.sources(new SourceOptions().sources(sourceFiles))
+				.build();
+		batchCompiler.configure(args);
+
+		CompilationUnit[] cu = batchCompiler.getCompilationUnits();
+		Set<String> list = Arrays.stream(cu).map(CompilationUnit::getModuleName).map(String::copyValueOf).collect(Collectors.toSet());
+		assertThat(list, is(Set.of("foo", "bar")));
+	}
+
+	@Test
+	@DisabledForJreRange(max = JRE.JAVA_8)
 	public void testSimpleModuleCanBeBuilt() {
-		checkJavaVersion();
 		// contract: Spoon is able to build a simple model with a module in full classpath
 		final Launcher launcher = new Launcher();
 		launcher.getEnvironment().setComplianceLevel(9);
@@ -304,24 +333,19 @@ public class TestModule {
 
 		CtModel model = launcher.getModel();
 
-		// unnamed module and module 'simple_module_with_code'
+		// unnamed module
 		assertEquals(2, model.getAllModules().size());
 		assertEquals(1, model.getAllTypes().size());
 
 		CtClass simpleClass = model.getElements(new TypeFilter<>(CtClass.class)).get(0);
 		assertEquals("SimpleClass", simpleClass.getSimpleName());
 
-		CtModule simpleModule = model.getElements(new NamedElementFilter<>(CtModule.class, "simple_module_with_code")).get(0);
-		assertNotNull(simpleModule);
-		assertEquals("simple_module_with_code", simpleModule.getSimpleName());
-
 		CtModule module = simpleClass.getParent(CtModule.class);
 		assertNotNull(module);
-		assertSame(simpleModule, module);
 	}
 
-	@Ignore
 	@Test
+	@Disabled
 	public void testMultipleModulesAndParents() {
 		// contract: Spoon is able to build a model with multiple modules
 
@@ -342,17 +366,58 @@ public class TestModule {
 		assertTrue(packBar.getParent() instanceof CtModule);
 	}
 
-	@Test (expected = SpoonException.class)
+	@Test
 	public void testModuleComplianceLevelException() {
-		// contract: provide clear exception in case if module exists but the compliance level is < 9
-		try {
-			final Launcher launcher = new Launcher();
-			launcher.getEnvironment().setComplianceLevel(8);
-			launcher.addInputResource(MODULE_RESOURCES_PATH + "/simple_module");
-			launcher.run();
-		} catch (SpoonException e) {
-			assertEquals("Modules are only available since Java 9. Please set appropriate compliance level.", e.getMessage());
-			throw e;
-		}
+		assertThrows(SpoonException.class, () -> {
+			// contract: provide clear exception in case if module exists but the compliance level is < 9
+			try {
+				final Launcher launcher = new Launcher();
+				launcher.getEnvironment().setComplianceLevel(8);
+				launcher.addInputResource(MODULE_RESOURCES_PATH + "/simple_module");
+				launcher.run();
+			} catch (SpoonException e) {
+				assertEquals("Modules are only available since Java 9. Please set appropriate compliance level.", e.getMessage());
+				throw e;
+			}
+		});
+	} 
+
+	@Test
+	public void testModuleOverlappingPackages() {
+		// contract: Non-synthetic package is returned for modules with overlapping packages
+		// Modules might contain "overlapping" (only in spoon! In java the packages are distinct)
+		// packages:
+		//   first
+		//    `- test
+		//     `- parent   <- This is only here because nested is a "sub package". This might be found
+		//   							    first when looking for modules containing "test.parent". In that case
+		//  									we have a problem.
+		//      `- nested  <- This is exported and in first.
+		//       `- Foo    <- This is the actual class in the module
+		//   second
+		//    `- test
+		//     `- parent
+		//      `- Bar
+		Launcher launcher = new Launcher();
+		launcher.getEnvironment().setComplianceLevel(9);
+		launcher.addInputResource(MODULE_RESOURCES_PATH + "/overlapping-packages");
+		CtModel ctModel = launcher.buildModel();
+		assertEquals(3, ctModel.getAllModules().size());
+		assertNotNull(launcher.getFactory().Type().get("test.parent.Bar"), "Wrong package picked, the synthetic one comes first in alphabetical order but" + " doesn't have the classes we want!"
+		);
+		assertNotNull(launcher.getFactory().Type().get("test.parent.nested.Foo"), "");
+	}
+
+	@Test
+	public void testModulePrintDoesNotDuplicate() {
+		// contract: Printing a module does not duplicate it in Model#getAllModules()
+		Launcher launcher = new Launcher();
+		launcher.getEnvironment().setComplianceLevel(9);
+		launcher.addInputResource(MODULE_RESOURCES_PATH + "/code-multiple-modules");
+		CtModel ctModel = launcher.buildModel();
+		assertEquals(3, ctModel.getAllModules().size());
+		//noinspection ResultOfMethodCallIgnored   I wish it had no effect too, unspecified static analysis tool
+		launcher.getFactory().Module().getModule("bar").toString();
+		assertEquals(3, ctModel.getAllModules().size());
 	}
 }

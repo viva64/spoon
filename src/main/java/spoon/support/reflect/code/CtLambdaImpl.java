@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,20 +7,26 @@
  */
 package spoon.support.reflect.code;
 
+import spoon.LovecraftException;
 import spoon.SpoonException;
 import spoon.reflect.annotations.MetamodelPropertyField;
+import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtBodyHolder;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtLambda;
+import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtStatement;
+import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtExecutable;
+import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.reference.CtExecutableReference;
+import spoon.reflect.reference.CtIntersectionTypeReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtVisitor;
 import spoon.support.UnsettableProperty;
@@ -103,8 +109,38 @@ public class CtLambdaImpl<T> extends CtExpressionImpl<T> implements CtLambda<T> 
 			//it can be null in noclasspath mode, so we do not know which method is called, by lambda
 			return null;
 		}
-		CtType<T> lambdaType = lambdaTypeRef.getTypeDeclaration();
-		if (lambdaType.isInterface() == false) {
+		if (!(lambdaTypeRef instanceof CtIntersectionTypeReference)) {
+			return getOverriddenMethodForNormalType(lambdaTypeRef);
+		}
+		CtMethod<?> lambdaExecutableMethod = getOverriddenMethodForIntersectionType(lambdaTypeRef);
+		if (lambdaExecutableMethod == null) {
+			throw new SpoonException("The lambda can be based on interface, which has one method. But " + lambdaTypeRef.getQualifiedName() + " has no one");
+		}
+		return (CtMethod<R>) lambdaExecutableMethod;
+	}
+
+	private CtMethod<?> getOverriddenMethodForIntersectionType(CtTypeReference<T> lambdaTypeRef)
+			throws SpoonException {
+		CtMethod<?> lambdaExecutableMethod = null;
+		CtElement parent = lambdaTypeRef.getParent();
+		CtTypeReference<?> parentTypeReference = null;
+		if (parent != null && parent instanceof CtLocalVariable) {
+			parentTypeReference = ((CtLocalVariable) parent).getType();
+		} else if (parent != null && parent instanceof CtAssignment) {
+			parentTypeReference = ((CtAssignment) parent).getAssigned().getType();
+		}
+		for (CtTypeReference<?> ctTypeReference : ((CtIntersectionTypeReference<?>) lambdaTypeRef).getBounds()) {
+			CtMethod<?> tmp = getOverriddenMethodForNormalType(ctTypeReference);
+			if (tmp != null && (lambdaExecutableMethod == null || ctTypeReference.equals(parentTypeReference))) {
+				lambdaExecutableMethod = tmp;
+			}
+		}
+		return lambdaExecutableMethod;
+	}
+
+	private <R> CtMethod<R> getOverriddenMethodForNormalType(CtTypeReference<?> lambdaTypeRef) throws SpoonException {
+		CtType<?> lambdaType = lambdaTypeRef.getTypeDeclaration();
+		if (!lambdaType.isInterface()) {
 			throw new SpoonException("The lambda can be based on interface only. But type " + lambdaTypeRef.getQualifiedName() + " is not an interface");
 		}
 		Set<CtMethod<?>> lambdaTypeMethods = lambdaType.getAllMethods();
@@ -125,9 +161,6 @@ public class CtLambdaImpl<T> extends CtExpressionImpl<T> implements CtLambda<T> 
 				}
 				lambdaExecutableMethod = method;
 			}
-		}
-		if (lambdaExecutableMethod == null) {
-			throw new SpoonException("The lambda can be based on interface, which has one method. But " + lambdaTypeRef.getQualifiedName() + " has no one");
 		}
 		return (CtMethod<R>) lambdaExecutableMethod;
 	}
@@ -156,6 +189,12 @@ public class CtLambdaImpl<T> extends CtExpressionImpl<T> implements CtLambda<T> 
 
 	@Override
 	public <C extends CtExecutable<T>> C addParameter(CtParameter<?> parameter) {
+		addParameterAt(parameters.size(), parameter);
+		return (C) this;
+	}
+
+	@Override
+	public <C extends CtExecutable<T>> C addParameterAt(int position, CtParameter<?> parameter) {
 		if (parameter == null) {
 			return (C) this;
 		}
@@ -164,7 +203,7 @@ public class CtLambdaImpl<T> extends CtExpressionImpl<T> implements CtLambda<T> 
 		}
 		parameter.setParent(this);
 		getFactory().getEnvironment().getModelChangeListener().onListAdd(this, PARAMETER, this.parameters, parameter);
-		parameters.add(parameter);
+		parameters.add(position, parameter);
 		return (C) this;
 	}
 
@@ -231,7 +270,7 @@ public class CtLambdaImpl<T> extends CtExpressionImpl<T> implements CtLambda<T> 
 	@Override
 	public <C extends CtLambda<T>> C setExpression(CtExpression<T> expression) {
 		if (body != null && expression != null) {
-			throw new SpoonException("A lambda can't have two bodies.");
+			throw new LovecraftException("A lambda can't have two bodies.");
 		} else {
 			if (expression != null) {
 				expression.setParent(this);
@@ -245,5 +284,13 @@ public class CtLambdaImpl<T> extends CtExpressionImpl<T> implements CtLambda<T> 
 	@Override
 	public CtLambda<T> clone() {
 		return (CtLambda<T>) super.clone();
+	}
+
+	@Override
+	public <C extends CtTypedElement> C setType(CtTypeReference type) {
+		if (type != null) {
+			type.setImplicit(true);
+		}
+		return super.setType(type);
 	}
 }

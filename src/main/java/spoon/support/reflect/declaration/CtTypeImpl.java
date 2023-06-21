@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -14,20 +14,25 @@ import spoon.reflect.annotations.MetamodelPropertyField;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtAnnotationType;
+import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtConstructor;
+import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtEnum;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtFormalTypeDeclarer;
+import spoon.reflect.declaration.CtInterface;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModifiable;
+import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.declaration.CtRecord;
 import spoon.reflect.declaration.CtShadowable;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeMember;
 import spoon.reflect.declaration.CtTypeParameter;
 import spoon.reflect.declaration.ModifierKind;
-import spoon.reflect.declaration.ParentNotInitializedException;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtExecutableReference;
@@ -42,6 +47,7 @@ import spoon.reflect.visitor.filter.AllTypeMembersFunction;
 import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.reflect.visitor.filter.ReferenceTypeFilter;
 import spoon.support.DerivedProperty;
+import spoon.support.adaption.TypeAdaptor;
 import spoon.support.UnsettableProperty;
 import spoon.support.comparator.CtLineElementComparator;
 import spoon.support.compiler.SnippetCompilationHelper;
@@ -49,7 +55,6 @@ import spoon.support.reflect.CtExtendedModifier;
 import spoon.support.reflect.CtModifierHandler;
 import spoon.support.util.QualifiedNameBasedSortedSet;
 import spoon.support.util.SignatureBasedSortedSet;
-import spoon.support.visitor.ClassTypingContext;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -59,6 +64,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -80,7 +86,7 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	@MetamodelPropertyField(role = {CtRole.TYPE_MEMBER, CtRole.FIELD, CtRole.CONSTRUCTOR, CtRole.ANNONYMOUS_EXECUTABLE, CtRole.METHOD, CtRole.NESTED_TYPE})
 	List<CtTypeMember> typeMembers = emptyList();
 
-	public CtTypeImpl() {
+	protected CtTypeImpl() {
 	}
 
 	@Override
@@ -172,7 +178,7 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 		}
 		typeMembers.clear();
 		for (CtTypeMember typeMember : members) {
-			addTypeMember(typeMember);
+			addTypeMemberAt(typeMembers.size(), typeMember);
 		}
 		return (C) this;
 	}
@@ -283,7 +289,7 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	}
 
 	private boolean shouldIncludeSamePackage(boolean includeSamePackage, CtTypeReference<?> typeRef) {
-		return includeSamePackage || (getPackage() != null && !getPackageReference(typeRef).equals(getPackage().getReference()));
+		return includeSamePackage || (getPackage() != null && !getPackageReference(typeRef).map(v -> v.equals(getPackage().getReference())).orElse(false));
 	}
 
 	private boolean isValidTypeReference(CtTypeReference<?> typeRef) {
@@ -305,13 +311,16 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	 * @see CtTypeReference#getPackage()
 	 * @since 4.0
 	 */
-	private static CtPackageReference getPackageReference(CtTypeReference<?> tref) {
+	private static Optional<CtPackageReference> getPackageReference(CtTypeReference<?> tref) {
 		CtPackageReference pref = tref.getPackage();
 		while (pref == null) {
 			tref = tref.getDeclaringType();
+			if (tref == null) {
+				return Optional.empty();
+			}
 			pref = tref.getPackage();
 		}
-		return pref;
+		return Optional.of(pref);
 	}
 
 	@Override
@@ -321,11 +330,7 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 
 	@Override
 	public CtType<?> getDeclaringType() {
-		try {
-			return getParent(CtType.class);
-		} catch (ParentNotInitializedException ex) {
-			return null;
-		}
+		return getParent(CtType.class);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -347,7 +352,7 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	public <N extends CtType<?>> N getNestedType(final String name) {
 		class NestedTypeScanner extends EarlyTerminatingScanner<CtType<?>> {
 
-			private boolean checkType(CtType<?> type) {
+			private boolean typeIsTarget(CtType<?> type) {
 				if (type.getSimpleName().equals(name) && CtTypeImpl.this.equals(type.getDeclaringType())) {
 					setResult(type);
 					terminate();
@@ -357,49 +362,58 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 			}
 
 			@Override
-			public <U> void visitCtClass(spoon.reflect.declaration.CtClass<U> ctClass) {
-				if (!checkType(ctClass)) {
-					final List<CtTypeMember> typeMembers = new ArrayList<>();
-					for (CtTypeMember typeMember : ctClass.getTypeMembers()) {
-						if (typeMember instanceof CtType || typeMember instanceof CtConstructor || typeMember instanceof CtMethod) {
-							typeMembers.add(typeMember);
-						}
-					}
-					scan(typeMembers);
-				}
+			public <U> void visitCtClass(CtClass<U> ctClass) {
+				visitType(ctClass);
 			}
 
 			@Override
-			public <U> void visitCtInterface(spoon.reflect.declaration.CtInterface<U> intrface) {
-				if (!checkType(intrface)) {
-					final List<CtTypeMember> typeMembers = new ArrayList<>();
-					for (CtTypeMember typeMember : intrface.getTypeMembers()) {
-						if (typeMember instanceof CtType || typeMember instanceof CtMethod) {
-							typeMembers.add(typeMember);
-						}
-					}
-					scan(typeMembers);
-				}
+			public <U> void visitCtInterface(CtInterface<U> intrface) {
+				visitType(intrface);
 			}
 
 			@Override
-			public <U extends java.lang.Enum<?>> void visitCtEnum(spoon.reflect.declaration.CtEnum<U> ctEnum) {
-				if (!checkType(ctEnum)) {
-					final List<CtTypeMember> typeMembers = new ArrayList<>();
-					for (CtTypeMember typeMember : ctEnum.getTypeMembers()) {
-						if (typeMember instanceof CtType || typeMember instanceof CtConstructor || typeMember instanceof CtMethod) {
-							typeMembers.add(typeMember);
-						}
-					}
-					scan(typeMembers);
-				}
+			public <U extends Enum<?>> void visitCtEnum(CtEnum<U> ctEnum) {
+				visitType(ctEnum);
 			}
 
 			@Override
 			public <A extends Annotation> void visitCtAnnotationType(CtAnnotationType<A> annotationType) {
-				if (!checkType(annotationType)) {
-					scan(annotationType.getNestedTypes());
+				visitType(annotationType);
+			}
+
+			@Override
+			public void visitCtRecord(CtRecord recordType) {
+				visitType(recordType);
+			}
+
+			@Override
+			public void visitCtTypeParameter(CtTypeParameter typeParameter) {
+				// ignored, can not harbour any nested types
+			}
+
+			@Override
+			protected void enter(CtElement e) {
+				if (e instanceof CtType) {
+					throw new SpoonException(
+						"Please open a bug report (https://github.com/INRIA/spoon/issues/new/choose) "
+							+ "with the following information: "
+							+ "Unhandled type detected in CtTypeImpl#getNestedType. "
+							+ "The scanner should probably be extended to cover " + e.getClass() + "."
+					);
 				}
+			}
+
+			private void visitType(CtType<?> type) {
+				if (typeIsTarget(type)) {
+					return;
+				}
+				final List<CtTypeMember> typeMembers = new ArrayList<>();
+				for (CtTypeMember typeMember : type.getTypeMembers()) {
+					if (typeMember instanceof CtType || typeMember instanceof CtConstructor || typeMember instanceof CtMethod) {
+						typeMembers.add(typeMember);
+					}
+				}
+				scan(typeMembers);
 			}
 		}
 		NestedTypeScanner scanner = new NestedTypeScanner();
@@ -655,7 +669,7 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	}
 
 	@Override
-	public <C extends CtFormalTypeDeclarer> C addFormalCtTypeParameter(CtTypeParameter formalTypeParameter) {
+	public <C extends CtFormalTypeDeclarer> C addFormalCtTypeParameterAt(int position, CtTypeParameter formalTypeParameter) {
 		if (formalTypeParameter == null) {
 			return (C) this;
 		}
@@ -664,8 +678,13 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 		}
 		formalTypeParameter.setParent(this);
 		getFactory().getEnvironment().getModelChangeListener().onListAdd(this, CtRole.TYPE_PARAMETER, this.formalCtTypeParameters, formalTypeParameter);
-		formalCtTypeParameters.add(formalTypeParameter);
+		formalCtTypeParameters.add(position, formalTypeParameter);
 		return (C) this;
+	}
+
+	@Override
+	public <C extends CtFormalTypeDeclarer> C addFormalCtTypeParameter(CtTypeParameter formalTypeParameter) {
+		return addFormalCtTypeParameterAt(formalCtTypeParameters.size(), formalTypeParameter);
 	}
 
 	@Override
@@ -829,6 +848,18 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	}
 
 	@Override
+	public <T extends CtNamedElement> T setSimpleName(String simpleName) {
+		String oldName = getSimpleName();
+		super.setSimpleName(simpleName);
+
+		if (parent instanceof CtPackageImpl) {
+			((CtPackageImpl) parent).updateTypeName(this, oldName);
+		}
+
+		return (T) this;
+	}
+
+	@Override
 	public String getQualifiedName() {
 		if (isTopLevel()) {
 			if (getPackage() != null && !getPackage().isUnnamedPackage()) {
@@ -910,12 +941,12 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	@Override
 	public Set<CtMethod<?>> getAllMethods() {
 		final Set<CtMethod<?>> l = new HashSet<>();
-		final ClassTypingContext ctc = new ClassTypingContext(this);
+		TypeAdaptor typeAdaptor = new TypeAdaptor(this);
 		map(new AllTypeMembersFunction(CtMethod.class)).forEach(new CtConsumer<CtMethod<?>>() {
 			@Override
 			public void accept(CtMethod<?> currentMethod) {
 				for (CtMethod<?> alreadyVisitedMethod : l) {
-					if (ctc.isSameSignature(currentMethod, alreadyVisitedMethod)) {
+					if (typeAdaptor.isConflicting(currentMethod, alreadyVisitedMethod)) {
 						return;
 					}
 				}
@@ -979,6 +1010,31 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	@Override
 	public boolean isAbstract() {
 		return this.modifierHandler.isAbstract();
+	}
+
+	@Override
+	public boolean isTransient() {
+		return this.modifierHandler.isTransient();
+	}
+
+	@Override
+	public boolean isSynchronized() {
+		return this.modifierHandler.isSynchronized();
+	}
+
+	@Override
+	public boolean isNative() {
+		return this.modifierHandler.isNative();
+	}
+
+	@Override
+	public boolean isStrictfp() {
+		return this.modifierHandler.isStrictfp();
+	}
+
+	@Override
+	public boolean isVolatile() {
+		return this.modifierHandler.isVolatile();
 	}
 
 	@Override

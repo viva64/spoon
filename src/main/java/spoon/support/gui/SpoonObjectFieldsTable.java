@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -22,7 +22,7 @@ import spoon.Launcher;
 
 
 public class SpoonObjectFieldsTable extends JFrame {
-	public class SpoonObjectTableModel extends AbstractTableModel {
+	public static class SpoonObjectTableModel extends AbstractTableModel {
 
 		private static final long serialVersionUID = 1L;
 

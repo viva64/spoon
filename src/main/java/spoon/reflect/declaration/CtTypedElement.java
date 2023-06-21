@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -27,5 +27,5 @@ public interface CtTypedElement<T> extends CtElement {
 	 * Sets this element's type.
 	 */
 	@PropertySetter(role = TYPE)
-	<C extends CtTypedElement> C setType(CtTypeReference<T> type);
+	<C extends CtTypedElement> C setType(CtTypeReference type);
 }

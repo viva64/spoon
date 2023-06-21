@@ -278,11 +278,12 @@ public class Metamodel {
 				.field(CtRole.IS_VARARGS, false, false)
 				.field(CtRole.DEFAULT_EXPRESSION, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
+				.field(CtRole.IS_INFERRED, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.TYPE, false, false)
 				.field(CtRole.COMMENT, false, false)
-				.field(CtRole.IS_INFERRED, false, false)
 
 			));
 
@@ -316,8 +317,8 @@ public class Metamodel {
 			types.add(new Type("CtCatchVariableReference", spoon.reflect.reference.CtCatchVariableReference.class, spoon.support.reflect.reference.CtCatchVariableReferenceImpl.class, fm -> fm
 				.field(CtRole.NAME, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
-				.field(CtRole.POSITION, false, false)
 				.field(CtRole.COMMENT, true, true)
+				.field(CtRole.POSITION, false, false)
 				.field(CtRole.TYPE, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 
@@ -337,7 +338,9 @@ public class Metamodel {
 				.field(CtRole.NAME, false, false)
 				.field(CtRole.IS_SHADOW, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.LABEL, false, false)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.SUPER_TYPE, true, true)
 				.field(CtRole.NESTED_TYPE, true, false)
 				.field(CtRole.METHOD, true, false)
@@ -347,6 +350,7 @@ public class Metamodel {
 				.field(CtRole.INTERFACE, false, false)
 				.field(CtRole.TYPE_PARAMETER, false, false)
 				.field(CtRole.TYPE_MEMBER, false, false)
+				.field(CtRole.PERMITTED_TYPE, false, false)
 				.field(CtRole.COMMENT, false, false)
 
 			));
@@ -383,6 +387,7 @@ public class Metamodel {
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.ASSIGNMENT, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.TYPE, false, false)
@@ -419,7 +424,9 @@ public class Metamodel {
 				.field(CtRole.IS_SHADOW, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
+				.field(CtRole.COMPACT_CONSTRUCTOR, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.PARAMETER, false, false)
 				.field(CtRole.THROWN, false, false)
@@ -441,6 +448,15 @@ public class Metamodel {
 
 			));
 
+			types.add(new Type("CtPackageDeclaration", spoon.reflect.declaration.CtPackageDeclaration.class, spoon.support.reflect.declaration.CtPackageDeclarationImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.COMMENT, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.PACKAGE_REF, false, false)
+
+			));
+
 			types.add(new Type("CtAnonymousExecutable", spoon.reflect.declaration.CtAnonymousExecutable.class, spoon.support.reflect.declaration.CtAnonymousExecutableImpl.class, fm -> fm
 				.field(CtRole.NAME, true, true)
 				.field(CtRole.TYPE, true, true)
@@ -448,6 +464,7 @@ public class Metamodel {
 				.field(CtRole.PARAMETER, true, true)
 				.field(CtRole.THROWN, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.BODY, false, false)
@@ -484,15 +501,6 @@ public class Metamodel {
 
 			));
 
-			types.add(new Type("CtTypeMemberWildcardImportReference", spoon.reflect.reference.CtTypeMemberWildcardImportReference.class, spoon.support.reflect.reference.CtTypeMemberWildcardImportReferenceImpl.class, fm -> fm
-				.field(CtRole.NAME, true, true)
-				.field(CtRole.IS_IMPLICIT, true, true)
-				.field(CtRole.POSITION, false, false)
-				.field(CtRole.COMMENT, true, true)
-				.field(CtRole.ANNOTATION, true, true)
-				.field(CtRole.TYPE_REF, false, false)
-			));
-
 			types.add(new Type("CtThisAccess", spoon.reflect.code.CtThisAccess.class, spoon.support.reflect.code.CtThisAccessImpl.class, fm -> fm
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.POSITION, false, false)
@@ -501,6 +509,17 @@ public class Metamodel {
 				.field(CtRole.TYPE, false, false)
 				.field(CtRole.CAST, false, false)
 				.field(CtRole.TARGET, false, false)
+
+			));
+
+			types.add(new Type("CtRecordComponent", spoon.reflect.declaration.CtRecordComponent.class, spoon.support.reflect.declaration.CtRecordComponentImpl.class, fm -> fm
+				.field(CtRole.NAME, false, false)
+				.field(CtRole.IS_SHADOW, false, false)
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.TYPE, false, false)
+				.field(CtRole.COMMENT, false, false)
 
 			));
 
@@ -569,6 +588,20 @@ public class Metamodel {
 
 			));
 
+			types.add(new Type("CtCompilationUnit", spoon.reflect.declaration.CtCompilationUnit.class, spoon.support.reflect.declaration.CtCompilationUnitImpl.class, fm -> fm
+				.field(CtRole.DECLARED_TYPE, true, true)
+				.field(CtRole.DECLARED_MODULE, true, true)
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.POSITION, true, true)
+				.field(CtRole.COMMENT, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.PACKAGE_DECLARATION, false, false)
+				.field(CtRole.DECLARED_IMPORT, false, false)
+				.field(CtRole.DECLARED_MODULE_REF, false, false)
+				.field(CtRole.DECLARED_TYPE_REF, false, false)
+
+			));
+
 			types.add(new Type("CtParameterReference", spoon.reflect.reference.CtParameterReference.class, spoon.support.reflect.reference.CtParameterReferenceImpl.class, fm -> fm
 				.field(CtRole.NAME, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
@@ -624,6 +657,7 @@ public class Metamodel {
 				.field(CtRole.PARAMETER, true, true)
 				.field(CtRole.THROWN, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.TYPE_PARAMETER, true, true)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.ANNOTATION, false, false)
@@ -639,6 +673,7 @@ public class Metamodel {
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.LABEL, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.NESTED_TYPE, true, false)
 				.field(CtRole.CONSTRUCTOR, true, false)
 				.field(CtRole.METHOD, true, false)
@@ -650,6 +685,7 @@ public class Metamodel {
 				.field(CtRole.INTERFACE, false, false)
 				.field(CtRole.TYPE_PARAMETER, false, false)
 				.field(CtRole.TYPE_MEMBER, false, false)
+				.field(CtRole.PERMITTED_TYPE, false, false)
 				.field(CtRole.COMMENT, false, false)
 
 			));
@@ -711,18 +747,6 @@ public class Metamodel {
 
 			));
 
-			types.add(new Type("CtSwitchExpression", spoon.reflect.code.CtSwitchExpression.class, spoon.support.reflect.code.CtSwitchExpressionImpl.class, fm -> fm
-				.field(CtRole.IS_IMPLICIT, false, false)
-				.field(CtRole.POSITION, false, false)
-				.field(CtRole.TYPE, false, false)
-				.field(CtRole.ANNOTATION, false, false)
-				.field(CtRole.EXPRESSION, false, false)
-				.field(CtRole.CASE, false, false)
-				.field(CtRole.COMMENT, false, false)
-				.field(CtRole.CAST, false, false)
-
-			));
-
 			types.add(new Type("CtTry", spoon.reflect.code.CtTry.class, spoon.support.reflect.code.CtTryImpl.class, fm -> fm
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.LABEL, false, false)
@@ -735,6 +759,16 @@ public class Metamodel {
 
 			));
 
+			types.add(new Type("CtYieldStatement", spoon.reflect.code.CtYieldStatement.class, spoon.support.reflect.code.CtYieldStatementImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.LABEL, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.EXPRESSION, false, false)
+				.field(CtRole.COMMENT, false, false)
+
+			));
+
 			types.add(new Type("CtSynchronized", spoon.reflect.code.CtSynchronized.class, spoon.support.reflect.code.CtSynchronizedImpl.class, fm -> fm
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.LABEL, false, false)
@@ -742,38 +776,6 @@ public class Metamodel {
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.EXPRESSION, false, false)
 				.field(CtRole.BODY, false, false)
-				.field(CtRole.COMMENT, false, false)
-
-			));
-
-			types.add(new Type("CtCompilationUnit", spoon.reflect.declaration.CtCompilationUnit.class, spoon.support.reflect.declaration.CtCompilationUnitImpl.class, fm -> fm
-				.field(CtRole.IS_IMPLICIT, false, false)
-				.field(CtRole.POSITION, true, true)
-				.field(CtRole.DECLARED_TYPE_REF, false, false)
-				.field(CtRole.DECLARED_TYPE, true, true)
-				.field(CtRole.DECLARED_MODULE_REF, false, false)
-				.field(CtRole.DECLARED_MODULE, true, true)
-				.field(CtRole.PACKAGE_DECLARATION, false, false)
-				.field(CtRole.DECLARED_IMPORT, false, false)
-				.field(CtRole.ANNOTATION, false, false)
-				.field(CtRole.COMMENT, false, false)
-
-			));
-
-			types.add(new Type("CtImport", spoon.reflect.declaration.CtImport.class, spoon.support.reflect.declaration.CtImportImpl.class, fm -> fm
-				.field(CtRole.IS_IMPLICIT, false, false)
-				.field(CtRole.POSITION, false, false)
-				.field(CtRole.IMPORT_REFERENCE, false, false)
-				.field(CtRole.ANNOTATION, false, false)
-				.field(CtRole.COMMENT, false, false)
-
-			));
-
-			types.add(new Type("CtPackageDeclaration", spoon.reflect.declaration.CtPackageDeclaration.class, spoon.support.reflect.declaration.CtPackageDeclarationImpl.class, fm -> fm
-				.field(CtRole.IS_IMPLICIT, false, false)
-				.field(CtRole.POSITION, false, false)
-				.field(CtRole.PACKAGE_REF, false, false)
-				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.COMMENT, false, false)
 
 			));
@@ -791,6 +793,15 @@ public class Metamodel {
 				.field(CtRole.PACKAGE_REF, false, false)
 				.field(CtRole.DECLARING_TYPE, false, false)
 				.field(CtRole.ANNOTATION, false, false)
+
+			));
+
+			types.add(new Type("CtImport", spoon.reflect.declaration.CtImport.class, spoon.support.reflect.declaration.CtImportImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.IMPORT_REFERENCE, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.COMMENT, false, false)
 
 			));
 
@@ -888,6 +899,7 @@ public class Metamodel {
 				.field(CtRole.IS_SHADOW, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.MODIFIER, true, true)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.INTERFACE, true, true)
 				.field(CtRole.TYPE_MEMBER, true, true)
 				.field(CtRole.NESTED_TYPE, true, true)
@@ -907,12 +919,14 @@ public class Metamodel {
 				.field(CtRole.LABEL, false, false)
 				.field(CtRole.ASSIGNMENT, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
+				.field(CtRole.IS_INFERRED, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.TYPE, false, false)
 				.field(CtRole.DEFAULT_EXPRESSION, false, false)
 				.field(CtRole.COMMENT, false, false)
-				.field(CtRole.IS_INFERRED, false, false)
+
 			));
 
 			types.add(new Type("CtIf", spoon.reflect.code.CtIf.class, spoon.support.reflect.code.CtIfImpl.class, fm -> fm
@@ -923,6 +937,30 @@ public class Metamodel {
 				.field(CtRole.CONDITION, false, false)
 				.field(CtRole.THEN, false, false)
 				.field(CtRole.ELSE, false, false)
+				.field(CtRole.COMMENT, false, false)
+
+			));
+
+			types.add(new Type("CtRecord", spoon.reflect.declaration.CtRecord.class, spoon.support.reflect.declaration.CtRecordImpl.class, fm -> fm
+				.field(CtRole.NAME, false, false)
+				.field(CtRole.IS_SHADOW, false, false)
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.LABEL, true, true)
+				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
+				.field(CtRole.SUPER_TYPE, true, true)
+				.field(CtRole.NESTED_TYPE, true, false)
+				.field(CtRole.CONSTRUCTOR, true, false)
+				.field(CtRole.METHOD, true, false)
+				.field(CtRole.ANNONYMOUS_EXECUTABLE, true, false)
+				.field(CtRole.FIELD, true, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.PERMITTED_TYPE, true, true)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.INTERFACE, false, false)
+				.field(CtRole.TYPE_MEMBER, false, false)
+				.field(CtRole.TYPE_PARAMETER, false, false)
+				.field(CtRole.RECORD_COMPONENT, false, false)
 				.field(CtRole.COMMENT, false, false)
 
 			));
@@ -941,6 +979,18 @@ public class Metamodel {
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.MODULE_DIRECTIVE, false, false)
 				.field(CtRole.SUB_PACKAGE, false, false)
+
+			));
+
+			types.add(new Type("CtSwitchExpression", spoon.reflect.code.CtSwitchExpression.class, spoon.support.reflect.code.CtSwitchExpressionImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.EXPRESSION, false, false)
+				.field(CtRole.CASE, false, false)
+				.field(CtRole.COMMENT, false, false)
+				.field(CtRole.TYPE, false, false)
+				.field(CtRole.CAST, false, false)
 
 			));
 
@@ -973,8 +1023,8 @@ public class Metamodel {
 			types.add(new Type("CtCase", spoon.reflect.code.CtCase.class, spoon.support.reflect.code.CtCaseImpl.class, fm -> fm
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.LABEL, false, false)
-				.field(CtRole.CASE_KIND, false, false)
 				.field(CtRole.POSITION, false, false)
+				.field(CtRole.CASE_KIND, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.EXPRESSION, false, false)
 				.field(CtRole.STATEMENT, false, false)
@@ -1006,10 +1056,10 @@ public class Metamodel {
 				.field(CtRole.IS_SHADOW, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.MODIFIER, true, true)
+				.field(CtRole.COMMENT, true, true)
 				.field(CtRole.INTERFACE, true, true)
 				.field(CtRole.SUPER_TYPE, true, true)
 				.field(CtRole.POSITION, false, false)
-				.field(CtRole.COMMENT, true, true)
 				.field(CtRole.PACKAGE_REF, false, false)
 				.field(CtRole.DECLARING_TYPE, false, false)
 				.field(CtRole.TYPE, false, false)
@@ -1024,6 +1074,7 @@ public class Metamodel {
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.IS_DEFAULT, false, false)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.TYPE_PARAMETER, false, false)
@@ -1038,14 +1089,25 @@ public class Metamodel {
 			types.add(new Type("CtLambda", spoon.reflect.code.CtLambda.class, spoon.support.reflect.code.CtLambdaImpl.class, fm -> fm
 				.field(CtRole.NAME, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.THROWN, true, true)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.TYPE, false, false)
 				.field(CtRole.CAST, false, false)
 				.field(CtRole.PARAMETER, false, false)
-				.field(CtRole.THROWN, true, true)
 				.field(CtRole.BODY, false, false)
 				.field(CtRole.EXPRESSION, false, false)
+				.field(CtRole.COMMENT, false, false)
+
+			));
+
+			types.add(new Type("CtTypePattern", spoon.reflect.code.CtTypePattern.class, spoon.support.reflect.code.CtTypePatternImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.CAST, true, true)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.VARIABLE, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.TYPE, false, false)
 				.field(CtRole.COMMENT, false, false)
 
 			));
@@ -1059,15 +1121,6 @@ public class Metamodel {
 				.field(CtRole.EXPRESSION, false, false)
 				.field(CtRole.DIMENSION, false, false)
 				.field(CtRole.COMMENT, false, false)
-
-			));
-
-			types.add(new Type("CtUsedService", spoon.reflect.declaration.CtUsedService.class, spoon.support.reflect.declaration.CtUsedServiceImpl.class, fm -> fm
-				.field(CtRole.IS_IMPLICIT, false, false)
-				.field(CtRole.POSITION, false, false)
-				.field(CtRole.COMMENT, false, false)
-				.field(CtRole.SERVICE_TYPE, false, false)
-				.field(CtRole.ANNOTATION, false, false)
 
 			));
 
@@ -1088,6 +1141,27 @@ public class Metamodel {
 
 			));
 
+			types.add(new Type("CtUsedService", spoon.reflect.declaration.CtUsedService.class, spoon.support.reflect.declaration.CtUsedServiceImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.COMMENT, false, false)
+				.field(CtRole.SERVICE_TYPE, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+
+			));
+
+			types.add(new Type("CtTextBlock", spoon.reflect.code.CtTextBlock.class, spoon.support.reflect.code.CtTextBlockImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.VALUE, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.LITERAL_BASE, false, false)
+				.field(CtRole.ANNOTATION, false, false)
+				.field(CtRole.TYPE, false, false)
+				.field(CtRole.CAST, false, false)
+				.field(CtRole.COMMENT, false, false)
+
+			));
+
 			types.add(new Type("CtThrow", spoon.reflect.code.CtThrow.class, spoon.support.reflect.code.CtThrowImpl.class, fm -> fm
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.LABEL, false, false)
@@ -1101,8 +1175,8 @@ public class Metamodel {
 			types.add(new Type("CtLiteral", spoon.reflect.code.CtLiteral.class, spoon.support.reflect.code.CtLiteralImpl.class, fm -> fm
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.VALUE, false, false)
-				.field(CtRole.LITERAL_BASE, false, false)
 				.field(CtRole.POSITION, false, false)
+				.field(CtRole.LITERAL_BASE, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.TYPE, false, false)
 				.field(CtRole.CAST, false, false)
@@ -1120,28 +1194,30 @@ public class Metamodel {
 
 			));
 
-			types.add(new Type("CtJavaDocTag", spoon.reflect.code.CtJavaDocTag.class, spoon.support.reflect.code.CtJavaDocTagImpl.class, fm -> fm
-				.field(CtRole.IS_IMPLICIT, false, false)
-				.field(CtRole.COMMENT_CONTENT, false, false)
-				.field(CtRole.DOCUMENTATION_TYPE, false, false)
-				.field(CtRole.JAVADOC_TAG_VALUE, false, false)
-				.field(CtRole.POSITION, false, false)
-				.field(CtRole.COMMENT, false, false)
-				.field(CtRole.ANNOTATION, false, false)
-
-			));
-
 			types.add(new Type("CtField", spoon.reflect.declaration.CtField.class, spoon.support.reflect.declaration.CtFieldImpl.class, fm -> fm
 				.field(CtRole.NAME, false, false)
 				.field(CtRole.IS_SHADOW, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.ASSIGNMENT, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.TYPE, false, false)
 				.field(CtRole.DEFAULT_EXPRESSION, false, false)
 				.field(CtRole.COMMENT, false, false)
+
+			));
+
+			types.add(new Type("CtJavaDocTag", spoon.reflect.code.CtJavaDocTag.class, spoon.support.reflect.code.CtJavaDocTagImpl.class, fm -> fm
+				.field(CtRole.IS_IMPLICIT, false, false)
+				.field(CtRole.COMMENT_CONTENT, false, false)
+				.field(CtRole.DOCUMENTATION_TYPE, false, false)
+				.field(CtRole.DOCUMENTATION_TYPE_REALNAME, false, false)
+				.field(CtRole.JAVADOC_TAG_VALUE, false, false)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.COMMENT, false, false)
+				.field(CtRole.ANNOTATION, false, false)
 
 			));
 
@@ -1177,6 +1253,16 @@ public class Metamodel {
 
 			));
 
+			types.add(new Type("CtTypeMemberWildcardImportReference", spoon.reflect.reference.CtTypeMemberWildcardImportReference.class, spoon.support.reflect.reference.CtTypeMemberWildcardImportReferenceImpl.class, fm -> fm
+				.field(CtRole.NAME, true, true)
+				.field(CtRole.IS_IMPLICIT, true, true)
+				.field(CtRole.COMMENT, true, true)
+				.field(CtRole.ANNOTATION, true, true)
+				.field(CtRole.POSITION, false, false)
+				.field(CtRole.TYPE_REF, false, false)
+
+			));
+
 			types.add(new Type("CtAnnotation", spoon.reflect.declaration.CtAnnotation.class, spoon.support.reflect.declaration.CtAnnotationImpl.class, fm -> fm
 				.field(CtRole.IS_SHADOW, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
@@ -1205,7 +1291,6 @@ public class Metamodel {
 			types.add(new Type("CtBreak", spoon.reflect.code.CtBreak.class, spoon.support.reflect.code.CtBreakImpl.class, fm -> fm
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.LABEL, false, false)
-				.field(CtRole.EXPRESSION, false, false)
 				.field(CtRole.TARGET_LABEL, false, false)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.ANNOTATION, false, false)
@@ -1232,6 +1317,7 @@ public class Metamodel {
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.LABEL, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.SUPER_TYPE, true, true)
 				.field(CtRole.NESTED_TYPE, true, false)
 				.field(CtRole.CONSTRUCTOR, true, false)
@@ -1240,6 +1326,7 @@ public class Metamodel {
 				.field(CtRole.FIELD, true, false)
 				.field(CtRole.TYPE_PARAMETER, true, true)
 				.field(CtRole.POSITION, false, false)
+				.field(CtRole.PERMITTED_TYPE, true, true)
 				.field(CtRole.ANNOTATION, false, false)
 				.field(CtRole.INTERFACE, false, false)
 				.field(CtRole.TYPE_MEMBER, false, false)
@@ -1279,6 +1366,7 @@ public class Metamodel {
 				.field(CtRole.IS_SHADOW, false, false)
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.INTERFACE, true, true)
 				.field(CtRole.SUPER_TYPE, true, true)
 				.field(CtRole.NESTED_TYPE, true, false)
@@ -1298,6 +1386,7 @@ public class Metamodel {
 				.field(CtRole.IS_IMPLICIT, false, false)
 				.field(CtRole.DEFAULT_EXPRESSION, true, true)
 				.field(CtRole.MODIFIER, false, false)
+				.field(CtRole.EMODIFIER, true, true)
 				.field(CtRole.POSITION, false, false)
 				.field(CtRole.COMMENT, false, false)
 				.field(CtRole.ANNOTATION, false, false)

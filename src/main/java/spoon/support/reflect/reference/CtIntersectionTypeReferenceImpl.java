@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -39,9 +39,6 @@ public class CtIntersectionTypeReferenceImpl<T> extends CtTypeReferenceImpl<T> i
 		if (bounds == null || bounds.isEmpty()) {
 			this.bounds = CtElementImpl.emptyList();
 			return (C) this;
-		}
-		if (this.bounds == CtElementImpl.<CtTypeReference<?>>emptySet()) {
-			this.bounds = new ArrayList<>();
 		}
 		getFactory().getEnvironment().getModelChangeListener().onListDeleteAll(this, BOUND, this.bounds, new ArrayList<>(this.bounds));
 		this.bounds.clear();

@@ -1,12 +1,14 @@
 package spoon.test.visitor;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.reflect.code.CtIf;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.factory.Factory;
 import spoon.reflect.visitor.CtScanner;
+import spoon.testing.utils.ModelTest;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Created by marcel on 16.03.16.
@@ -36,14 +38,10 @@ public class VisitorTest {
 		}
 	}
 
-	@Test
-	public void testRecursiveDescent() {
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/spoon/test/visitor/Foo.java");
-		launcher.buildModel();
-
+	@ModelTest("./src/test/resources/spoon/test/visitor/Foo.java")
+	public void testRecursiveDescent(Factory factory) {
 		final MyVisitor visitor = new MyVisitor(2);
-		visitor.scan(launcher.getFactory().Package().getRootPackage());
+		visitor.scan(factory.Package().getRootPackage());
 		assertTrue(visitor.equals);
 	}
 }

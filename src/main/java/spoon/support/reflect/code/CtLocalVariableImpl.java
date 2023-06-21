@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -11,6 +11,7 @@ import spoon.reflect.annotations.MetamodelPropertyField;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtRHSReceiver;
+import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.declaration.CtTypedElement;
@@ -81,6 +82,30 @@ public class CtLocalVariableImpl<T> extends CtStatementImpl implements CtLocalVa
 	}
 
 	@Override
+	public boolean isPartOfJointDeclaration() {
+		if (this.getPosition() instanceof NoSourcePosition) {
+			return  false;
+		}
+		for (Object o : getParent().getDirectChildren()) {
+			if (!(o instanceof CtLocalVariable)) {
+				continue;
+			}
+			CtLocalVariable<?> f = (CtLocalVariable<?>) o;
+			if (f == this) {
+				continue;
+			}
+			if (f.getPosition() == null || f.getPosition() instanceof NoSourcePosition) {
+				continue;
+			}
+			if (f.getPosition().getSourceStart() == this.getPosition().getSourceStart()
+					&& f.getPosition().getSourceEnd() == this.getPosition().getSourceEnd()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
 	public <C extends CtNamedElement> C setSimpleName(String simpleName) {
 		getFactory().getEnvironment().getModelChangeListener().onObjectUpdate(this, CtRole.NAME, simpleName, this.name);
 		this.name = simpleName;
@@ -88,7 +113,7 @@ public class CtLocalVariableImpl<T> extends CtStatementImpl implements CtLocalVa
 	}
 
 	@Override
-	public <C extends CtTypedElement> C setType(CtTypeReference<T> type) {
+	public <C extends CtTypedElement> C setType(CtTypeReference type) {
 		if (type != null) {
 			type.setParent(this);
 		}
@@ -214,5 +239,30 @@ public class CtLocalVariableImpl<T> extends CtStatementImpl implements CtLocalVa
 	@Override
 	public boolean isAbstract() {
 		return this.modifierHandler.isAbstract();
+	}
+
+	@Override
+	public boolean isTransient() {
+		return this.modifierHandler.isTransient();
+	}
+
+	@Override
+	public boolean isVolatile() {
+		return this.modifierHandler.isVolatile();
+	}
+
+	@Override
+	public boolean isSynchronized() {
+		return this.modifierHandler.isSynchronized();
+	}
+
+	@Override
+	public boolean isNative() {
+		return this.modifierHandler.isNative();
+	}
+
+	@Override
+	public boolean isStrictfp() {
+		return this.modifierHandler.isStrictfp();
 	}
 }

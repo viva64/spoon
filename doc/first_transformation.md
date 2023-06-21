@@ -1,18 +1,15 @@
 ---
-title: First transformation processor
+title: Transformation processors
 tags: [getting-started]
 keywords: start, begin, hello world, processor, spoon, factory, setter
 ---
-
-
-## Goal
 
 
 We'll make a first transformation that adds a field to a class
 and initializes it in the constructor of the current class.
 
 
-## Factories and setters
+### Factories and setters to create AST elements
 
 With `Factory` ([javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/factory/Factory.html)), 
 you can get and create all elements of the meta model. For example, if you want 
@@ -76,7 +73,7 @@ You can convert any string in a `CtStatement` ([javadoc](http://spoon.gforge.inr
 with `createCodeSnippetStatement(String statement)` or in `CtExpression` ([javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtExpression.html)) 
 with `createCodeSnippetExpression(String expression)`. In our case, we convert `this.dates = dates` 
 in a `CtAssignement` ([javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtAssignment.html)) 
-with an assignment and an assigned elements.
+with an assignment and an assigned element.
 
 With this last example, you have created a statement that you have put in a block. 
 You have created a parameter typed by the same type as the field and 
@@ -115,7 +112,7 @@ public class ClassProcessor extends AbstractProcessor<CtClass<?>> {
 }
 ```
 
-## Refactoring transformations
+### Refactoring transformations
 
 Spoon provides some methods for automated refactoring:.
 

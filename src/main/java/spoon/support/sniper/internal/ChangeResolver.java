@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -30,7 +30,7 @@ public class ChangeResolver {
 	public ChangeResolver(ChangeCollector changeCollector, CtElement element) {
 		this.changeCollector = changeCollector;
 		this.element = element;
-		changedRoles = element != null ? changeCollector.getChanges(element) : null;
+		changedRoles = element != null ? changeCollector.getChanges(element) : Collections.emptySet();
 	}
 
 	/**

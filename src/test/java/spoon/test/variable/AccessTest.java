@@ -16,7 +16,10 @@
  */
 package spoon.test.variable;
 
-import org.junit.Test;
+
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
 import spoon.ContractVerifier;
 import spoon.Launcher;
 import spoon.reflect.code.CtArrayAccess;
@@ -38,17 +41,14 @@ import spoon.reflect.factory.Factory;
 import spoon.reflect.visitor.Query;
 import spoon.reflect.visitor.filter.AbstractFilter;
 import spoon.reflect.visitor.filter.TypeFilter;
-import spoon.test.main.MainTest;
 import spoon.test.variable.testclasses.ArrayAccessSample;
 import spoon.test.variable.testclasses.FieldAccessSample;
 import spoon.test.variable.testclasses.RHSSample;
 import spoon.test.variable.testclasses.StackedAssignmentSample;
 import spoon.test.variable.testclasses.VariableAccessSample;
 
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static spoon.testing.utils.ModelUtils.build;
 import static spoon.testing.utils.ModelUtils.buildClass;
 import static spoon.testing.utils.ModelUtils.createFactory;

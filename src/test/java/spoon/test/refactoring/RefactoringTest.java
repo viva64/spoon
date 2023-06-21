@@ -16,11 +16,11 @@
  */
 package spoon.test.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -29,8 +29,10 @@ import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import spoon.Launcher;
 import spoon.refactoring.Refactoring;
 import spoon.reflect.code.BinaryOperatorKind;
@@ -135,16 +137,21 @@ public class RefactoringTest {
 		launcher.run();
 		final CtClass<?> aClassX = (CtClass<?>) launcher.getFactory().Type().get("spoon.test.refactoring.testclasses.AClassX");
 
+		// contract: the new compilation unit has been written
+		assertTrue(new File("target/spooned/refactoring/spoon/test/refactoring/testclasses/AClassX.java").exists());
+
+		// contract: the source position has been set correctly
+		assertEquals("AClassX.java", aClassX.getPosition().getFile().getName());
+
+		// contract: instanceof parameter have been renamed
 		final CtBinaryOperator<?> instanceofInvocation = aClassX.getElements(new TypeFilter<CtBinaryOperator<?>>(CtBinaryOperator.class)).get(0);
 		assertEquals(BinaryOperatorKind.INSTANCEOF, instanceofInvocation.getKind());
 		assertEquals("o", instanceofInvocation.getLeftHandOperand().toString());
 		assertEquals("spoon.test.refactoring.testclasses.AClassX", instanceofInvocation.getRightHandOperand().toString());
 	}
 	@Test
+	@DisabledForJreRange(max = JRE.JAVA_8)
 	public void testRemoveDeprecatedMethods() {
-		if (checkJavaVersion()) {
-			return;
-		}
 		// clean dir if exists
 		try {
 			Files.walk(Paths.get("target/deprecated-refactoring")).sorted(Comparator.reverseOrder())
@@ -176,17 +183,5 @@ public class RefactoringTest {
 		} catch (Exception e) {
 			// error is kinda okay
 		}
-	}
-	/**
-	 * checks if current java version is >=9.
-	 * True if <=8 else false;
-	 */
-	private boolean checkJavaVersion() {
-		String property = System.getProperty("java.version");
-		if (property != null && !property.isEmpty()) {
-			// java 8 and less are versionning "1.X" where 9 and more are directly versioned "X"
-		return property.startsWith("1.");
-		}
-		return false;
 	}
 }

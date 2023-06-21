@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -84,5 +84,8 @@ public interface Template<T extends CtElement> {
 	 * 		It may be null for templates with no context.
 	 */
 	T apply(CtType<?> targetType);
+
+	/** if true, the result of the template evaluation is simplified with partial evaluation */
+	boolean withPartialEvaluation();
 
 }

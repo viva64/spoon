@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -9,7 +9,7 @@ package spoon.support.reflect.declaration;
 
 
 import java.io.File;
-import java.io.FileInputStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -324,10 +324,11 @@ public class CtCompilationUnitImpl extends CtElementImpl implements CtCompilatio
 	public String getOriginalSourceCode() {
 
 		if (originalSourceCode == null && getFile() != null && getFile().exists()) {
-			try (FileInputStream s = new FileInputStream(getFile())) {
-				byte[] elementBytes = new byte[s.available()];
-				s.read(elementBytes);
-				originalSourceCode = new String(elementBytes, this.getFactory().getEnvironment().getEncoding());
+			try {
+				originalSourceCode = Files.readString(
+					getFile().toPath(),
+					this.getFactory().getEnvironment().getEncoding()
+				);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -356,8 +357,7 @@ public class CtCompilationUnitImpl extends CtElementImpl implements CtCompilatio
 			if (declaredTypeReferences.isEmpty()) {
 				throw new SpoonException("Root source fragment of compilation unit of package is not supported");
 			}
-			rootFragment = new ElementSourceFragment(this, null);
-			rootFragment.addTreeOfSourceFragmentsOfElement(this);
+			rootFragment = ElementSourceFragment.createSourceFragmentsFrom(this);
 		}
 		return rootFragment;
 	}
@@ -420,7 +420,7 @@ public class CtCompilationUnitImpl extends CtElementImpl implements CtCompilatio
 
 	@Override
 	@UnsettableProperty
-	public <E extends CtElement> E setParent(E parent) {
+	public <E extends CtElement> E setParent(CtElement parent) {
 		return (E) this;
 	}
 

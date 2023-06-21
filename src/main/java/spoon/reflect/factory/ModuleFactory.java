@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -128,6 +128,7 @@ public class ModuleFactory extends SubFactory {
 			ctModule = factory.Core().createModule().setSimpleName(moduleName);
 			ctModule.setRootPackage(new CtModelImpl.CtRootPackage());
 			ctModule.setParent(getUnnamedModule());
+			getUnnamedModule().addModule(ctModule);
 		}
 
 		return ctModule;

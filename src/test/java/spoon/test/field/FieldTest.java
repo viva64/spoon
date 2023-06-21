@@ -16,9 +16,7 @@
  */
 package spoon.test.field;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static spoon.testing.utils.ModelUtils.buildClass;
 import static spoon.testing.utils.ModelUtils.createFactory;
 
@@ -26,13 +24,12 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.List;
 
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.CtFieldRead;
 import spoon.reflect.code.CtReturn;
-import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtMethod;
@@ -40,12 +37,13 @@ import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtFieldReference;
 import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.reflect.eval.VisitorPartialEvaluator;
 import spoon.test.field.testclasses.A;
 import spoon.test.field.testclasses.AddFieldAtTop;
 import spoon.test.field.testclasses.BaseClass;
+import spoon.testing.utils.LineSeparatorExtension;
+import spoon.testing.utils.ModelTest;
 
 public class FieldTest {
 
@@ -128,14 +126,26 @@ public class FieldTest {
 		return first;
 	}
 
-	@Test
-	public void testGetDefaultExpression() {
-		Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/java/spoon/test/field/testclasses/A.java");
-		spoon.addInputResource("./src/test/java/spoon/test/field/testclasses/BaseClass.java");
-		spoon.buildModel();
+	@ModelTest({
+		"./src/test/java/spoon/test/field/testclasses/A.java",
+		"./src/test/java/spoon/test/field/testclasses/BaseClass.java",
+	})
+	public void testGetDefaultExpression(Factory factory) {
+		final CtClass<A> aClass = factory.Class().get(A.class);
 
-		final CtClass<A> aClass = spoon.getFactory().Class().get(A.class);
+		// contract: isPartOfJointDeclaration works per the specification in the javadoc
+		assertEquals(false,aClass.getField("alone1").isPartOfJointDeclaration());
+		assertEquals(false,aClass.getField("alone2").isPartOfJointDeclaration());
+		assertEquals(false,aClass.getField("alone3").isPartOfJointDeclaration());
+		assertEquals(true,aClass.getField("i").isPartOfJointDeclaration());
+		assertEquals(true,aClass.getField("k").isPartOfJointDeclaration());
+		assertEquals(true,aClass.getField("n").isPartOfJointDeclaration());
+		assertEquals(true,aClass.getField("l").isPartOfJointDeclaration());
+		assertEquals(true,aClass.getField("m").isPartOfJointDeclaration());
+
+		// bonus assertions for Java noobs
+		assertEquals(0,A.l); // default initialization of Java
+		assertEquals(1,A.m);
 
 		CtClass<A.ClassB> bClass = aClass.getFactory().Class().get(A.ClassB.class);
 		List<CtMethod<?>> methods = bClass.getMethodsByName("getKey");
@@ -162,14 +172,10 @@ public class FieldTest {
 		assertNotNull(retour);
 	}
 
-	@Test
-	public void getFQNofFieldReference() {
+	@ModelTest("./src/test/resources/spoon/test/noclasspath/fields/Toto.java")
+	public void getFQNofFieldReference(CtModel model) {
 		// contract: when a reference field origin cannot be determined a call to its qualified name returns an explicit value
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/spoon/test/noclasspath/fields/Toto.java");
-		launcher.getEnvironment().setNoClasspath(true);
-		CtModel ctModel = launcher.buildModel();
-		List<CtFieldReference> elements = ctModel.getElements(new TypeFilter<>(CtFieldReference.class));
+		List<CtFieldReference> elements = model.getElements(new TypeFilter<>(CtFieldReference.class));
 		assertEquals(1, elements.size());
 
 		CtFieldReference fieldReference = elements.get(0);
@@ -178,6 +184,7 @@ public class FieldTest {
 	}
 
 	@Test
+	@ExtendWith(LineSeparatorExtension.class)
 	public void bugAfterRefactoringImports() {
 		Launcher launcher = new Launcher();
 		Factory factory = launcher.getFactory();

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -33,7 +33,7 @@ public interface CtVariableReference<T> extends CtReference {
 	 * Sets the type of the variable.
 	 */
 	@PropertySetter(role = CtRole.TYPE)
-	<C extends CtVariableReference<T>> C setType(CtTypeReference<T> type);
+	<C extends CtVariableReference<T>> C setType(CtTypeReference type);
 
 	/**
 	 * Tries to get the declaration of the reference.

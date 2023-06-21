@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -47,15 +47,18 @@ import spoon.reflect.code.CtSuperAccess;
 import spoon.reflect.code.CtSwitch;
 import spoon.reflect.code.CtSwitchExpression;
 import spoon.reflect.code.CtSynchronized;
+import spoon.reflect.code.CtTextBlock;
 import spoon.reflect.code.CtThisAccess;
 import spoon.reflect.code.CtThrow;
 import spoon.reflect.code.CtTry;
 import spoon.reflect.code.CtTryWithResource;
 import spoon.reflect.code.CtTypeAccess;
+import spoon.reflect.code.CtTypePattern;
 import spoon.reflect.code.CtUnaryOperator;
 import spoon.reflect.code.CtVariableRead;
 import spoon.reflect.code.CtVariableWrite;
 import spoon.reflect.code.CtWhile;
+import spoon.reflect.code.CtYieldStatement;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtAnnotationMethod;
 import spoon.reflect.declaration.CtAnnotationType;
@@ -71,6 +74,8 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtPackageExport;
 import spoon.reflect.declaration.CtProvidedService;
+import spoon.reflect.declaration.CtRecord;
+import spoon.reflect.declaration.CtRecordComponent;
 import spoon.reflect.declaration.CtModuleRequirement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtPackageDeclaration;
@@ -95,7 +100,7 @@ import spoon.reflect.reference.CtTypeMemberWildcardImportReference;
 
 import java.lang.annotation.Annotation;
 
-/** Provides an empty implementation of CtVIsitor.
+/** Provides an empty implementation of CtVisitor.
  *  See {@link CtScanner} for a much more powerful implementation of CtVisitor.
  */
 public abstract class CtAbstractVisitor implements CtVisitor {
@@ -261,6 +266,11 @@ public abstract class CtAbstractVisitor implements CtVisitor {
 
 	@Override
 	public <T> void visitCtLiteral(CtLiteral<T> literal) {
+
+	}
+
+	@Override
+	public void visitCtTextBlock(CtTextBlock ctTextBlock) {
 
 	}
 
@@ -523,4 +533,26 @@ public abstract class CtAbstractVisitor implements CtVisitor {
 	public void visitCtTypeMemberWildcardImportReference(CtTypeMemberWildcardImportReference wildcardReference) {
 
 	}
+
+	@Override
+	public void visitCtYieldStatement(CtYieldStatement statement) {
+
+	}
+
+	@Override
+	public void visitCtTypePattern(CtTypePattern pattern) {
+
+	}
+
+	@Override
+	public void visitCtRecord(CtRecord recordType) {
+
+	}
+
+	@Override
+	public void visitCtRecordComponent(CtRecordComponent recordComponent) {
+
+	}
+
+
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -79,6 +79,12 @@ public class CtParameterImpl<T> extends CtNamedElementImpl implements CtParamete
 	}
 
 	@Override
+	public boolean isPartOfJointDeclaration() {
+		// a parameter can never be part of a joint declaration
+		return false;
+	}
+
+	@Override
 	public boolean isInferred() {
 		return this.inferred;
 	}
@@ -91,7 +97,7 @@ public class CtParameterImpl<T> extends CtNamedElementImpl implements CtParamete
 	}
 
 	@Override
-	public <C extends CtTypedElement> C setType(CtTypeReference<T> type) {
+	public <C extends CtTypedElement> C setType(CtTypeReference type) {
 		if (type != null) {
 			type.setParent(this);
 		}
@@ -217,5 +223,30 @@ public class CtParameterImpl<T> extends CtNamedElementImpl implements CtParamete
 	@Override
 	public boolean isAbstract() {
 		return this.modifierHandler.isAbstract();
+	}
+
+	@Override
+	public boolean isTransient() {
+		return this.modifierHandler.isTransient();
+	}
+
+	@Override
+	public boolean isVolatile() {
+		return this.modifierHandler.isVolatile();
+	}
+
+	@Override
+	public boolean isSynchronized() {
+		return this.modifierHandler.isSynchronized();
+	}
+
+	@Override
+	public boolean isNative() {
+		return this.modifierHandler.isNative();
+	}
+
+	@Override
+	public boolean isStrictfp() {
+		return this.modifierHandler.isStrictfp();
 	}
 }

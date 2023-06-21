@@ -16,10 +16,12 @@
  */
 package spoon.test.javadoc;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.OutputType;
 import spoon.SpoonAPI;
+import spoon.javadoc.internal.Javadoc;
+import spoon.javadoc.internal.JavadocDescriptionElement;
 import spoon.javadoc.internal.JavadocInlineTag;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.CtComment;
@@ -36,11 +38,12 @@ import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.test.imports.ImportTest;
 import spoon.test.javadoc.testclasses.Bar;
+import spoon.testing.utils.ModelTest;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.Check.assertCtElementEquals;
 
 public class JavaDocTest {
@@ -139,15 +142,9 @@ public class JavaDocTest {
 		assertEquals("foo", j.getTags().get(0).getContent());
 	}
 
-	@Test
-	public void testTagsParameters() {
+	@ModelTest("./src/test/java/spoon/test/javadoc/testclasses/A.java")
+	public void testTagsParameters(CtModel model) {
 		// contract: @throws and @exception should have proper params
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/java/spoon/test/javadoc/testclasses/A.java");
-		launcher.getEnvironment().setCommentEnabled(true);
-		launcher.getEnvironment().setNoClasspath(true);
-		CtModel model = launcher.buildModel();
-
 		List<CtJavaDoc> javadocs = model.getElements(new TypeFilter<>(CtJavaDoc.class));
 
 		CtJavaDocTag throwsTag = javadocs.get(0).getTags().get(0);
@@ -157,15 +154,9 @@ public class JavaDocTest {
 		assertEquals("FileNotFoundException", exceptionTag.getParam());
 	}
 
-	@Test
-	public void testJavadocTagNames() {
+	@ModelTest("./src/test/java/spoon/test/javadoc/testclasses/B.java")
+	public void testJavadocTagNames(CtModel model) {
 		//contract: we should handle all possible javadoc tags properly
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/java/spoon/test/javadoc/testclasses/B.java");
-		launcher.getEnvironment().setCommentEnabled(true);
-		launcher.getEnvironment().setNoClasspath(true);
-		CtModel model = launcher.buildModel();
-
 		CtType<?> type = model.getAllTypes().stream().findFirst().get();
 		assertEquals(TagType.VERSION, type.getElements(new TypeFilter<>(CtEnum.class)).get(0).getElements(new TypeFilter<>(CtJavaDoc.class)).get(0).getTags().get(0).getType());
 		assertEquals(TagType.AUTHOR, type.getMethodsByName("m1").get(0).getElements(new TypeFilter<>(CtJavaDoc.class)).get(0).getTags().get(0).getType());
@@ -180,6 +171,29 @@ public class JavaDocTest {
 		assertEquals(TagType.SINCE, type.getMethodsByName("m10").get(0).getElements(new TypeFilter<>(CtJavaDoc.class)).get(0).getTags().get(0).getType());
 		assertEquals(TagType.THROWS, type.getMethodsByName("m11").get(0).getElements(new TypeFilter<>(CtJavaDoc.class)).get(0).getTags().get(0).getType());
 		assertEquals(TagType.UNKNOWN, type.getMethodsByName("m12").get(0).getElements(new TypeFilter<>(CtJavaDoc.class)).get(0).getTags().get(0).getType());
+	}
+
+	@Test
+	public void testNestedBracesInJavadocTag() {
+		CtClass<?> ctClass = Launcher.parseClass("/**\n"
+				+ " * This is code: {@code public void foo() { Hello }} and something after it.\n"
+				+ " */\n"
+				+ "public class Foo {}");
+
+		Javadoc javadoc = Javadoc.parse(ctClass.getComments().get(0).asJavaDoc().getContent());
+		JavadocDescriptionElement firstTextElement = javadoc.getDescription()
+				.getElements()
+				.get(0);
+		JavadocInlineTag codeElement = (JavadocInlineTag) javadoc.getDescription()
+				.getElements()
+				.get(1);
+		JavadocDescriptionElement finalTextElement = javadoc.getDescription()
+				.getElements()
+				.get(2);
+
+		assertEquals("This is code: ", firstTextElement.toText());
+		assertEquals("public void foo() { Hello }", codeElement.getContent());
+		assertEquals(" and something after it.", finalTextElement.toText());
 	}
 
 }

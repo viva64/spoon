@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -39,7 +39,7 @@ public class CtSuperAccessImpl<T> extends CtVariableReadImpl<T> implements CtSup
 		}
 		getFactory().getEnvironment().getModelChangeListener().onObjectUpdate(this, TARGET, target, this.target);
 		this.target = target;
-		return null;
+		return (C) this;
 	}
 
 	@Override

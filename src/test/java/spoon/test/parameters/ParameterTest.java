@@ -16,34 +16,32 @@
  */
 package spoon.test.parameters;
 
-import org.junit.Test;
+
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
+import spoon.reflect.CtModel;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtParameter;
+import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtParameterReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.testing.utils.ModelTest;
 
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ParameterTest {
 
-	@Test
-	public void testParameterInNoClasspath() {
-		final Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/parameter");
-		launcher.setSourceOutputDirectory("./target/parameter");
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.run();
-
+	@ModelTest("./src/test/resources/parameter")
+	public void testParameterInNoClasspath(final Launcher launcher) {
 		final CtClass<Object> aClass = launcher.getFactory().Class().get("org.eclipse.draw2d.text.FlowUtilities");
-		final CtParameter<?> parameter = aClass.getElements(new NamedElementFilter<>(CtParameter.class,"font")).get(0);
+		final CtParameter<?> parameter = aClass.getElements(new NamedElementFilter<>(CtParameter.class, "font")).get(0);
 
 		assertEquals("font", parameter.getSimpleName());
 		assertNotNull(parameter.getType());
@@ -51,14 +49,9 @@ public class ParameterTest {
 		assertEquals("org.eclipse.swt.graphics.Font font", parameter.toString());
 	}
 
-	@Test
-	public void testGetParameterReferenceInLambdaNoClasspath() {
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/noclasspath/Tacos.java");
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.buildModel();
-
-		CtMethod<?> ctMethod = launcher.getFactory().Type().get("Tacos").getMethodsByName("setStarRatings").get(0);
+	@ModelTest("./src/test/resources/noclasspath/Tacos.java")
+	public void testGetParameterReferenceInLambdaNoClasspath(Factory factory) {
+		CtMethod<?> ctMethod = factory.Type().get("Tacos").getMethodsByName("setStarRatings").get(0);
 		CtParameter ctParameter = ctMethod.getBody().getStatement(0).getElements(new TypeFilter<CtParameter>(CtParameter.class) {
 			@Override
 			public boolean matches(CtParameter element) {
@@ -80,40 +73,35 @@ public class ParameterTest {
 		}
 	}
 
-	@Test
 	@SuppressWarnings("unchecked")
-	public void testMultiParameterLambdaTypeReference() {
-		Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/resources/noclasspath/lambdas/MultiParameterLambda.java");
-		launcher.getEnvironment().setNoClasspath(true);
-		launcher.buildModel();
-
+	@ModelTest("./src/test/resources/noclasspath/lambdas/MultiParameterLambda.java")
+	public void testMultiParameterLambdaTypeReference(CtModel model, Factory factory) {
 		List<CtParameter> parameters;
 
 		// test string parameters
-		parameters = launcher.getModel()
+		parameters = model
 						.getElements(new NamedElementFilter<>(CtMethod.class,"stringLambda"))
 						.get(0)
 						.getElements(new TypeFilter<>(CtParameter.class));
 		assertEquals(2, parameters.size());
 		for (final CtParameter param : parameters) {
 			CtTypeReference refType = param.getReference().getType();
-			assertEquals(launcher.getFactory().Type().STRING, refType);
+			assertEquals(factory.Type().STRING, refType);
 		}
 
 		// test integer parameters
-		parameters = launcher.getModel()
+		parameters = model
 				.getElements(new NamedElementFilter<>(CtMethod.class,"integerLambda"))
 				.get(0)
 				.getElements(new TypeFilter<>(CtParameter.class));
 		assertEquals(2, parameters.size());
 		for (final CtParameter param : parameters) {
 			CtTypeReference refType = param.getReference().getType();
-			assertEquals(launcher.getFactory().Type().INTEGER, refType);
+			assertEquals(factory.Type().INTEGER, refType);
 		}
 
 		// test unknown parameters
-		parameters = launcher.getModel()
+		parameters = model
 				.getElements(new NamedElementFilter<>(CtMethod.class,"unknownLambda"))
 				.get(0)
 				.getElements(new TypeFilter<>(CtParameter.class));
@@ -123,5 +111,13 @@ public class ParameterTest {
 			// unknown parameters have no type
 			assertNull(refType);
 		}
+	}
+
+	@ModelTest("./src/test/resources/parameter/ParameterResource.java")
+	public void testGetParentAfterGetParameterReference(CtModel model) {
+		// contract: after getting a parameter reference, the parent of the parameter type reference should still be the parameter itself
+		CtParameter parameter = model.getRootPackage().getElements(new TypeFilter<>(CtParameter.class)).get(0);
+		CtParameterReference pref = parameter.getReference();
+		assertEquals(parameter, parameter.getType().getParent());
 	}
 }

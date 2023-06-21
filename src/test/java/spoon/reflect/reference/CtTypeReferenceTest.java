@@ -1,11 +1,15 @@
 package spoon.reflect.reference;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoRule;
 import org.mockito.stubbing.Answer;
+import spoon.Launcher;
 import spoon.compiler.Environment;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.factory.TypeFactory;
@@ -17,24 +21,24 @@ import java.util.function.Supplier;
 
 import static com.google.common.primitives.Primitives.allPrimitiveTypes;
 import static com.google.common.primitives.Primitives.wrap;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
-import static org.mockito.junit.MockitoJUnit.rule;
 import static spoon.testing.utils.Check.assertNotNull;
 
+@ExtendWith(MockitoExtension.class)
 public class CtTypeReferenceTest {
     private final TypeFactory typeFactory = new TypeFactory();
-    @Rule public MockitoRule mockito = rule();
+
     @Mock private Factory factory;
     @Mock private Environment environment;
     @Mock private FineModelChangeListener listener;
     @Mock private ClassLoader classLoader;
 
-    @Before public void setUp() {
-        when(factory.Type()).thenReturn(typeFactory);
-        when(factory.getEnvironment()).thenReturn(environment);
-        when(environment.getModelChangeListener()).thenReturn(listener);
-        when(environment.getInputClassLoader()).thenReturn(classLoader);
+    @BeforeEach public void setUp() {
+        Mockito.lenient().when(factory.Type()).thenReturn(typeFactory);
+        Mockito.lenient().when(factory.getEnvironment()).thenReturn(environment);
+        Mockito.lenient().when(environment.getModelChangeListener()).thenReturn(listener);
+        Mockito.lenient().when(environment.getInputClassLoader()).thenReturn(classLoader);
     }
 
     /**
@@ -77,7 +81,7 @@ public class CtTypeReferenceTest {
         reference.setFactory(factory);
         reference.setSimpleName(inputClass.getName());
         if (mockClassLoader) {
-            when(classLoader.loadClass(inputClass.getName()))
+            Mockito.lenient().when(classLoader.loadClass(inputClass.getName()))
                 .thenAnswer((Answer<Object>) invocationOnMock -> inputClass);
         }
 
@@ -89,4 +93,32 @@ public class CtTypeReferenceTest {
         //contract: box/unbox returns a reference toward the expected type
         assertEquals(expectedClass.getName(), result.getQualifiedName());
     }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+        "byte,              2, byte[][]",
+        "byte,              3, byte[][][]",
+        "java.lang.String,  3, String[][][]",
+        "char,              1, char[]",
+        "boolean,           1, boolean[]",
+        "byte,              1, byte[]",
+        "short,             1, short[]",
+        "int,               1, int[]",
+        "long,              1, long[]",
+        "float,             1, float[]",
+        "double,            1, double[]",
+    })
+    void testGetActualClassForArray(String className, int arrayDepth, String expected) {
+        // contract: "getActualClass" should return proper classes for multi-dimensional arrays
+        Factory factory = new Launcher().getFactory();
+        CtArrayTypeReference<?> reference = factory.createArrayReference(
+            factory.createReference(className),
+            arrayDepth
+        );
+        assertEquals(
+            expected,
+            reference.getActualClass().getSimpleName()
+        );
+    }
+
 }

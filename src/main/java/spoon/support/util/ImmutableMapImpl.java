@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -88,7 +88,7 @@ public class ImmutableMapImpl implements ImmutableMap {
 		appendMap(sb, map);
 		if (parent != null) {
 			sb.append("\nparent:\n");
-			sb.append(parent.toString());
+			sb.append(parent);
 		}
 		return sb.toString();
 	}

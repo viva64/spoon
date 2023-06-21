@@ -16,13 +16,6 @@
  */
 package spoon.test.compilation;
 
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -32,12 +25,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+
 
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import spoon.Launcher;
 import spoon.SpoonException;
@@ -48,6 +43,7 @@ import spoon.reflect.code.CtBinaryOperator;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtReturn;
 import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
@@ -60,12 +56,21 @@ import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.SpoonClassNotFoundException;
 import spoon.support.compiler.FileSystemFolder;
+import spoon.support.compiler.ProgressLogger;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 import spoon.support.compiler.jdt.JDTBatchCompiler;
 import spoon.test.compilation.testclasses.Bar;
 import spoon.test.compilation.testclasses.IBar;
 import spoon.test.compilation.testclasses.Ifoo;
 import spoon.testing.utils.ModelUtils;
+
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CompilationTest {
 
@@ -89,15 +94,10 @@ public class CompilationTest {
 		SpoonModelBuilder compiler = launcher.createCompiler();
 		boolean compile = compiler.compile(SpoonModelBuilder.InputType.CTTYPES);
 		final String nl = System.getProperty("line.separator");
-		assertTrue(
-				nl + "the compilation should succeed: " + nl +
-						((JDTBasedSpoonCompiler) compiler).getProblems()
-								.stream()
-								.filter(IProblem::isError)
-								.map(CategorizedProblem::toString)
-								.collect(Collectors.joining(nl)),
-				compile
-		);
+		assertTrue(compile,
+				nl + "the compilation should succeed: " + nl
+						+ ((JDTBasedSpoonCompiler) (compiler)).getProblems().stream().filter(IProblem::isError)
+								.map(CategorizedProblem::toString).collect(Collectors.joining(nl)));
 	}
 
 	@Test
@@ -245,6 +245,8 @@ public class CompilationTest {
 			}
 		};
 
+		// contract: a progress logger can be used
+		launcher.getEnvironment().setSpoonProgress(new ProgressLogger(launcher.getEnvironment()));
 		launcher.addInputResource("./src/test/java/spoon/test/imports");
 		launcher.buildModel();
 		int n = 0;
@@ -255,6 +257,22 @@ public class CompilationTest {
 		}
 		assertTrue(n >= 2);
 
+	}
+
+	@Test
+	public void testModuleResolution() throws InterruptedException {
+		// contract: module name is set from the info extract from the module-info.java file
+		// when such file exists
+		Launcher launcher = new Launcher();
+
+		// contract: ComplianceLevel must be >=9 to build a model from an input resource
+		// that contains module-info.java file(s)
+		launcher.getEnvironment().setComplianceLevel(9);
+		launcher.addInputResource("./src/test/resources/simple-module");
+		launcher.buildModel();
+		Set<String> moduleNames = launcher.getModel().getAllModules().stream()
+				.map(CtNamedElement::getSimpleName).collect(Collectors.toSet());
+		assertEquals(moduleNames, Set.of("spoonmod", "unnamed module"));
 	}
 
 	@Test
@@ -367,7 +385,7 @@ public class CompilationTest {
 
 		CtTypeReference<?> mIFoo = launcher.getFactory().Type().createReference("spoontest.IFoo");
 		CtTypeReference<?> mFoo = launcher.getFactory().Type().createReference("spoontest.Foo");
-		assertTrue("Foo subtype of IFoo", mFoo.isSubtypeOf(mIFoo));
+		assertTrue(mFoo.isSubtypeOf(mIFoo), "Foo subtype of IFoo");
 
 		launcher.getModelBuilder().compile(SpoonModelBuilder.InputType.FILES);
 
@@ -394,7 +412,7 @@ public class CompilationTest {
 		mIFoo = launcher.getFactory().Type().createReference("spoontest.IFoo");
 		mFoo = launcher.getFactory().Type().createReference("spoontest.Foo");
 		//if it fails then it is because each class is loaded by different class loader
-		assertTrue("Foo subtype of IFoo", mFoo.isSubtypeOf(mIFoo));
+		assertTrue(mFoo.isSubtypeOf(mIFoo), "Foo subtype of IFoo");
 
 		// not in the spoon classpath before setting it
 		Class<?> ifoo = launcher.getEnvironment().getInputClassLoader().loadClass("spoontest.IFoo");
@@ -440,20 +458,33 @@ public class CompilationTest {
 
 	@Test
 	public void testURLClassLoader() throws Exception {
-		// contract: Spoon handles URLClassLoader and retrieves path elements
+		// contract: Spoon uses the manually set and not the default URLClassLoader
+		Launcher launcher = new Launcher();
+		launcher.addInputResource("src/test/resources/classloader-test/LauncherUser.java");
+		launcher.getEnvironment().setNoClasspath(false);
+		String classpath = "src/test/resources/classloader-test/";
+		URL url = new File(classpath).toURI().toURL();
+		URL[] urls = new URL[]{url};
+		URLClassLoader urlClassloaderNullParent = new URLClassLoader(urls,null);
+		launcher.getEnvironment().setInputClassLoader(urlClassloaderNullParent);
+		CtModel model = launcher.buildModel();
+		List<CtType> ctTypeList = model.getElements(new TypeFilter(CtType.class));
+		CtTypeReference launcherField = ctTypeList.get(0).getField("launcher").getType();
+		assertEquals(0, launcherField.getTypeDeclaration().getFields().size());
+	}
 
+	@Test
+	public void testPathRetrievalFromURLClassLoader() throws Exception {
+		// contract: Spoon retrieves path elements from a manually set URLClassloader
 		String expected = "target/classes/";
-
 		File f = new File(expected);
-		URL[] urls = {f.toURL()};
+		URL[] urls = {f.toURI().toURL()};
 		URLClassLoader urlClassLoader = new URLClassLoader(urls);
 		Launcher launcher = new Launcher();
 		launcher.getEnvironment().setInputClassLoader(urlClassLoader);
-
 		String[] sourceClassPath = launcher.getEnvironment().getSourceClasspath();
 		assertEquals(1, sourceClassPath.length);
-		String tail = sourceClassPath[0].substring(sourceClassPath[0].length() - expected.length());
-		assertEquals(expected, tail);
+		assertEquals(Path.of(expected).toAbsolutePath(), Path.of(sourceClassPath[0]).toAbsolutePath());
 	}
 
 	@Test

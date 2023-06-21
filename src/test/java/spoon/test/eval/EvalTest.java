@@ -16,20 +16,31 @@
  */
 package spoon.test.eval;
 
-import org.junit.Test;
+
+import java.io.File;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import spoon.Launcher;
 import spoon.SpoonException;
+import spoon.reflect.code.BinaryOperatorKind;
+import spoon.reflect.code.CtBinaryOperator;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCodeElement;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtIf;
+import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtReturn;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtVariable;
 import spoon.reflect.eval.PartialEvaluator;
+import spoon.reflect.factory.Factory;
 import spoon.reflect.visitor.AccessibleVariablesFinder;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.reflect.eval.EvalHelper;
@@ -37,13 +48,10 @@ import spoon.support.reflect.eval.InlinePartialEvaluator;
 import spoon.support.reflect.eval.VisitorPartialEvaluator;
 import spoon.test.eval.testclasses.Foo;
 
-import java.io.File;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.ModelUtils.build;
 
 public class EvalTest {
@@ -92,7 +100,7 @@ public class EvalTest {
 		CtBlock<?> b = type.getMethodsByName("testDoNotSimplifyCasts").get(0).getBody();
 		assertEquals(1, b.getStatements().size());
 		b = b.partiallyEvaluate();
-		assertEquals("return ((U) ((java.lang.Object) (spoon.test.eval.testclasses.ToEvaluate.castTarget(element).getClass())))", b.getStatements().get(0).toString());
+		assertEquals("return ((U) (java.lang.Object) (spoon.test.eval.testclasses.ToEvaluate.castTarget(element).getClass()))", b.getStatements().get(0).toString());
 	}
 
 	@Test
@@ -157,7 +165,7 @@ public class EvalTest {
 	@Test
 	public void testVisitorPartialEvaluator_binary() {
 		Launcher launcher = new Launcher();
-
+		
 		{ // binary operator
 			CtCodeElement el = launcher.getFactory().Code().createCodeSnippetExpression("0+1").compile();
 			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
@@ -184,6 +192,62 @@ public class EvalTest {
 			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
 			CtElement elnew = eval.evaluate(el);
 			assertEquals("false", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = createBinaryOperatorOnLiterals(launcher.getFactory(), (byte) 2, 2, BinaryOperatorKind.SL);
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("8", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = createBinaryOperatorOnLiterals(launcher.getFactory(), (short) 2, 2, BinaryOperatorKind.SL);
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("8", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = launcher.getFactory().Code().createCodeSnippetExpression("2<<2").compile();
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("8", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = launcher.getFactory().Code().createCodeSnippetExpression("(1L<<53)-1").compile();
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("9007199254740991L", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = createBinaryOperatorOnLiterals(launcher.getFactory(), (byte) 8, 2, BinaryOperatorKind.SR);
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("2", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = createBinaryOperatorOnLiterals(launcher.getFactory(), (short) 8, 2, BinaryOperatorKind.SR);
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("2", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = launcher.getFactory().Code().createCodeSnippetExpression("8>>2").compile();
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("2", elnew.toString());
+		}
+
+		{ // binary operator
+			CtCodeElement el = launcher.getFactory().Code().createCodeSnippetExpression("(9007199254740991L>>53)+1").compile();
+			VisitorPartialEvaluator eval = new VisitorPartialEvaluator();
+			CtElement elnew = eval.evaluate(el);
+			assertEquals("1L", elnew.toString());
 		}
 	}
 
@@ -249,5 +313,34 @@ public class EvalTest {
 		assertEquals(File.pathSeparator, EvalHelper.convertElementToRuntimeObject(foo.getField("str1").getDefaultExpression()));
 		assertEquals(File.pathSeparator, EvalHelper.getCorrespondingRuntimeObject(foo.getField("str1").getDefaultExpression()));
 
+	}
+
+	private CtBinaryOperator<?> createBinaryOperatorOnLiterals(Factory factory, Object leftLiteral, Object rightLiteral, BinaryOperatorKind opKind) {
+		return factory.createBinaryOperator(factory.createLiteral(leftLiteral), factory.createLiteral(rightLiteral), opKind);
+	}
+	
+	@ParameterizedTest
+	@CsvSource(
+		delimiter = '|',
+		useHeadersInDisplayName = true,
+		value = {
+			" Literal  | Expected  ",	
+			"-1.234567 | -1.234567 ",
+			"-2.345F   | -2.345F   ", 
+			"-3        | -3        ",
+			"-4L       | -4L       "
+		}
+	)
+	void testDoublePrecisionLost(String literal, String expected) {
+		// contract: the partial evaluation of a binary operator on literals does not lose precision for double and float
+		String code = "public class Test {\n"
+		+ "	void test() {\n"
+		+ "		System.out.println(%s);\n"
+		+ "	}\n"
+		+ "}\n";
+		CtMethod<?> method =  Launcher.parseClass(String.format(code, literal)).getElements(new TypeFilter<>(CtMethod.class)).get(0);
+		CtInvocation<?> parameter = method.getElements(new TypeFilter<>(CtInvocation.class)).get(0);
+		method.setBody(method.getBody().partiallyEvaluate());
+		assertEquals(expected, parameter.getArguments().get(0).toString());
 	}
 }

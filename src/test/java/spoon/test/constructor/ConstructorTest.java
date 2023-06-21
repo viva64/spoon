@@ -16,13 +16,21 @@
  */
 package spoon.test.constructor;
 
-import org.junit.Before;
-import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.SpoonAPI;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtConstructor;
+import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtTypeParameter;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtIntersectionTypeReference;
@@ -34,22 +42,21 @@ import spoon.test.constructor.testclasses.ImplicitConstructor;
 import spoon.test.constructor.testclasses.Tacos;
 import spoon.testing.utils.ModelUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.ModelUtils.canBeBuilt;
 
 public class ConstructorTest {
 	private Factory factory;
 	private CtClass<?> aClass;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		SpoonAPI launcher = new Launcher();
 		launcher.run(new String[] {
@@ -157,5 +164,83 @@ public class ConstructorTest {
 
 		assertEquals("Serializable", bounds.get(1).getSimpleName());
 		assertEquals(1, bounds.get(1).getAnnotations().size());
+	}
+
+	@Test
+	public void test_addParameterAt_addsParameterToSpecifiedPosition() {
+		// contract: the parameter should be added at the specified position
+		Factory factory = new Launcher().getFactory();
+
+		CtConstructor<?> constructor = factory.createConstructor();
+
+		CtParameter<String> first = factory.createParameter();
+		CtTypeReference<String> firstType = factory.Type().stringType();
+		first.setSimpleName("x");
+		first.setType(firstType);
+
+		CtParameter<Integer> second = factory.createParameter();
+		CtTypeReference<Integer> secondType = factory.Type().integerType();
+		second.setSimpleName("y");
+		second.setType(secondType);
+
+		CtParameter<Boolean> third = factory.createParameter();
+		CtTypeReference<Boolean> thirdType = factory.Type().booleanType();
+		third.setSimpleName("z");
+		third.setType(thirdType);
+
+		constructor.addParameterAt(0, second);
+		constructor.addParameterAt(1, third);
+		constructor.addParameterAt(0, first);
+
+		assertThat(constructor.getParameters(), equalTo(Arrays.asList(first, second, third)));
+	}
+
+	@Test
+	public void test_addParameterAt_throwsOutOfBoundsException_whenPositionIsOutOfBounds() {
+		// contract: `addParameterAt` should throw an out of bounds exception when the specified position is out of
+		// bounds of the parameter collection
+		Factory factory = new Launcher().getFactory();
+		CtConstructor<?> constructor = factory.createConstructor();
+		CtParameter<?> paramater = factory.createParameter();
+
+		assertThrows(IndexOutOfBoundsException.class,
+				() -> constructor.addParameterAt(2, paramater));
+	}
+
+	@Test
+	public void test_addFormalCtTypeParameterAt_addsTypeParameterToSpecifiedPosition() {
+		// contract: addFormalCtTypeParameterAt should respect the position provided to it.
+
+		// arrange
+		Factory factory = new Launcher().getFactory();
+
+		CtConstructor<?> constructor = factory.createConstructor();
+
+		CtTypeParameter first = factory.createTypeParameter();
+		first.setSimpleName("T");
+		CtTypeParameter second = factory.createTypeParameter();
+		second.setSimpleName("E");
+		CtTypeParameter third = factory.createTypeParameter();
+		third.setSimpleName("C");
+
+		// act
+		// add the type parameters out-of-order but in the correct positions
+		constructor.addFormalCtTypeParameterAt(0, second);
+		constructor.addFormalCtTypeParameterAt(0, first);
+		constructor.addFormalCtTypeParameterAt(2, third);
+
+		assertThat(constructor.getFormalCtTypeParameters(), equalTo(Arrays.asList(first, second, third)));
+	}
+
+	@Test
+	public void test_addFormalCtTypeParameterAt_throwsOutOfBoundsException_whenPositionIsOutOfBounds() {
+		// contract: addFormalCtTypeParameterAt should throw an out ouf bounds exception when the
+		// specified position is out of bounds
+		Factory factory = new Launcher().getFactory();
+		CtConstructor<?> constructor = factory.createConstructor();
+		CtTypeParameter typeParam = factory.createTypeParameter();
+
+		assertThrows(IndexOutOfBoundsException.class,
+				() -> constructor.addFormalCtTypeParameterAt(1, typeParam));
 	}
 }

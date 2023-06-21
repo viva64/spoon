@@ -1,18 +1,17 @@
 ---
-title: Quickstart
+title: Testing code transformations
 tags: [quickstart]
 keywords: testing, quickstart
 ---
 
-## Overview
 
-Spoon module testing is a Java library that provides a fluent api for writing assertions. 
+Spoon module testing is a Java library that provides a fluent API for writing assertions. 
 Its main goal is to propose an easy way to test Java source code transformation.
 
 This module is directly integrated in the spoon project and can be used as soon as the
 dependency is specified in your project.
 
-## Getting started
+### The Assert class
 
 The Assert class is the entry point for assertion methods for different data types.
 Each method in this class is a static factory for the type-specific assertion objects. 
@@ -34,7 +33,7 @@ import static spoon.testing.Assert.assertThat;
 assertThat('Foo.java').withProcessor(new AProcessor()).isEqualTo('FooTransformed.java');
 ```
 
-## Assertion Types
+### Assertion Types
 
 There are three types of assertions:
 
@@ -44,7 +43,7 @@ FileAssert | Assertions available on a file.
 CtElementAssert | Assertions available on a `CtElement`.
 CtPackageAssert | Assertions available between two `CtPackage`.
 
-## CtElement assertion example
+### Assertion example
 
 Let's say that you have a processor which change the name of all fields by the name "j".
 
@@ -68,4 +67,4 @@ final CtType<Foo> type = spoon.getFactory().Type().get(Foo.class);
 assertThat(type.getField("i")).withProcessor(new MyProcessor()).isEqualTo("public int j;");
 ```
 
-Note that, method `withProcessor` takes as parameter either with a processor  instance, a processor class name, a class object.
+Note that, method `withProcessor` takes as parameter either a processor instance, a processor class name, or a class object.

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import spoon.compiler.SpoonFile;
 import spoon.compiler.SpoonFolder;
@@ -43,20 +44,12 @@ public class VirtualFolder implements SpoonFolder {
 
 	@Override
 	public List<SpoonFile> getAllJavaFiles() {
-		List<SpoonFile> result = new ArrayList<>();
-
-		for (SpoonFile f : getAllFiles()) {
-			if (f.isJava()) {
-				result.add(f);
-			}
-		}
-
-		return result;
+		return getAllFiles().stream().filter(SpoonFile::isJava).collect(Collectors.toList());
 	}
 
 	@Override
 	public List<SpoonFile> getFiles() {
-		return Collections.unmodifiableList(new ArrayList<>(files));
+		return List.copyOf(files);
 	}
 
 	@Override

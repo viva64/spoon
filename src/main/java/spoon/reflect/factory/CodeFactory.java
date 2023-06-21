@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -29,6 +29,7 @@ import spoon.reflect.code.CtNewArray;
 import spoon.reflect.code.CtNewClass;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.code.CtStatementList;
+import spoon.reflect.code.CtTextBlock;
 import spoon.reflect.code.CtThisAccess;
 import spoon.reflect.code.CtThrow;
 import spoon.reflect.code.CtTypeAccess;
@@ -56,7 +57,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -270,6 +270,19 @@ public class CodeFactory extends SubFactory {
 	}
 
 	/**
+	 * Creates a TextBlock with the given string value.
+	 * @param value
+	 * 		the string value of the literal
+	 * @return a new literal
+	 */
+	public CtTextBlock createTextBlock(String value) {
+		CtTextBlock textblock = factory.Core().createTextBlock();
+		textblock.setValue(value);
+		textblock.setType((CtTypeReference<String>) factory.Type().STRING);
+		return textblock;
+	}
+
+	/**
 	 * Creates a one-dimension array that must only contain literals.
 	 */
 	@SuppressWarnings("unchecked")
@@ -341,8 +354,13 @@ public class CodeFactory extends SubFactory {
 	 * 		Modifiers of the catch variable
 	 * @return a new catch variable declaration
 	 */
-	public <T> CtCatchVariable<T> createCatchVariable(CtTypeReference<T> type, String name, ModifierKind...modifierKinds) {
-		return factory.Core().<T>createCatchVariable().<CtCatchVariable<T>>setSimpleName(name).<CtCatchVariable<T>>setType(type).setModifiers(new HashSet<>(Arrays.asList(modifierKinds)));
+	public <T> CtCatchVariable<T> createCatchVariable(CtTypeReference<T> type, String name, ModifierKind... modifierKinds) {
+		EnumSet<ModifierKind> modifiers = EnumSet.noneOf(ModifierKind.class);
+		modifiers.addAll(Arrays.asList(modifierKinds));
+		return factory.Core().<T>createCatchVariable()
+				.<CtCatchVariable<T>>setSimpleName(name)
+				.<CtCatchVariable<T>>setType(type)
+				.setModifiers(modifiers);
 	}
 
 	/**
@@ -578,16 +596,31 @@ public class CodeFactory extends SubFactory {
 		if (originalClass == null) {
 			return null;
 		}
-		CtTypeReference<T> typeReference = factory.Core().<T>createTypeReference();
-		typeReference.setSimpleName(originalClass.getSimpleName());
-		if (originalClass.isPrimitive()) {
-			return typeReference;
+		int arrayDimensionCount = 0;
+		Class<?> currentClass = originalClass;
+		while (currentClass.isArray()) {
+			currentClass = currentClass.getComponentType();
+			arrayDimensionCount++;
 		}
-		if (originalClass.getDeclaringClass() != null) {
-			// the inner class reference does not have package
-			return typeReference.setDeclaringType(createCtTypeReference(originalClass.getDeclaringClass()));
+		CtTypeReference<T> typeReference = factory.Core().createTypeReference();
+		if (currentClass.isAnonymousClass()) {
+			int end = currentClass.getName().lastIndexOf('$');
+			typeReference.setSimpleName(currentClass.getName().substring(end + 1));
+		} else {
+			typeReference.setSimpleName(currentClass.getSimpleName());
 		}
-		return typeReference.setPackage(createCtPackageReference(originalClass.getPackage()));
+		if (currentClass.getEnclosingClass() != null) {
+			typeReference.setDeclaringType(createCtTypeReference(currentClass.getEnclosingClass()));
+		}
+		if (currentClass.getPackage() != null) {
+			typeReference.setPackage(createCtPackageReference(currentClass.getPackage()));
+		}
+
+		if (arrayDimensionCount > 0) {
+			typeReference = (CtTypeReference<T>) factory.createArrayReference(typeReference, arrayDimensionCount);
+		}
+
+		return typeReference;
 	}
 
 	/**
@@ -706,7 +739,7 @@ public class CodeFactory extends SubFactory {
 	/**
 	 * Creates a javadoc tag
 	 *
-	 * @param content The content of the javadoc tag with a possible paramater
+	 * @param content The content of the javadoc tag with a possible parameter
 	 * @param type The tag type
 	 * @return a new CtJavaDocTag
 	 */
@@ -731,4 +764,32 @@ public class CodeFactory extends SubFactory {
 		return docTag.setContent(content.trim()).setType(type);
 	}
 
+	/**
+	 * Creates a javadoc tag
+	 *
+	 * @param content The content of the javadoc tag with a possible parameter
+	 * @param type The tag type
+	 * @param realName The real name of the tag
+	 * @return a new CtJavaDocTag
+	 */
+	public CtJavaDocTag createJavaDocTag(String content, CtJavaDocTag.TagType type, String realName) {
+		if (content == null) {
+			content = "";
+		}
+		CtJavaDocTag docTag = factory.Core().createJavaDocTag();
+		if (type != null && type.hasParam()) {
+			int firstWord = content.indexOf(' ');
+			int firstLine = content.indexOf('\n');
+			if (firstLine < firstWord && firstLine >= 0) {
+				firstWord = firstLine;
+			}
+			if (firstWord == -1) {
+				firstWord = content.length();
+			}
+			String param = content.substring(0, firstWord);
+			content = content.substring(firstWord);
+			docTag.setParam(param);
+		}
+		return docTag.setContent(content.trim()).setType(type).setRealName(realName);
+	}
 }

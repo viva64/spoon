@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -15,6 +15,10 @@ import spoon.reflect.code.CtComment;
 public class DefaultTokenWriter implements TokenWriter {
 
 	private final PrinterHelper printerHelper;
+
+	public DefaultTokenWriter() {
+		this.printerHelper = new PrinterHelper();
+	}
 
 	public DefaultTokenWriter(PrinterHelper printerHelper) {
 		this.printerHelper = printerHelper;

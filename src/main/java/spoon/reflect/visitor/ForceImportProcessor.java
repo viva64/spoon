@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -46,6 +46,9 @@ public class ForceImportProcessor extends ImportAnalyzer<LexicalScope> {
 				CtType<?> topLevelType = contextType.getTopLevelType();
 				CtTypeReference<?> referenceDeclaringType = reference.getDeclaringType();
 				if (referenceDeclaringType != null && referenceDeclaringType.getQualifiedName().equals(topLevelType.getQualifiedName())) {
+					if (reference.getQualifiedName().startsWith(referenceDeclaringType.getQualifiedName())) {
+						return;
+					}
 					//the reference to direct child type has to be made implicit
 					reference.setSimplyQualified(true);
 					return;

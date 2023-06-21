@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -87,7 +87,7 @@ public abstract class AbstractRenameRefactoring<T extends CtNamedElement> implem
 
 	@Override
 	public AbstractRenameRefactoring<T> setNewName(String newName) {
-		if (newNameValidationRE != null && newNameValidationRE.matcher(newName).matches() == false) {
+		if (newNameValidationRE != null && !newNameValidationRE.matcher(newName).matches()) {
 			throw new SpoonException("New name \"" + newName + "\" is not valid name");
 		}
 		this.newName = newName;

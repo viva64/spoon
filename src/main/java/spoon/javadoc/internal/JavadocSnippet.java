@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -23,6 +23,7 @@ import java.io.Serializable;
 * have two snippets: one before and one after the inline tag (<code>{@link String}</code>).
 */
 public class JavadocSnippet implements JavadocDescriptionElement, Serializable {
+	private static final long serialVersionUID = 1L;
 	private String text;
 
 	public JavadocSnippet(String text) {

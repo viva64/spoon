@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -109,7 +109,7 @@ public class PatternPrinter extends DefaultGenerator {
 		if (obj instanceof CtElement) {
 			MetamodelConcept mmType = Metamodel.getInstance().getConcept((Class) obj.getClass());
 			MetamodelProperty mmCommentField = mmType.getProperty(CtRole.COMMENT);
-			return mmCommentField != null && mmCommentField.isDerived() == false;
+			return mmCommentField != null && !mmCommentField.isDerived();
 		}
 		return false;
 	}
@@ -132,7 +132,7 @@ public class PatternPrinter extends DefaultGenerator {
 
 	private void addParameterCommentTo(CtElement ele, ParamOnElement... paramsOnElement) {
 		for (ParamOnElement paramOnElement : paramsOnElement) {
-			if (isNodeContained(paramOnElement.node) == false) {
+			if (!isNodeContained(paramOnElement.node)) {
 				params.add(paramOnElement);
 			}
 		}

@@ -16,13 +16,15 @@
  */
 package spoon.test.ctType;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
+import spoon.reflect.CtModel;
 import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtComment;
 import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtInterface;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtNamedElement;
@@ -33,16 +35,22 @@ import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.support.compiler.VirtualFile;
 import spoon.test.ctType.testclasses.X;
+import spoon.testing.utils.ModelTest;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static spoon.testing.utils.ModelUtils.buildClass;
 import static spoon.testing.utils.ModelUtils.createFactory;
 
@@ -84,15 +92,10 @@ public class CtTypeTest {
 		assertTrue(yClass.hasMethod(superMethod));
 	}
 
-	@Test
-	public void testHasMethodInDefaultMethod() {
-		final Launcher launcher = new Launcher();
-		launcher.addInputResource("./src/test/java/spoon/test/ctType/testclasses/X.java");
-		launcher.getEnvironment().setComplianceLevel(8);
-		launcher.run();
-
-		final CtClass<?> x = launcher.getFactory().Class().get("spoon.test.ctType.testclasses.W");
-		final CtInterface<?> z = launcher.getFactory().Interface().get("spoon.test.ctType.testclasses.Z");
+	@ModelTest(value = "./src/test/java/spoon/test/ctType/testclasses/X.java", complianceLevel = 8)
+	public void testHasMethodInDefaultMethod(Launcher launcher, Factory factory) {
+		final CtClass<?> x = factory.Class().get("spoon.test.ctType.testclasses.W");
+		final CtInterface<?> z = factory.Interface().get("spoon.test.ctType.testclasses.Z");
 		final CtMethod<?> superMethod = z.getMethods().iterator().next();
 
 		assertTrue(x.hasMethod(superMethod));
@@ -189,7 +192,7 @@ public class CtTypeTest {
 
 	private void checkIsSubtype(CtTypeReference superType, CtTypeReference subType, Map<String, CtTypeReference<?>> nameToTypeRef) {
 		String msg = getTypeName(subType) + " isSubTypeOf " + getTypeName(superType);
-		assertTrue(msg, subType.isSubtypeOf(superType));
+		assertTrue(subType.isSubtypeOf(superType), msg);
 	}
 
 	private static final Pattern assignment = Pattern.compile("\\s*(\\w+)\\s*=\\s*(\\w+);");
@@ -200,7 +203,7 @@ public class CtTypeTest {
 		CtTypeReference<?> superType = nameToTypeRef.get(m.group(1));
 		CtTypeReference<?> subType = nameToTypeRef.get(m.group(2));
 		String msg = getTypeName(subType) + " is NOT SubTypeOf " + getTypeName(superType);
-		assertFalse(msg, subType.isSubtypeOf(superType));
+		assertFalse(subType.isSubtypeOf(superType), msg);
 	}
 
 	private String getTypeName(CtTypeReference<?> ref) {
@@ -212,5 +215,119 @@ public class CtTypeTest {
 			name = ref.getParent(CtNamedElement.class).getSimpleName();
 		}
 		return ref.toString() + " " + name;
+	}
+
+	@Test
+	public void testRetainsInterfaceOrder() {
+		final Launcher launcher = new Launcher();
+		List<String> expectedInterfaceOrder = Arrays.asList(
+				"java.util.function.Supplier<java.lang.Integer>",
+				"java.util.function.Consumer<java.lang.Integer>",
+				"java.lang.Comparable<java.lang.Integer>"
+		);
+		launcher.addInputResource("./src/test/java/spoon/test/ctType/testclasses/MultiInterfaceImplementation.java");
+
+		CtModel model = launcher.buildModel();
+		CtType<?> type = model.getAllTypes().iterator().next();
+		List<String> interfaces = type.getSuperInterfaces()
+				.stream().map(CtElement::toString).collect(Collectors.toList());
+
+		assertEquals(expectedInterfaceOrder, interfaces);
+	}
+	@Test
+	public void getUsedTypesWithWildcard() {
+		//contract: Wildcard types like "?" shouldn't create a NPE. For more context see issue#3514
+		String input = "src/test/resources/layornos/AllocationStorage.java";
+		Launcher launcher = new Launcher();
+		launcher.getEnvironment().setNoClasspath(true);
+		launcher.addInputResource(input);
+		CtModel model = launcher.buildModel();
+		model.getAllTypes().forEach(type -> {
+			type.getUsedTypes(false);
+			});
+	}
+
+	@Test
+	public void testTypeDeclarationToReferenceRoundTripInNamedModule() {
+		// contract: It's possible to go from a type declaration, to a reference, and back to the declaration
+		// when the declaration is contained within a named module
+
+		final Launcher launcher = new Launcher();
+		launcher.getEnvironment().setComplianceLevel(9);
+		launcher.addInputResource("./src/test/resources/spoon/test/module/simple_module_with_code");
+		launcher.buildModel();
+
+		CtType<?> typeDecl = launcher.getFactory().Type().get("fr.simplemodule.pack.SimpleClass");
+		CtTypeReference<?> typeRef = typeDecl.getReference();
+		CtType<?> reFetchedTypeDecl = typeRef.getTypeDeclaration();
+
+		assertSame(reFetchedTypeDecl, typeDecl);
+	}
+  
+	@Test
+	public void testSneakyThrowsInSubClasses() {
+		// contract: Sneaky throws doesn't crash spoons method return type resolution.
+		// see e.g https://projectlombok.org/features/SneakyThrows for explanation
+		Launcher launcher = new Launcher();
+		launcher.addInputResource("src/test/resources/npe");
+		CtModel model = launcher.buildModel();
+		assertDoesNotThrow(() -> model.getAllTypes().stream().forEach(CtType::getAllExecutables));
+  }
+  
+  @Test
+	public void testGetAllExecutablesOnTypeImplementingNestedInterface() {
+		// contract: implicit static nested interfaces are correct handled in getAllExecutables.
+		Launcher launcher = new Launcher();
+		launcher.addInputResource("src/test/resources/extendsStaticInnerType");
+		CtModel model = launcher.buildModel();
+		CtType<?> type = model.getAllTypes().stream().filter(v -> v.getSimpleName().contains("BarBaz")).findAny().get();
+		int expectedNumExecutablesInJDK8 = 13;
+		int expectedNumExecutablesPostJDK8 = 14;
+		int numExecutables = type.getAllExecutables().size();
+		assertThat(numExecutables, anyOf(
+				equalTo(expectedNumExecutablesInJDK8),
+				equalTo(expectedNumExecutablesPostJDK8))
+		);	
+	}
+
+	/**
+	 * This test captures keyword constraint in CtReferenceImpl based on the compliance level, since the keyword
+	 * "enum" was only introduced in Java 5
+	 */
+	@Test
+	public void testEnumPackage() {
+		final Launcher launcher = new Launcher();
+		launcher.addInputResource("./src/test/resources/keywordCompliance/enum/Foo.java");
+		launcher.getEnvironment().setComplianceLevel(4);
+		launcher.run();
+
+		Collection<CtType<?>> types = launcher.getModel().getAllTypes();
+		assertThat(types.size(), is(1));
+		assertThat(types.stream().findFirst().get(), notNullValue());
+		assertThat(types.stream().findFirst().get().getQualifiedName(), is("keywordCompliance.enum.Foo"));
+	}
+
+	@Test
+	void testRecordInnerClassesHaveDefinition() {
+		// contract: Record inner classes should have a definition
+		Launcher launcher = new Launcher();
+		launcher.addInputResource(new VirtualFile("class Foo {\n" +
+			"  class Inner {\n" +
+			"    record Inner2(String name) {\n" +
+			"    }\n" +
+			"  }\n" +
+			"}"));
+		launcher.getEnvironment().setComplianceLevel(17);
+		CtType<?> foo = launcher.buildModel().getAllTypes().iterator().next();
+		assertEquals(foo, foo.getReference().getTypeDeclaration());
+		assertEquals(1, foo.getNestedTypes().size());
+
+		for (CtType<?> nestedType : foo.getNestedTypes()) {
+			assertEquals(nestedType, nestedType.getReference().getTypeDeclaration());
+			assertEquals(1, nestedType.getNestedTypes().size());
+			for (CtType<?> type : nestedType.getNestedTypes()) {
+				assertEquals(type, type.getReference().getTypeDeclaration());
+			}
+		}
 	}
 }

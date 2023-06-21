@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -52,6 +52,11 @@ abstract class AbstractSourceFragmentContextCollection extends AbstractSourceFra
 				return false;
 			} else if (tpe.getType() == TokenType.IDENTIFIER) {
 				return findIndexOfNextChildTokenByType(TokenType.IDENTIFIER) >= 0;
+			} else if (tpe.getToken().equals(";") && anyChildFragmentHasRole(CtRole.TRY_RESOURCE)) {
+				// We check for ; printed using printList in DJPP#visitCtTryWithResource because if we do not, the context
+				// gets popped from the stack and printer messes up printing of the latter elements.
+				// See: https://github.com/INRIA/spoon/pull/4309.
+				return true;
 			}
 			return findIndexOfNextChildTokenByValue(tpe.getToken()) >= 0;
 		}
@@ -68,11 +73,21 @@ abstract class AbstractSourceFragmentContextCollection extends AbstractSourceFra
 		throw new SpoonException("Unexpected PrintEvent: " + event.getClass());
 	}
 
+	private boolean anyChildFragmentHasRole(CtRole role) {
+		return childFragments.stream()
+				.filter(ElementSourceFragment.class::isInstance)
+				.map(ElementSourceFragment.class::cast)
+				.map(ElementSourceFragment::getRoleInParent)
+				.map(role::equals)
+				.findAny()
+				.orElse(false);
+	}
+
 	@Override
-	protected Boolean isFragmentModified(SourceFragment fragment) {
+	protected ModificationStatus isFragmentModified(SourceFragment fragment) {
 		//we cannot fast detect if it is modified using our changeResolver.
-		//So return null. The code later will detect it including modified roles.
-		return null;
+		// The code later will detect it including modified roles.
+		return ModificationStatus.UNKNOWN;
 	}
 
 	/**

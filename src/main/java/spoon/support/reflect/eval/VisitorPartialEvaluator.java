@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -47,6 +47,7 @@ import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtScanner;
 import spoon.support.util.RtHelper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -76,6 +77,9 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 		}
 		if ((type.getActualClass() == short.class) || (type.getActualClass() == Short.class)) {
 			return n.shortValue();
+		}
+		if ((type.getActualClass() == double.class) || (type.getActualClass() == Double.class)) {
+			return n.doubleValue();
 		}
 		return n;
 	}
@@ -194,6 +198,28 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 					res.setValue(((Number) leftObject).intValue() ^ ((Number) rightObject).intValue());
 				}
 				break;
+			case SL:
+				if (isIntegralType(leftObject) && isIntegralType(rightObject)) {
+					long rightObjectValue = ((Number) rightObject).longValue();
+					if (leftObject instanceof Long) {
+						res.setValue((long) leftObject << rightObjectValue);
+					} else {
+						res.setValue(((Number) leftObject).intValue() << rightObjectValue);
+					}
+					break;
+				}
+				throw new RuntimeException(operator.getKind() + " is only supported for integral types on both sides");
+			case SR:
+				if (isIntegralType(leftObject) && isIntegralType(rightObject)) {
+					long rightObjectValue = ((Number) rightObject).longValue();
+					if (leftObject instanceof Long) {
+						res.setValue((long) leftObject >> rightObjectValue);
+					} else {
+						res.setValue(((Number) leftObject).intValue() >> rightObjectValue);
+					}
+					break;
+				}
+				throw new RuntimeException(operator.getKind() + " is only supported for integral types on both sides");
 			default:
 				throw new RuntimeException("unsupported operator " + operator.getKind());
 			}
@@ -332,7 +358,7 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 
 		// Evaluate forInit
 		List<CtStatement> lst = forLoop.getForInit();
-		for (CtStatement s : lst) {
+		for (CtStatement s : new ArrayList<>(lst)) { // copying the list to avoid ConcurrentModificationException
 			CtStatement evaluateStatement = evaluate(s);
 			if (evaluateStatement != null) {
 				forLoop.addForInit(evaluateStatement);
@@ -344,7 +370,7 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 
 		// Evaluate forUpdate
 		lst = forLoop.getForUpdate();
-		for (CtStatement s : lst) {
+		for (CtStatement s : new ArrayList<>(lst)) { // copying the list to avoid ConcurrentModificationException
 			CtStatement evaluateStatement = evaluate(s);
 			if (evaluateStatement != null) {
 				forLoop.addForUpdate(evaluateStatement);
@@ -449,6 +475,10 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 		setResult(i);
 	}
 
+	private boolean isIntegralType(Object object) {
+		return object instanceof Byte || object instanceof Short || object instanceof Integer || object instanceof Long;
+	}
+
 	private boolean isLiteralType(Object object) {
 		if (object == null) {
 			return true;
@@ -527,9 +557,12 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 				res.setValue(!(Boolean) object);
 				break;
 			case NEG:
-				res.setValue(convert(operator.getType(),
-					-1 * ((Number) object).longValue()));
-				break;
+				if (isFloatingType(operator.getType())) {
+					res.setValue(convert(operator.getType(), -1 * ((Number) object).doubleValue()));
+				} else {
+					res.setValue(convert(operator.getType(), -1 * ((Number) object).longValue()));
+				}
+			break;
 			default:
 				throw new RuntimeException("unsupported operator " + operator.getKind());
 			}
@@ -537,6 +570,22 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 			return;
 		}
 		setResult(operator.clone());
+	}
+
+	/**
+	 * Checks if the given type reference is a floating type. This includes primitive and their wrapper types.
+	 * A type is considered floating if it is either a double or a float.
+	 * @param type the type reference to check
+	 * @return true if the type is a floating type, false otherwise. If the type is null, false is returned.
+	 */
+	private boolean isFloatingType(CtTypeReference<?> type) {
+		if (type == null) {
+			return false;
+		}
+		return type.equals(type.getFactory().Type().doublePrimitiveType())
+				|| type.equals(type.getFactory().Type().floatPrimitiveType())
+				|| type.equals(type.getFactory().Type().doubleType())
+				|| type.equals(type.getFactory().Type().floatType());
 	}
 
 	@Override

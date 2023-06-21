@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -107,12 +107,9 @@ public class PatternParameterConfigurator {
 	}
 
 	private AbstractParameterInfo getParameterInfo(String parameterName, boolean createIfNotExist) {
-		AbstractParameterInfo pi = parameterInfos.get(parameterName);
-		if (pi == null) {
-			pi = new MapParameterInfo(parameterName).setValueConvertor(patternBuilder.getDefaultValueConvertor());
-			parameterInfos.put(parameterName, pi);
-		}
-		return pi;
+		return parameterInfos.computeIfAbsent(parameterName, k -> {
+			return new MapParameterInfo(k).setValueConvertor(patternBuilder.getDefaultValueConvertor());
+		});
 	}
 
 	/**
@@ -132,7 +129,7 @@ public class PatternParameterConfigurator {
 	}
 
 	public PatternParameterConfigurator setMaxOccurrence(int maxOccurrence) {
-		if (maxOccurrence == ParameterInfo.UNLIMITED_OCCURRENCES || maxOccurrence > 1 && currentParameter.isMultiple() == false) {
+		if (maxOccurrence == ParameterInfo.UNLIMITED_OCCURRENCES || maxOccurrence > 1 && !currentParameter.isMultiple()) {
 			throw new SpoonException("Cannot set maxOccurrences > 1 for single value parameter. Call setMultiple(true) first.");
 		}
 		currentParameter.setMaxOccurrences(maxOccurrence);
@@ -533,7 +530,7 @@ public class PatternParameterConfigurator {
 			CtType<?> templateType = patternBuilder.getTemplateTypeRef().getTypeDeclaration();
 			//configure template parameters based on parameter values only - these without any declaration in Template
 			parameterValues.forEach((paramName, paramValue) -> {
-				if (isSubstituted(paramName) == false) {
+				if (!isSubstituted(paramName)) {
 					//and only these parameters whose name isn't already handled by explicit template parameters
 					//replace types whose name fits to name of parameter
 					parameter(paramName)
@@ -985,7 +982,7 @@ public class PatternParameterConfigurator {
 		CtElement element = pep.element;
 		while (element.isParentInitialized()) {
 			CtElement parent = element.getParent();
-			if ((parent instanceof CtBlock) == false || parent.isImplicit() == false) {
+			if (!(parent instanceof CtBlock) || !parent.isImplicit()) {
 				break;
 			}
 			element = parent;

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,6 +7,7 @@
  */
 package spoon.reflect.factory;
 
+import spoon.Launcher;
 import spoon.SpoonException;
 import spoon.reflect.code.CtNewClass;
 import spoon.reflect.cu.SourcePosition;
@@ -33,9 +34,7 @@ import spoon.reflect.visitor.CtAbstractVisitor;
 import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.DefaultCoreFactory;
-import spoon.support.SpoonClassNotFoundException;
 import spoon.support.StandardEnvironment;
-import spoon.support.util.internal.MapUtils;
 import spoon.support.visitor.ClassTypingContext;
 import spoon.support.visitor.GenericTypeAdapter;
 import spoon.support.visitor.MethodTypingContext;
@@ -43,27 +42,25 @@ import spoon.support.visitor.java.JavaReflectionTreeBuilder;
 
 import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * The {@link CtType} sub-factory.
  */
 public class TypeFactory extends SubFactory {
 
-	private static final Set<String> NULL_PACKAGE_CLASSES = Collections.unmodifiableSet(new HashSet<>(
-			Arrays.asList("void", "boolean", "byte", "short", "char", "int", "float", "long", "double",
-					// TODO (leventov) it is questionable to me that nulltype should also be here
-					CtTypeReference.NULL_TYPE_NAME)));
+	private static final Set<String> NULL_PACKAGE_CLASSES = Set.of(
+			"void", "boolean", "byte", "short", "char", "int", "float", "long", "double",
+			// TODO (leventov) it is questionable to me that nulltype should also be here
+			CtTypeReference.NULL_TYPE_NAME);
 
 	public final CtTypeReference<?> NULL_TYPE = createReference(CtTypeReference.NULL_TYPE_NAME);
 	public final CtTypeReference<Void> VOID = createReference(Void.class);
@@ -93,6 +90,7 @@ public class TypeFactory extends SubFactory {
 	public final CtTypeReference<Set> SET = createReference(Set.class);
 	public final CtTypeReference<Map> MAP = createReference(Map.class);
 	public final CtTypeReference<Enum> ENUM = createReference(Enum.class);
+	public final CtTypeReference<?> OMITTED_TYPE_ARG_TYPE = createReference(CtTypeReference.OMITTED_TYPE_ARG_NAME);
 
 	private final Map<Class<?>, CtType<?>> shadowCache = new ConcurrentHashMap<>();
 
@@ -292,6 +290,9 @@ public class TypeFactory extends SubFactory {
 	 */
 	public CtArrayTypeReference<?> createArrayReference(CtTypeReference<?> reference, int n) {
 		CtTypeReference<?> componentType;
+		if (n < 1) {
+			throw new SpoonException("Array dimension must be >= 1");
+		}
 		if (n == 1) {
 			return createArrayReference(reference);
 		}
@@ -448,8 +449,7 @@ public class TypeFactory extends SubFactory {
 				return null;
 			}
 			String className = qualifiedName.substring(inertTypeIndex + 1);
-			final CtTypeReference<T> reference = t.getReference();
-			if (reference.isLocalType()) {
+			if (t.isLocalType()) {
 				final List<CtClass<T>> enclosingClasses = t.getElements(new TypeFilter<CtClass<T>>(CtClass.class) {
 					@Override
 					public boolean matches(CtClass<T> element) {
@@ -465,10 +465,9 @@ public class TypeFactory extends SubFactory {
 				// If the class name is an integer, the class is an anonymous class, otherwise,
 				// it is a standard class.
 				//TODO reset cache when type is modified
-				return getFromCache(t, className, () -> {
+				return getFromCache(t, className, k -> {
 					//the searching for declaration of anonymous class is expensive
 					//do that only once and store it in cache of CtType
-					Integer.parseInt(className);
 					final List<CtNewClass> anonymousClasses = t.getElements(new TypeFilter<CtNewClass>(CtNewClass.class) {
 						@Override
 						public boolean matches(CtNewClass element) {
@@ -489,13 +488,13 @@ public class TypeFactory extends SubFactory {
 
 	private static final String CACHE_KEY = TypeFactory.class.getName() + "-AnnonymousTypeCache";
 
-	private <T, K> T getFromCache(CtElement element, K key, Supplier<T> valueResolver) {
+	private <T, K> T getFromCache(CtElement element, K key, Function<K, T> valueResolver) {
 		Map<K, T> cache = (Map<K, T>) element.getMetadata(CACHE_KEY);
 		if (cache == null) {
 			cache = new HashMap<>();
 			element.putMetadata(CACHE_KEY, cache);
 		}
-		return MapUtils.getOrCreate(cache, key, valueResolver);
+		return cache.computeIfAbsent(key, valueResolver);
 	}
 
 	private boolean isNumber(String str) {
@@ -560,9 +559,14 @@ public class TypeFactory extends SubFactory {
 			if (shadowClass == null) {
 				CtType<T> newShadowClass;
 				try {
-					newShadowClass = new JavaReflectionTreeBuilder(createFactory()).scan((Class<T>) cl);
+					newShadowClass = new JavaReflectionTreeBuilder(getShadowFactory()).scan((Class<T>) cl);
 				} catch (Throwable e) {
-					throw new SpoonClassNotFoundException("cannot create shadow class: " + cl.getName(), e);
+					Launcher.LOGGER.warn("cannot create shadow class: {}", cl.getName(), e);
+
+					newShadowClass = getShadowFactory().Core().createClass();
+					newShadowClass.setSimpleName(cl.getSimpleName());
+					newShadowClass.setShadow(true);
+					getShadowFactory().Package().getOrCreate(cl.getPackage().getName()).addType(newShadowClass);
 				}
 				newShadowClass.setFactory(factory);
 				newShadowClass.accept(new CtScanner() {
@@ -582,9 +586,13 @@ public class TypeFactory extends SubFactory {
 		return aType;
 	}
 
-	private Factory createFactory() {
-		//use existing environment to use correct class loader
-		return new FactoryImpl(new DefaultCoreFactory(), factory.getEnvironment());
+	private transient Factory shadowFactory;
+	private Factory getShadowFactory() {
+		if (shadowFactory == null) {
+			//use existing environment to use correct class loader
+			shadowFactory = new FactoryImpl(new DefaultCoreFactory(), factory.getEnvironment());
+		}
+		return shadowFactory;
 	}
 
 	/**

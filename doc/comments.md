@@ -3,17 +3,15 @@ title: Comments and position
 keywords: comments position
 ---
 
-# Comment
-
 In Spoon there are four different kinds of comments:
 
-* File comments (comment at the begin of the file, generally licence) `CtComment.CommentType.FILE`
+* File comments (comment at the beginning of the file, generally licence) `CtComment.CommentType.FILE`
 * Line comments (from // to end line) `CtComment.CommentType.INLINE`
 * Block comments (from /* to */) `CtComment.CommentType.BLOCK`
 * Javadoc comments (from /** to */) `CtComment.CommentType.JAVADOC`
 
 The comments are represented in Spoon with a `CtComment` class ([javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtComment.html)). 
-This class exposes an API to get the content `CtComment.getContent()`, the type `CtComment.getCommentType()` and the position `CtComment.getPosition()` of an comment.
+This class exposes an API to get the content `CtComment.getContent()`, the type `CtComment.getCommentType()` and the position `CtComment.getPosition()` of a comment.
 
 We also try to understand to which element they are attached.
 We use some simple heuristics that work well in nominal cases but cannot address all specific cases.
@@ -21,11 +19,11 @@ You can retrieve the comments of each `CtElement` via the API `CtElement.getComm
 
 The parsing of the comments can be enabled in the Environment via the option `Environment.setCommentEnabled(boolean)` or the command line argument `--enable-comments` (or `-c`).  
 
-## Javadoc Comments
+### Javadoc Comments
 
 The Javadoc comments are also available via the API `CtElement.getDocComment()` but this API returns directly the content of the Javadoc as `String`.
 
-## Comment Attribution
+### Comment Attribution
 
 * Each element can have multiple comments
 * Comments in the same line of a statement are attached to the statement
@@ -33,8 +31,6 @@ The Javadoc comments are also available via the API `CtElement.getDocComment()` 
 * Comments cannot be associated to other comments
 * Comments at the end of a block are considered as orphan comments
 * Comments before a class definition are attached to the class
-
-### Comment Examples
 
 Class comment
 
@@ -71,7 +67,7 @@ Multiple line comment
 int a;
 ```
 
-## Process Comments
+### Processing Comments
 
 You can process comments like every `CtElement`.
 
@@ -81,7 +77,7 @@ public class CtCommentProcessor extends AbstractProcessor<CtComment> {
     @Override
     public boolean isToBeProcessed(CtComment candidate) {
         // only process Javadoc
-        if (candidatate.getCommentType() == CtComment.CommentType.JAVADOC) {
+        if (candidate.getCommentType() == CtComment.CommentType.JAVADOC) {
             return true;
         }
         return false;
@@ -94,7 +90,7 @@ public class CtCommentProcessor extends AbstractProcessor<CtComment> {
 }
 ```
 
-# Source Position
+### Source Positions
 
 `SourcePosition` ([javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/cu/SourcePosition.html)) defines the position of the `CtElement` ([javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/declaration/CtElement.html)) in the original source file. 
 SourcePosition is extended by three specialized positions:

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,9 +7,9 @@
  */
 package spoon.support.template;
 
-import spoon.SpoonException;
+import spoon.template.TemplateException;
 
-public class UndefinedParameterException extends SpoonException {
+public class UndefinedParameterException extends TemplateException {
 
 	private static final long serialVersionUID = 1L;
 

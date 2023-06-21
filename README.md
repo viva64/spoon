@@ -1,13 +1,16 @@
 [![Maven Central](https://img.shields.io/maven-central/v/fr.inria.gforge.spoon/spoon-core.svg)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22fr.inria.gforge.spoon%22%20AND%20a%3A%22spoon-core%22)
-[![Travis Build Status](https://travis-ci.org/INRIA/spoon.svg?branch=master)](https://travis-ci.org/INRIA/spoon)
+[![GHA tests Workflow Status](https://github.com/INRIA/spoon/actions/workflows/tests.yml/badge.svg)](https://github.com/INRIA/spoon/actions/workflows/tests.yml)
 [![Coverage Status](https://coveralls.io/repos/INRIA/spoon/badge.png)](https://coveralls.io/r/INRIA/spoon)
 [![Maintainability Rating](https://sonarqube.ow2.org/api/project_badges/measure?project=fr.inria.gforge.spoon%3Aspoon-core&metric=sqale_rating)](https://sonarqube.ow2.org/dashboard?id=fr.inria.gforge.spoon%3Aspoon-core)
+[![Reproducible Builds](https://img.shields.io/badge/Reproducible_Builds-ok-success?labelColor=1e5b96)](https://github.com/jvm-repo-rebuild/reproducible-central#fr.inria.gforge.spoon:spoon-core)
 
 # Spoon
 
-Spoon is an open-source library to analyze, rewrite, transform, transpile Java source code. It parses source files to build a well-designed AST with powerful analysis and transformation API. It fully supports modern Java versions up to Java 11.
-Spoon is an official Inria open-source project, and member of the [OW2](https://www.ow2.org/) open-source consortium.
-The official website is available at <http://spoon.gforge.inria.fr/>.
+Spoon is an open-source library to analyze, rewrite, transform, transpile Java source code. It parses source files to build a well-designed AST with powerful analysis and transformation API. It supports modern Java versions up to Java 20. Spoon is an official Inria open-source project, and member of the [OW2](https://www.ow2.org/) open-source consortium.
+
+## Documentation
+
+The latest official documentation is available at <http://spoon.gforge.inria.fr/>.
 
 ### Academic usage
 
@@ -15,10 +18,10 @@ If you use Spoon for academic purposes, please cite: Renaud Pawlak, Martin Monpe
 
 ```
 @article{pawlak:hal-01169705,
-  TITLE = {{Spoon: A Library for Implementing Analyses and Transformations of Java Source Code}},
+  TITLE = "{Spoon: A Library for Implementing Analyses and Transformations of Java Source Code}",
   AUTHOR = {Pawlak, Renaud and Monperrus, Martin and Petitprez, Nicolas and Noguera, Carlos and Seinturier, Lionel},
-  JOURNAL = {{Software: Practice and Experience}},
-  PUBLISHER = {{Wiley-Blackwell}},
+  JOURNAL = "{Software: Practice and Experience}",
+  PUBLISHER = "{Wiley-Blackwell}",
   PAGES = {1155-1179},
   VOLUME = {46},
   URL = {https://hal.archives-ouvertes.fr/hal-01078532/document},
@@ -32,6 +35,10 @@ If you use Spoon for academic purposes, please cite: Renaud Pawlak, Martin Monpe
 If you need professional support on Spoon (development, training, extension), you are welcome to post a comment on https://github.com/INRIA/spoon/issues/3251
 
 ## Getting started in 2 seconds
+
+> **Java version:** Spoon version 10 and up requires Java 11 or later. Spoon 9.1.0 is the final Spoon release compatible
+> with Java 8, and we do not plan to backport any bug fixes or features to Spoon 9. Note that Spoon can of course still
+> consume source code for older versions of Java, but it needs JDK 11+ to run.
 
 Get latest stable version with Maven, see <https://search.maven.org/artifact/fr.inria.gforge.spoon/spoon-core>
 
@@ -50,7 +57,7 @@ Documentation:
 
 ## Contributing in 2 seconds
 
-Create your first pull-request to improve the documentation, see [doc](https://github.com/INRIA/spoon/tree/master/doc)! Proceed with your first bug fix! The community is open-minded, respectful and patient. All external contributions are welcome.
+Create your first pull request to improve the documentation, see [doc](https://github.com/INRIA/spoon/tree/master/doc)! Proceed with your first bug fix! The community is open-minded, respectful and patient. All external contributions are welcome.
 
 ## Design Philosophy
 
@@ -83,7 +90,7 @@ mvn test
 
 ### Download
 
-Latest version: <https://search.maven.org/remote_content?g=fr.inria.gforge.spoon&a=spoon-core&v=LATEST&c=jar-with-dependencies> - [Javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/spoon-core/apidocs/index.html)
+Latest version: <https://search.maven.org/remote_content?g=fr.inria.gforge.spoon&a=spoon-core&v=LATEST&c=jar-with-dependencies> - [Javadoc](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/index.html)
 
 Maven:
 
@@ -91,6 +98,7 @@ Maven:
 <dependency>
     <groupId>fr.inria.gforge.spoon</groupId>
     <artifactId>spoon-core</artifactId>
+    <!-- See rendered release value at http://spoon.gforge.inria.fr/ -->
     <version>{{site.spoon_release}}</version>
 </dependency>
 ```
@@ -98,10 +106,18 @@ Maven:
 ## Releases
 
 <!-- .* Marker comment. -->
+- Oct 2022, Spoon 10.2.0 [(changelog)](https://github.com/INRIA/spoon/pull/4946)
+- April 2022, Spoon 10.1.0 [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-10.1.0)
+- October 2021, Spoon 10.0.0 [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-10.0.0)
+- August 2021: Spoon 9.1.0 [(changelog)](https://github.com/INRIA/spoon/pull/4104)
+- March 2021: Spoon 9.0.0 [(changelog)](https://github.com/INRIA/spoon/issues/3845)
+- October 2020: Spoon 8.3.0 [(changelog)](https://github.com/INRIA/spoon/pull/3647)
+- July 2020: Spoon 8.2.0 [(changelog)](https://github.com/INRIA/spoon/pull/3501)
+- March 2020: Spoon 8.1.0 [(changelog)](https://github.com/INRIA/spoon/pull/3310)
 - November 2019, Spoon 8.0.0 [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-8.0.0)
 - July 2019: Spoon 7.5.0 is released [(changelog)](https://github.com/INRIA/spoon/pull/3057)
 - May 2019: Spoon 7.4.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-7.4.0)
-- Februray 10, 2019: Spoon 7.3.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-7.3.0) 
+- February 10, 2019: Spoon 7.3.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-7.3.0) 
 - December 4, 2018: Spoon 7.2.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-7.2.0) 
 - October 10, 2018: Spoon 7.1.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-7.1.0) 
 - July 4, 2018: Spoon 7.0.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-7.0.0) 
@@ -109,7 +125,7 @@ Maven:
 - December 20, 2017: Spoon 6.1.0 is released, merry christmas! :christmas_tree: [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-6.1.0)
 - November 17, 2017: Spoon 6.0.0 is released! Check the [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-6.0.0) as there are few non backward-compatible changes :warning:
 - September 6, 2017: Spoon 5.9.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-5.9.0) *back-to-work* release!
-- July 11, 2017: Spoon 5.8.0 is released  [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-5.8.0) Summer release :beer: To be prefered wrt the previous one: fix lot of bugs.
+- July 11, 2017: Spoon 5.8.0 is released  [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-5.8.0) Summer release :beer: To be preferred wrt the previous one: fix lot of bugs.
 - June 01, 2017: Spoon 5.7.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-5.7.0)
 - March 16, 2017: Spoon 5.6.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-5.6.0) Spring release :-)
 - January 11, 2017: Spoon 5.5.0 is released [(changelog)](https://github.com/INRIA/spoon/releases/tag/spoon-core-5.5.0). Happy new year!
@@ -136,68 +152,138 @@ Maven:
 - September 30, 2013: Spoon 1.6 is released.
 - April 12, 2012: Spoon 1.5 is released.
 
+## License
+
+Spoon is Free and Open Source, double-licensed under the ([CeCILL-C license](https://cecill.info/licences.en.html) - French equivalent to LGPL) and the MIT license.
 
 ## Github Contributors
 
-Alphabetical order of last names
+This list is generated by `chore/generate-contributor-list.py`. If you're not listed or you'd like to have your full name, please post to https://github.com/INRIA/spoon/issues/3909.
 
-    git log --pretty="%an" | sed -e '/Spoon Bot/d' | sort -u | awk 'NF>=2 {print "* " $0}' | sort -k3
-
-* David Bernard
-* Artur Bosch
-* Egor Bredikhin
-* Maxime CLEMENT
-* Benoit Cornu
-* Andre Cruz
-* Benjamin DANGLOT
-* Scott Dickerson
-* Yann Diorcet
-* Thomas Durieux
-* Sergey Fedorov
+* adamjryan
 * Alcides Fonseca
-* Clement Fournier
-* Jan Galinski
-* Nicolas Harrand
-* Mickael Istria
-* Mehdi Kaytoue
-* Urs Keller
-* Filip Krakowski
-* Lukas Krejci
+* Alexander Shopov
+* Aman Sharma
+* andrewbwogi
+* André Cruz
+* André Silva
+* Antoine Mottier
+* Anton Lyxell
+* argius
+* Arnaud Blouin
+* arsenkhy
+* Artamm
+* Artur Bosch
+* aryan
 * Ashutosh Kumar Verma
-* Roman Leventov
-* Fan Long
-* Kai Luo
-* Matias Martinez
-* Luke Merrick
-* Martin Monperrus
-* Vincenzo Musco
-* Carlos Noguera
-* Gerard Paligot
-* Renaud Pawlak
-* Nicolas Petitprez
-* Phillip Schichtel
-* Lionel Seinturier
-* Miguel Sozinho Ramalho
-* Marcel Steinbeck
-* Christopher Stokes
-* Eddie T
-* Simon Urli
-* Pavel Vojtechovsky
-* Stefan Wolf
-* Diorcet Yann
-* Gregor Zeitlinger
-* Tomasz Zielinski
-
-Early contributors:
-
-* Olivier Barais
-* David Bernard
+* aveuiller
+* Axel Howind
+* Benjamin DANGLOT
 * Benoit Cornu
-* Favio DeMarco
-* Didier Donsez
-* Christophe Dufour
-* Sebastian Lamelas Marcote
-* Matias Martinez
 * Carlos Noguera
-* Renaud Pawlak
+* Ceki Gülcü
+* Charm
+* ChrisSquare
+* Christophe Dufour
+* Christopher Stokes
+* Clemens Bartz
+* Clément Fournier
+* César Soto Valero
+* Darius Sas
+* David Bernard
+* Didier Donsez
+* Diorcet Yann
+* dufaux
+* dwayneb
+* dya-tel
+* Eddie T
+* Egor Bredikhin
+* Fabien DUMINY
+* Fan Long
+* fangzhen
+* fav
+* Favio DeMarco
+* Fernanda Madeiral
+* Filip Krakowski
+* Gabriel Chaperon Burgos
+* gibahjoe
+* GluckZhang
+* Gregor Zeitlinger
+* gtoison
+* Guillaume Toison
+* Gérard Paligot
+* Hannes Greule
+* Haris Adzemovic
+* HectorSM
+* Henry Chu
+* Horia Constantin
+* I-Al-Istannen
+* intrigus-lgtm
+* jakobbraun
+* Jan Galinski
+* jon
+* Kai Luo
+* Lakshya A Agrawal
+* leventov
+* Lionel Seinturier
+* lodart
+* Lukas Krejci
+* Luke Merrick
+* Marcel Manseer
+* Marcel Steinbeck
+* Martin Monperrus
+* MartinWitt
+* Matias Martinez
+* Maxim Stefanov
+* Maxime CLEMENT
+* Mehdi Kaytoue
+* Michael Täge
+* Mickael Istria
+* Miguel Sozinho Ramalho
+* Mikael Forsberg
+* Muhammet Ali AKBAY
+* Nicolas Harrand
 * Nicolas Pessemier
+* Nicolas Petitprez
+* Noah Santschi-Cooney
+* Olivier Barais
+* Ondřej Šebek
+* Pavel Vojtechovsky
+* peroksid90
+* Phillip Schichtel
+* Quentin LE DILAVREC
+* raymogg
+* Renaud Pawlak
+* Reza Gharibi
+* Rhys Compton
+* Rick Kellogg
+* Rijnard van Tonder
+* Rohitesh Kumar Jain
+* Roman Leventov
+* santos-samuel
+* scootafew
+* Scott Dickerson
+* Scott Pinwell
+* Sebastian Lamelas Marcote
+* Sergey Fedorov
+* Shantanu
+* Simon Larsén
+* Simon Urli
+* Spencer Williams
+* srlm
+* ST0NEWALL
+* Stefan Wolf
+* Sébastien Bertrand
+* Thimo Seitz
+* Thomas Durieux
+* tiagodrcarvalho
+* Tomasz Zieliński
+* Urs Keller
+* Viktor
+* Vincenzo Musco
+* Wolfgang Schmiesing
+* Wouter Smeenk
+* Wreulicke
+* Yann Diorcet
+* Zhang Xindong
+* Дмитрий

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -22,7 +22,7 @@ public class DefaultSourceFragmentPrinter implements SourceFragmentPrinter {
 
 	@Override
 	public void print(PrinterEvent event) {
-		event.print();
+		event.printSourceFragment(null, ModificationStatus.UNKNOWN);
 	}
 
 	@Override

@@ -29,7 +29,7 @@ annotations on any arbitrary code elements (including within method bodies), and
 supports the modification of the existing code.
 
 
-## Annotation Processing with Spoon
+### Annotation Processing Example
 
 Spoon provides developers with a way to specify the analyses and transformations 
 associated with annotations. Annotations are metadata on code that start with `@` in Java.
@@ -62,7 +62,7 @@ The implementation of such an annotation would not be straightforward using Java
 since it would not allow us to just insert the NULL check in the body of the annotated method. 
 
 
-## The Annotation Processor Interface
+### The Annotation Processor Interface
 
 In Spoon, the full code model can be used  for compile-time annotation processing. To this end, 
 Spoon provides a special kind of processor called `AnnotationProcessor` whose interface is:
@@ -79,7 +79,7 @@ public interface AnnotationProcessor<A extends Annotation, E extends CtElement> 
 
 Annotation processors extend normal processors by stating the annotation type those elements must 
 carry (type parameter `A`), in addition of stating the kind of source code element they process 
-(type parameter `E`). The `process` method (line 4) receives as arguments both the CtElement and the 
+(type parameter `E`). The `process` method (line 4) receives as arguments both the `CtElement` and the 
 annotation it carries. The remaining four methods (`getProcessedAnnotationTypes`, `getConsumedAnnotationTypes`, 
 `inferConsumedAnnotationTypes` and `shoudBeConsumed`) configure the visiting of the AST during annotation 
 processing. The Spoon annotation processing runtime is able to infer the type of annotation a processor 
@@ -114,7 +114,7 @@ respectively. The actual processing of the annotation is implemented in the `pro
 (lines 10-13). Annotated code is transformed by navigating the AST up from the annotated parameter to the owner method, 
 and then down to the method's body code block (lines 10 and 12). The construction of the `assert` statement is delegated 
 to a helper method `constructAssertion(String)`, taking as argument the name of the parameter to check. This helper method 
-constructs an instance of `CtAssert` (by either programmatically constructing the desired boolean expression. Having obtained 
+constructs an instance of `CtAssert` by programmatically constructing the desired boolean expression. Having obtained 
 the desired assert statement, it is injected at the beginning of the body of the method. 
 
 More complex annotation processing scenarios can be tackled with Spoon. For example, when using the `NotNull` annotation, 

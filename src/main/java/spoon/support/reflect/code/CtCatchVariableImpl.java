@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -108,6 +108,11 @@ public class CtCatchVariableImpl<T> extends CtCodeElementImpl implements CtCatch
 	}
 
 	@Override
+	public boolean isPartOfJointDeclaration() {
+		return false;
+	}
+
+	@Override
 	public <C extends CtNamedElement> C setSimpleName(String simpleName) {
 		getFactory().getEnvironment().getModelChangeListener().onObjectUpdate(this, CtRole.NAME, simpleName, this.name);
 		this.name = simpleName;
@@ -115,7 +120,7 @@ public class CtCatchVariableImpl<T> extends CtCodeElementImpl implements CtCatch
 	}
 
 	@Override
-	public <C extends CtTypedElement> C setType(CtTypeReference<T> type) {
+	public <C extends CtTypedElement> C setType(CtTypeReference type) {
 		setMultiTypes(type == null ? emptyList() : Collections.singletonList(type));
 		return (C) this;
 	}
@@ -257,5 +262,30 @@ public class CtCatchVariableImpl<T> extends CtCodeElementImpl implements CtCatch
 	@Override
 	public boolean isAbstract() {
 		return this.modifierHandler.isAbstract();
+	}
+
+	@Override
+	public boolean isTransient() {
+		return this.modifierHandler.isTransient();
+	}
+
+	@Override
+	public boolean isVolatile() {
+		return this.modifierHandler.isVolatile();
+	}
+
+	@Override
+	public boolean isSynchronized() {
+		return this.modifierHandler.isSynchronized();
+	}
+
+	@Override
+	public boolean isNative() {
+		return this.modifierHandler.isNative();
+	}
+
+	@Override
+	public boolean isStrictfp() {
+		return this.modifierHandler.isStrictfp();
 	}
 }

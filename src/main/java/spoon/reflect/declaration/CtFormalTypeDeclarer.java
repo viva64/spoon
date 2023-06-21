@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -37,6 +37,16 @@ public interface CtFormalTypeDeclarer extends CtTypeMember {
 	 */
 	@PropertySetter(role = TYPE_PARAMETER)
 	<T extends CtFormalTypeDeclarer> T addFormalCtTypeParameter(CtTypeParameter formalTypeParameter);
+
+	/**
+	 * Add a type parameter at a specific position.
+	 *
+	 * @param position Position to insert the type parameter at
+	 * @param formalTypeParameter The type parameter to insert
+	 * @return The receiver
+	 */
+	@PropertySetter(role = TYPE_PARAMETER)
+	<T extends CtFormalTypeDeclarer> T addFormalCtTypeParameterAt(int position, CtTypeParameter formalTypeParameter);
 
 	/**
 	 * Removes a type parameters from this generic element.

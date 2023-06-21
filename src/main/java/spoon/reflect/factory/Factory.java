@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -52,6 +52,7 @@ import spoon.reflect.code.CtSuperAccess;
 import spoon.reflect.code.CtSwitch;
 import spoon.reflect.code.CtSwitchExpression;
 import spoon.reflect.code.CtSynchronized;
+import spoon.reflect.code.CtTextBlock;
 import spoon.reflect.code.CtThisAccess;
 import spoon.reflect.code.CtThrow;
 import spoon.reflect.code.CtTry;
@@ -62,6 +63,7 @@ import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.code.CtVariableRead;
 import spoon.reflect.code.CtVariableWrite;
 import spoon.reflect.code.CtWhile;
+import spoon.reflect.code.CtYieldStatement;
 import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.BodyHolderSourcePosition;
@@ -83,6 +85,8 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtPackageExport;
 import spoon.reflect.declaration.CtProvidedService;
+import spoon.reflect.declaration.CtRecord;
+import spoon.reflect.declaration.CtRecordComponent;
 import spoon.reflect.declaration.CtModuleRequirement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtPackageDeclaration;
@@ -179,6 +183,9 @@ public interface Factory {
 
 	/** Access to {@link ModuleFactory} subfactory for Java 9 modules */
 	ModuleFactory Module();
+
+	/** Access to templates */
+	Factory Templates();
 
 	/**
 	 *  @see CodeFactory#createAnnotation(CtTypeReference)
@@ -344,11 +351,15 @@ public interface Factory {
 	 */
 	CtComment createComment(String content, CtComment.CommentType type);
 
-
 	/**
 	 *  @see CodeFactory#createJavaDocTag(String,CtJavaDocTag.TagType)
 	 */
 	CtJavaDocTag createJavaDocTag(String content, CtJavaDocTag.TagType type);
+
+	/**
+	 *  @see CodeFactory#createJavaDocTag(String,CtJavaDocTag.TagType,String)
+	 */
+	CtJavaDocTag createJavaDocTag(String content, CtJavaDocTag.TagType type, String realName);
 
 	/**
 	 * @see CoreFactory#createJavaDoc()
@@ -357,7 +368,7 @@ public interface Factory {
 
 
 	/**
-	 *  @see CodeFactory#createJavaDocTag(String,CtJavaDocTag.TagType)
+	 *  @see CodeFactory#createJavaDocTag()
 	 */
 	CtJavaDocTag createJavaDocTag();
 
@@ -510,6 +521,16 @@ public interface Factory {
 	 *  @see CoreFactory#createLiteral()
 	 */
 	<T> CtLiteral<T> createLiteral();
+
+	/**
+	 *  @see CoreFactory#createTextBlock()
+	 */
+	CtTextBlock createTextBlock();
+
+	/**
+	 *  @see CodeFactory#createTextBlock(String)
+	 */
+	CtTextBlock createTextBlock(String value);
 
 	/**
 	 *  @see CoreFactory#createLocalVariable()
@@ -1041,4 +1062,22 @@ public interface Factory {
 	 * @see TypeFactory#createSimplyQualifiedReference(String)
 	 */
 	<T> CtTypeReference<T> createSimplyQualifiedReference(String qualifiedName);
+
+	/**
+	 *  @see CoreFactory#createYieldStatement()
+	 */
+	CtYieldStatement createYieldStatement(boolean isImplicit);
+
+	/**
+	 * @see CoreFactory#createRecord()
+	 * @return a CtRecord
+	 */
+	CtRecord createRecord();
+
+	/**
+	 * @see CoreFactory#createRecordComponent()
+	 * @return a CtRecordComponent.
+	 */
+	CtRecordComponent createRecordComponent();
+
 }

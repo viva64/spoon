@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -49,5 +49,5 @@ public interface CtCatchVariable<T> extends CtVariable<T>, CtMultiTypedElement, 
 
 	@Override
 	@UnsettableProperty
-	<C extends CtTypedElement> C setType(CtTypeReference<T> type);
+	<C extends CtTypedElement> C setType(CtTypeReference type);
 }

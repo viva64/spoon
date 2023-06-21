@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -207,6 +207,11 @@ public class ChangeCollector {
 
 		@Override
 		public <K, V> void onMapAdd(CtElement currentElement, CtRole role, Map<K, V> field, K key, CtElement newValue) {
+			onChange(currentElement, role);
+		}
+
+		@Override
+		public <K, V> void onMapDelete(CtElement currentElement, CtRole role, Map<K, V> field, K key, CtElement oldValue) {
 			onChange(currentElement, role);
 		}
 

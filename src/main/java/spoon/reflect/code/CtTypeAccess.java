@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -74,7 +74,7 @@ public interface CtTypeAccess<A> extends CtExpression<Void> {
 
 	@Override
 	@UnsettableProperty
-	<C extends CtTypedElement> C setType(CtTypeReference<Void> type);
+	<C extends CtTypedElement> C setType(CtTypeReference type);
 
 	/**
 	 * @return {@link #getAccessedType()}.isImplicit()

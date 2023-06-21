@@ -16,13 +16,27 @@
  */
 package spoon.reflect.visitor;
 
-import org.junit.Test;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
+import spoon.metamodel.ConceptKind;
 import spoon.metamodel.MMMethod;
 import spoon.metamodel.MMMethodKind;
-import spoon.metamodel.ConceptKind;
-import spoon.metamodel.MetamodelConcept;
 import spoon.metamodel.Metamodel;
+import spoon.metamodel.MetamodelConcept;
 import spoon.reflect.code.CtFieldRead;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.cu.CompilationUnit;
@@ -39,25 +53,12 @@ import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.reflect.visitor.processors.CheckScannerTestProcessor;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CtScannerTest {
 
@@ -146,7 +147,7 @@ public class CtScannerTest {
 			}
 
 			CtMethod<?> visitMethod = scannerVisitMethodsByName.remove("visit" + leafConcept.getName());
-			assertNotNull("CtScanner#" + "visit" + leafConcept.getName() + "(...) not found", visitMethod);
+			assertNotNull(visitMethod, "CtScanner#" + "visit" + leafConcept.getName() + "(...) not found");
 			Set<String> calledMethods = new HashSet<>();
 			Set<String> checkedMethods = new HashSet<>();
 
@@ -216,7 +217,7 @@ public class CtScannerTest {
 		if (!problems.isEmpty()) {
 			fail(String.join("\n", problems));
 		}
-		assertTrue("not enough checks " + c.nbChecks, c.nbChecks >= 200);
+		assertTrue(c.nbChecks >= 200, "not enough checks " + c.nbChecks);
 	}
 
 	@Test
@@ -270,9 +271,9 @@ public class CtScannerTest {
 		// this is a coarse-grain check to see if the scanner changes
 		// no more exec ref in paramref
 		// also takes into account the comments
-		assertEquals(3655, counter.nElement + countOfCommentsInCompilationUnits);
-		assertEquals(2435, counter.nEnter + countOfCommentsInCompilationUnits);
-		assertEquals(2435, counter.nExit + countOfCommentsInCompilationUnits);
+		assertEquals(3631, counter.nElement + countOfCommentsInCompilationUnits);
+		assertEquals(2423, counter.nEnter + countOfCommentsInCompilationUnits);
+		assertEquals(2423, counter.nExit + countOfCommentsInCompilationUnits);
 
 		// contract: all AST nodes which are part of Collection or Map are visited first by method "scan(Collection|Map)" and then by method "scan(CtElement)"
 		Counter counter2 = new Counter();
@@ -355,5 +356,23 @@ public class CtScannerTest {
 			}
 			fail();
 		}
+	}
+
+	@Test
+	public void testDequeSCanner() {
+		CtClass<?> c = Launcher.parseClass("class A { void m() { System.out.println(\\\"yeah\\\");} }");
+		ArrayList l = new ArrayList<Integer>();
+		new CtDequeScanner() {
+			@Override
+			public void scan(CtElement o) {
+				l.add(elementsDeque.size());
+				super.scan(o);
+			}
+		}.scan(c);
+		// contract: the CtDequeScanner has the context information of the parents
+		assertEquals(45, l.size()); // we visited the whole tree
+		assertEquals(0, l.get(0));
+		assertEquals(1, l.get(1)); // visiting a child
+		assertEquals(2, l.get(3)); // visiting a grand child
 	}
 }

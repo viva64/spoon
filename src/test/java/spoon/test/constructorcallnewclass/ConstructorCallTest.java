@@ -16,11 +16,19 @@
  */
 package spoon.test.constructorcallnewclass;
 
-import org.junit.Before;
-import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
+import spoon.reflect.CtModel;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtArrayTypeReference;
@@ -31,19 +39,19 @@ import spoon.support.comparator.DeepRepresentationComparator;
 import spoon.test.constructorcallnewclass.testclasses.Foo;
 import spoon.test.constructorcallnewclass.testclasses.Panini;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TreeSet;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ConstructorCallTest {
 	private List<CtConstructorCall<?>> constructorCalls;
 	private List<CtConstructorCall<?>> constructorCallsPanini;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		final Launcher launcher = new Launcher();
 		launcher.addInputResource("./src/test/java/" + Foo.class.getCanonicalName().replace(".", "/") + ".java");
@@ -113,18 +121,18 @@ public class ConstructorCallTest {
 
 	private void assertHasParameters(int sizeExpected, CtConstructorCall<?> constructorCall) {
 		if (sizeExpected == 0) {
-			assertEquals("Constructor call without parameter", sizeExpected, constructorCall.getArguments().size());
+			assertEquals(sizeExpected, constructorCall.getArguments().size(), "Constructor call without parameter");
 		} else {
-			assertEquals("Constructor call with parameters", sizeExpected, constructorCall.getArguments().size());
+			assertEquals(sizeExpected, constructorCall.getArguments().size(), "Constructor call with parameters");
 		}
 	}
 
 	private void assertIsConstructor(CtConstructorCall<?> constructorCall) {
-		assertTrue("Method must be a constructor", constructorCall.getExecutable().isConstructor());
+		assertTrue(constructorCall.getExecutable().isConstructor(), "Method must be a constructor");
 	}
 
 	private void assertConstructorCallWithType(Class<?> typeExpected, CtConstructorCall<?> constructorCall) {
-		assertSame("Constructor call is typed by the class of the constructor", typeExpected, constructorCall.getType().getActualClass());
+		assertSame(typeExpected, constructorCall.getType().getActualClass(), "Constructor call is typed by the class of the constructor");
 	}
 
 	@Test
@@ -140,4 +148,91 @@ public class ConstructorCallTest {
 		assertEquals("new Bar()", call2.toString());
 	}
 
+	@Test
+	public void testParameterizedConstructorCallOmittedTypeArgsNoClasspath() {
+		// contract: omitted type arguments to constructors must be properly resolved if the context allows
+		// the expected type to be known
+		List<String> expectedTypeArgNames = Arrays.asList("Integer", "String");
+		String sourceFile = "./src/test/resources/noclasspath/GenericTypeEmptyDiamond.java";
+
+		CtTypeReference<?> executableType = getConstructorCallTypeFrom("GenericKnownExpectedType", sourceFile);
+
+		assertTrue(executableType.isParameterized());
+		assertEquals(expectedTypeArgNames,
+				executableType.getActualTypeArguments().stream()
+						.map(CtTypeReference::getSimpleName).collect(Collectors.toList()));
+		assertTrue(executableType.getActualTypeArguments().stream().allMatch(CtElement::isImplicit));
+	}
+
+	@Test
+	public void testParameterizedConstructorCallOmittedTypeArgsUnknownExpectedTypeNoClasspath() {
+		// contract: even if the expected type is not known for omitted type arguments the type access must be
+		// detected as parameterized
+		String sourceFile = "./src/test/resources/noclasspath/GenericTypeEmptyDiamond.java";
+		CtTypeReference<?> executableType = getConstructorCallTypeFrom("GenericUnknownExpectedType", sourceFile);
+		assertTrue(executableType.isParameterized());
+		assertTrue(executableType.getActualTypeArguments().stream().allMatch(CtElement::isImplicit));
+	}
+
+	@Test
+	public void testParameterizedConstructorCallOmittedTypeArgsResolvedTypeNoClasspath() {
+		// contract: if a resolved type (here, java.util.ArrayList) is parameterized with empty diamonds in an
+		// unresolved method, the resolved type reference should still be parameterized.
+		String sourceFile = "./src/test/resources/noclasspath/GenericTypeEmptyDiamond.java";
+		CtTypeReference<?> executableType = getConstructorCallTypeFrom("ArrayList", sourceFile);
+		assertTrue(executableType.isParameterized());
+	}
+
+	@Test
+	public void test_addArgumentAt_addsArgumentToSpecifiedPosition() {
+		// contract: addArgumentAt should add arguments to the specified position.
+
+		// arrange
+		Factory factory = new Launcher().getFactory();
+		factory.getEnvironment().setAutoImports(true);
+		CtConstructorCall<?> newLinkedHashMap = (CtConstructorCall<?>) factory
+                // make it raw on purpose to simplify assertion
+				.createCodeSnippetExpression("new java.util.LinkedHashMap()")
+				.compile();
+
+		// act
+		// LinkedHashMap has multiple constructors, we're going for:
+		// LinkedHashMap(int initialCapacity, float loadFactor, boolean accessOrder) by adding
+		// arguments a bit haphazardly
+
+		// 10
+		newLinkedHashMap.addArgumentAt(0, factory.createLiteral(10))
+			// 10, true
+			.addArgumentAt(1, factory.createLiteral(true))
+			// 10, 1.4, true
+			.addArgumentAt(1, factory.createLiteral(1.4));
+
+		// assert
+		assertThat(newLinkedHashMap.toString(), equalTo("new LinkedHashMap(10, 1.4, true)"));
+	}
+
+	private CtTypeReference<?> getConstructorCallTypeFrom(String simpleName, String sourceFile) {
+		final Launcher launcher = new Launcher();
+		launcher.getEnvironment().setNoClasspath(true);
+		launcher.addInputResource(sourceFile);
+		CtModel model = launcher.buildModel();
+		List<CtConstructorCall<?>> calls =
+				model.getElements(element -> element.getExecutable().getType().getSimpleName().equals(simpleName));
+		assert calls.size() == 1;
+		return calls.get(0).getExecutable().getType();
+	}
+	
+	@Test
+	public void testConstructorCorrectTyped() {
+		// no constructorcall from the input has the simple object type in noclasspathmode
+		Launcher launcher = new Launcher();
+		launcher.getEnvironment().setNoClasspath(true);
+		launcher.addInputResource("./src/test/resources/constructorcall-type/ConstructorCallWithTypesNotOnClasspath.java");
+		CtModel model = launcher.buildModel();
+		for (CtConstructorCall<?> ctConstructorCall : model
+				.getElements(new TypeFilter<>(CtConstructorCall.class))) {
+			assertThat(ctConstructorCall.getExecutable().getType().getSimpleName(), not(equalTo("Object")));
+			assertThat(ctConstructorCall.getType(), not(ctConstructorCall.getFactory().Type().objectType()));
+		}
+	}
 }

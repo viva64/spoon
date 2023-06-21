@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,10 +7,10 @@
  */
 package spoon.support.compiler.jdt;
 
-import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
+
 import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.declaration.CtImport;
 import spoon.reflect.declaration.CtMethod;
@@ -20,8 +20,10 @@ import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtReference;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -30,7 +32,6 @@ import java.util.Set;
 class JDTImportBuilder {
 
 	private final CompilationUnitDeclaration declarationUnit;
-	private String filePath;
 	private CompilationUnit spoonUnit;
 	private ICompilationUnit sourceUnit;
 	private Factory factory;
@@ -40,7 +41,6 @@ class JDTImportBuilder {
 		this.declarationUnit = declarationUnit;
 		this.factory = factory;
 		this.sourceUnit = declarationUnit.compilationResult.compilationUnit;
-		this.filePath = CharOperation.charToString(sourceUnit.getFileName());
 		// get the CU: it has already been built during model building in JDTBasedSpoonCompiler
 		this.spoonUnit = JDTTreeBuilder.getOrCreateCompilationUnit(declarationUnit, factory);
 		this.imports = new HashSet<>();
@@ -61,9 +61,8 @@ class JDTImportBuilder {
 					int lastDot = importName.lastIndexOf('.');
 					String packageName = importName.substring(0, lastDot);
 
-					// only get package from the model by traversing from rootPackage the model
-					// it does not use reflection to achieve that
-					CtPackage ctPackage = this.factory.Package().get(packageName);
+					// load package by looking up in the class loader or in the model being built
+					CtPackage ctPackage = loadPackage(packageName);
 
 					if (ctPackage != null) {
 						this.imports.add(createImportWithPosition(ctPackage.getReference(), importRef));
@@ -140,6 +139,23 @@ class JDTImportBuilder {
 		return imprt;
 	}
 
+	private CtPackage loadPackage(String packageName) {
+		// get all packages known for the current class loader and the ones which are accessible from it
+		Package[] allPackagesInAllClassLoaders = Package.getPackages();
+
+		Optional<Package> requiredPackage = Arrays.stream(allPackagesInAllClassLoaders)
+				.filter(pkg -> pkg.getName().equals(packageName))
+				.findAny();
+		if (requiredPackage.isPresent()) {
+			CtPackage ctPackage = factory.createPackage();
+			ctPackage.setSimpleName(requiredPackage.get().getName());
+			return ctPackage;
+		}
+
+		// get package by traversing the model
+		return factory.Package().get(packageName);
+	}
+
 	private CtType getOrLoadClass(String className) {
 		CtType klass = this.factory.Type().get(className);
 
@@ -148,7 +164,7 @@ class JDTImportBuilder {
 
 			if (klass == null) {
 				try {
-					Class zeClass = this.getClass().getClassLoader().loadClass(className);
+					Class<?> zeClass = loadClass(className);
 					klass = this.factory.Type().get(zeClass);
 					return klass;
 				} catch (NoClassDefFoundError | ClassNotFoundException e) {
@@ -163,5 +179,15 @@ class JDTImportBuilder {
 			}
 		}
 		return klass;
+	}
+
+	private Class<?> loadClass(String className) throws ClassNotFoundException {
+		Class<?> zeClass;
+		if (this.factory.getEnvironment().getInputClassLoader() != null) {
+			zeClass = this.factory.getEnvironment().getInputClassLoader().loadClass(className);
+		} else {
+			zeClass = this.getClass().getClassLoader().loadClass(className);
+		}
+		return zeClass;
 	}
 }

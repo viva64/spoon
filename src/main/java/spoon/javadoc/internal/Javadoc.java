@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -14,10 +14,7 @@
  */
 package spoon.javadoc.internal;
 
-import spoon.reflect.code.CtComment;
-
 import static spoon.javadoc.internal.JavadocInlineTag.nextWord;
-
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,6 +22,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.tuple.Pair;
+import spoon.reflect.code.CtComment;
 
 /**
 * The structured content of a single Javadoc comment.
@@ -35,6 +34,7 @@ import java.util.stream.Collectors;
 * writing this comment does not contain any block tags (such as <code>@see AnotherClass</code>)
 */
 public class Javadoc implements Serializable {
+	private static final long serialVersionUID = 1L;
 
 	private JavadocDescription description;
 	private List<JavadocBlockTag> blockTags;
@@ -128,12 +128,12 @@ public class Javadoc implements Serializable {
 		int index = 0;
 		Pair<Integer, Integer> nextInlineTagPos;
 		while ((nextInlineTagPos = indexOfNextInlineTag(text, index)) != null) {
-			if (nextInlineTagPos.a != index) {
-			instance.addElement(new JavadocSnippet(text.substring(index, nextInlineTagPos.a)));
+			if (nextInlineTagPos.getLeft() != index) {
+			instance.addElement(new JavadocSnippet(text.substring(index, nextInlineTagPos.getLeft())));
 			}
 			instance.addElement(
-				JavadocInlineTag.fromText(text.substring(nextInlineTagPos.a, nextInlineTagPos.b + 1)));
-			index = nextInlineTagPos.b + 1;
+				JavadocInlineTag.fromText(text.substring(nextInlineTagPos.getLeft(), nextInlineTagPos.getRight() + 1)));
+			index = nextInlineTagPos.getRight() + 1;
 		}
 		if (index < text.length()) {
 			instance.addElement(new JavadocSnippet(text.substring(index)));
@@ -146,12 +146,36 @@ public class Javadoc implements Serializable {
 		if (index == -1) {
 			return null;
 		}
-		// we are interested only in complete inline tags
-		int closeIndex = text.indexOf("}", index);
+
+		// Find the corresponding end curly brace:
+		//
+		//                 Tag doesn't end here
+		//                            |
+		//                            v
+		//   {@code public class Foo {}}
+		//   ^                         ^
+		//   |                         |
+		// index                 Tag ends here
+
+		int closeIndex = -1;
+		int nesting = 1;
+		for (int i = index + 2; i < text.length(); i++) {
+			char read = text.charAt(i);
+			if (read == '{') {
+				nesting++;
+			} else if (read == '}') {
+				nesting--;
+			}
+			if (nesting == 0) {
+				closeIndex = i;
+				break;
+			}
+		}
+
 		if (closeIndex == -1) {
 			return null;
 		}
-		return new Pair<>(index, closeIndex);
+		return Pair.of(index, closeIndex);
 	}
 
 	/** parses the Javadoc content (description + tags) */
@@ -168,10 +192,11 @@ public class Javadoc implements Serializable {
 		List<String> blockLines;
 		String descriptionText;
 		if (indexOfFirstBlockTag == -1) {
-			descriptionText = trimRight(String.join(CtComment.LINE_SEPARATOR, cleanLines));
+			descriptionText = String.join(CtComment.LINE_SEPARATOR, cleanLines).stripTrailing();
 			blockLines = Collections.emptyList();
 		} else {
-			descriptionText = trimRight(String.join(CtComment.LINE_SEPARATOR, cleanLines.subList(0, indexOfFirstBlockTag)));
+			descriptionText = String.join(CtComment.LINE_SEPARATOR, cleanLines.subList(0, indexOfFirstBlockTag))
+					.stripTrailing();
 
 			// Combine cleaned lines, but only starting with the first block tag till the end
 			// In this combined string it is easier to handle multiple lines which actually belong
@@ -209,13 +234,6 @@ public class Javadoc implements Serializable {
 
 	private static boolean isABlockLine(String line) {
 		return line.trim().startsWith(BLOCK_TAG_PREFIX);
-	}
-
-	private static String trimRight(String string) {
-		while (!string.isEmpty() && Character.isWhitespace(string.charAt(string.length() - 1))) {
-			string = string.substring(0, string.length() - 1);
-		}
-		return string;
 	}
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -45,10 +45,13 @@ abstract class AbstractTypingContext implements GenericTypeAdapter {
 		}
 		if (!result.getActualTypeArguments().isEmpty()) {
 			//we have to adapt actual type arguments recursive too
-			if (isCopy == false) {
-				CtElement parent = result.getParent();
+			if (!isCopy) {
+				CtElement parent = result.isParentInitialized() ? result.getParent() : null;
 				result = result.clone();
-				result.setParent(parent);
+				if (parent != null) {
+					result.setParent(parent);
+				}
+
 				List<CtTypeReference<?>> actTypeArgs = new ArrayList<>(result.getActualTypeArguments());
 				for (int i = 0; i < actTypeArgs.size(); i++) {
 					CtTypeReference adaptedTypeArgs = adaptType(actTypeArgs.get(i));
@@ -72,7 +75,9 @@ abstract class AbstractTypingContext implements GenericTypeAdapter {
 
 	private CtTypeReference<?> adaptTypeParameterReferenceBoundingType(CtWildcardReference typeParamRef, CtTypeReference<?> boundingType) {
 		CtWildcardReference typeParamRefAdapted = typeParamRef.clone();
-		typeParamRefAdapted.setParent(typeParamRef.getParent());
+		if (typeParamRef.isParentInitialized()) {
+			typeParamRefAdapted.setParent(typeParamRef.getParent());
+		}
 		typeParamRefAdapted.setBoundingType(boundingType.equals(boundingType.getFactory().Type().getDefaultBoundingType()) ? boundingType.getFactory().Type().getDefaultBoundingType() : adaptType(boundingType));
 		return typeParamRefAdapted;
 	}

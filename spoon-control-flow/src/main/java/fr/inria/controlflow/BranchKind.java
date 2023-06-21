@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,6 +25,9 @@ package fr.inria.controlflow;
  * Branching for a node
  */
 public enum BranchKind {
+	TRY,         // Represents the start of a try block
+	CATCH,       // Represents the start of a catch block
+	FINALLY,     // Represents the start of a finally block
 	BRANCH,      // Represents a branch
 	STATEMENT,   // Represents an statement
 	BLOCK_BEGIN, // Represents the begining of a block

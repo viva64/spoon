@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -56,6 +56,10 @@ import java.util.regex.Pattern;
 
 /**
  * A scanner that calculates the imports for a given model.
+ *
+ * This class is not used anymore, it has been replaced by all subclasses of {@link ImportAnalyzer}.
+ *
+ * Still, we keep ImportScannerImpl for backward compatibility because it is used by some clients.
  */
 public class ImportScannerImpl extends CtScanner implements ImportScanner {
 
@@ -175,11 +179,11 @@ public class ImportScannerImpl extends CtScanner implements ImportScanner {
 			String bracket = m.group(1);
 			String tag = m.group(2);
 			if ("{".equals(bracket)) {
-				if (inlineTags.contains(tag) == false) {
+				if (!inlineTags.contains(tag)) {
 					continue;
 				}
 			} else {
-				if (mainTags.contains(tag) == false) {
+				if (!mainTags.contains(tag)) {
 					continue;
 				}
 			}
@@ -357,7 +361,7 @@ public class ImportScannerImpl extends CtScanner implements ImportScanner {
 			return false;
 		}
 
-		if (targetType != null && targetType.canAccess(ref) == false) {
+		if (targetType != null && !targetType.canAccess(ref)) {
 			//ref type is not visible in targetType we must not add import for it, java compiler would fail on that.
 			return false;
 		}
@@ -666,11 +670,9 @@ public class ImportScannerImpl extends CtScanner implements ImportScanner {
 		methodImports.put(ref.getSimpleName(), ref);
 
 		// if we are in the same package than target type, we also import class to avoid FQN in FQN mode.
-		if (ref.getDeclaringType() != null) {
-			if (ref.getDeclaringType().getPackage() != null) {
+		if (ref.getDeclaringType() != null && ref.getDeclaringType().getPackage() != null && this.targetType != null) {
 				if (ref.getDeclaringType().getPackage().equals(this.targetType.getPackage())) {
 					addClassImport(ref.getDeclaringType());
-				}
 			}
 		}
 		return true;
@@ -770,7 +772,6 @@ public class ImportScannerImpl extends CtScanner implements ImportScanner {
 
 		if (parent != null) {
 			CtBlock block = (CtBlock) parent;
-			boolean innerClass = false;
 
 			// now we have the first container block, we want to check if we're not in an inner class
 			while (parent != null && !(parent instanceof CtClass)) {

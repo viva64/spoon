@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -14,7 +14,9 @@ import spoon.reflect.code.CtContinue;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtOperatorAssignment;
 import spoon.reflect.code.CtStatement;
+import spoon.reflect.code.CtTextBlock;
 import spoon.reflect.code.CtUnaryOperator;
+import spoon.reflect.declaration.CtCodeSnippet;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModifiable;
@@ -106,6 +108,15 @@ public class EqualsChecker extends CtInheritanceScanner {
 			setNotEqual(CtRole.MODIFIER);
 		}
 		super.scanCtModifiable(m);
+	}
+
+	@Override
+	public void scanCtCodeSnippet(CtCodeSnippet snippet) {
+		final CtCodeSnippet peek = (CtCodeSnippet) this.other;
+		if (!snippet.getValue().equals(peek.getValue())) {
+			setNotEqual(CtRole.SNIPPET);
+		}
+		super.scanCtCodeSnippet(snippet);
 	}
 
 	@Override
@@ -240,6 +251,21 @@ public class EqualsChecker extends CtInheritanceScanner {
 			setNotEqual(CtRole.VALUE);
 		}
 		super.visitCtLiteral(e);
+	}
+
+	@Override
+	public void visitCtTextBlock(CtTextBlock e) {
+		final CtTextBlock peek = (CtTextBlock) this.other;
+		if (e.getValue() == null) {
+			if (peek.getValue() != null) {
+				setNotEqual(CtRole.VALUE);
+			}
+		} else if (peek.getValue() == null) {
+			setNotEqual(CtRole.VALUE);
+		} else if (!e.getValue().equals(peek.getValue())) {
+			setNotEqual(CtRole.VALUE);
+		}
+		super.visitCtTextBlock(e);
 	}
 
 	@Override

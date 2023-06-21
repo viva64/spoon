@@ -16,30 +16,37 @@
  */
 package spoon.test.sourcePosition;
 
-import org.junit.Test;
 
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import spoon.Launcher;
+import spoon.reflect.CtModel;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.Filter;
 import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.support.reflect.CtExtendedModifier;
 import spoon.support.reflect.cu.CompilationUnitImpl;
 import spoon.support.reflect.cu.position.BodyHolderSourcePositionImpl;
 import spoon.support.reflect.cu.position.DeclarationSourcePositionImpl;
 import spoon.support.reflect.cu.position.SourcePositionImpl;
+import spoon.support.reflect.declaration.CtClassImpl;
 import spoon.test.sourcePosition.testclasses.Brambora;
+import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static spoon.testing.utils.ModelUtils.build;
 
 public class SourcePositionTest {
@@ -111,5 +118,15 @@ public class SourcePositionTest {
 				"modifier = |2;2|2|\n" + 
 				"name = |4;7|4567|\n" + 
 				"body = |8;9|89|", bhsp.getSourceDetails());
+	}
+
+	@ModelTest({
+		"./src/test/resources/spoon/test/sourcePosition/ClassWithAnnotation.java",
+		"./src/test/resources/spoon/test/sourcePosition/TestAnnotation.java",
+	})
+	public void testSourcePositionWhenCommentInAnnotation(CtModel model) {
+		// contract: comment characters as element values in annotations should not break position assignment to modifiers
+		List<CtClassImpl> list = model.getElements(new TypeFilter<>(CtClassImpl.class));
+		assertEquals(4,list.get(0).getPosition().getLine());
 	}
 }

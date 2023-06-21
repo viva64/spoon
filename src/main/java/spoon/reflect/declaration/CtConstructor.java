@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,16 +7,17 @@
  */
 package spoon.reflect.declaration;
 
-import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.annotations.PropertyGetter;
-import spoon.support.UnsettableProperty;
-
 import static spoon.reflect.path.CtRole.NAME;
+import spoon.reflect.annotations.PropertyGetter;
+import spoon.reflect.annotations.PropertySetter;
+import spoon.reflect.path.CtRole;
+import spoon.reflect.reference.CtTypeReference;
+import spoon.support.UnsettableProperty;
 
 /**
  * This element defines a constructor declaration.
  */
-public interface CtConstructor<T> extends CtExecutable<T>, CtTypeMember, CtFormalTypeDeclarer, CtShadowable {
+public interface CtConstructor<T> extends CtExecutable<T>, CtFormalTypeDeclarer, CtShadowable {
 
 	/**
 	 * Always returns "&lt;init&gt;".
@@ -30,9 +31,22 @@ public interface CtConstructor<T> extends CtExecutable<T>, CtTypeMember, CtForma
 
 	@Override
 	@UnsettableProperty
-	<C extends CtTypedElement> C setType(CtTypeReference<T> type);
+	<C extends CtTypedElement> C setType(CtTypeReference type);
 
 	@Override
 	@UnsettableProperty
 	<C extends CtNamedElement> C setSimpleName(String simpleName);
+	/**
+	 * Checks if the constructor is a compact constructor. Only records have compact constructors.
+	 * @return true if the constructor is a compact constructor.
+	 */
+	@PropertyGetter(role = CtRole.COMPACT_CONSTRUCTOR)
+	boolean isCompactConstructor();
+	/**
+	 * Marks the constructor as a compact constructor. Only records have compact constructors.
+	 * @param compactConstructor   true if the constructor is a compact constructor, false otherwise
+	 */
+	@PropertySetter(role = CtRole.COMPACT_CONSTRUCTOR)
+	void setCompactConstructor(boolean compactConstructor);
+
 }

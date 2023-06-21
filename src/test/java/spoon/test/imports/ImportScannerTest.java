@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2006-2018 INRIA and contributors
+ * Copyright (C) 2006-2021 INRIA and contributors
  * Spoon - http://spoon.gforge.inria.fr/
  *
  * This software is governed by the CeCILL-C License under French law and
@@ -16,10 +16,11 @@
  */
 package spoon.test.imports;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.SpoonModelBuilder;
 import spoon.compiler.SpoonResourceHelper;
+import spoon.reflect.CtModel;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtImport;
 import spoon.reflect.declaration.CtType;
@@ -33,10 +34,12 @@ import spoon.reflect.visitor.Query;
 import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.support.JavaOutputProcessor;
 import spoon.test.imports.testclasses.ToBeModified;
+import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.security.AccessControlException;
 import java.util.ArrayList;
@@ -48,42 +51,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static spoon.testing.utils.ModelUtils.build;
 
-/**
- * Created by gerard on 14/10/2014.
- */
 public class ImportScannerTest {
 
-	@Test
-	public void testImportOnSpoon() throws IOException {
-
+	@ModelTest("./src/main/java/spoon/")
+	public void testImportOnSpoon(Launcher launcher, Factory factory, CtModel model) throws IOException {
 		File targetDir = new File("./target/import-test");
-		Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/main/java/spoon/");
-		spoon.getEnvironment().setAutoImports(true);
-		spoon.getEnvironment().setCommentEnabled(true);
-		spoon.getEnvironment().setSourceOutputDirectory(targetDir);
-		spoon.getEnvironment().setLevel("warn");
-		spoon.buildModel();
+		launcher.getEnvironment().setSourceOutputDirectory(targetDir);
 
-		PrettyPrinter prettyPrinter = new DefaultJavaPrettyPrinter(spoon.getEnvironment());
+		// contract: ImportScannerImpl does not throw an exception on a large and complex model (OK, it's a smoke test)
+		// Update: I found a nasty NPE bug :-), smoke tests can be useful
+		new ImportScannerImpl().scan(factory.Package().getRootPackage());
+
+
+		PrettyPrinter prettyPrinter = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
 
 		Map<CtType, List<String>> missingImports = new HashMap<>();
 		Map<CtType, List<String>> unusedImports = new HashMap<>();
 
 		JavaOutputProcessor outputProcessor;
 
-		for (CtType<?> ctType : spoon.getModel().getAllTypes()) {
+		for (CtType<?> ctType : model.getAllTypes()) {
 			if (!ctType.isTopLevel()) {
 				continue;
 			}
 
 			outputProcessor = new JavaOutputProcessor(prettyPrinter);
-			outputProcessor.setFactory(spoon.getFactory());
+			outputProcessor.setFactory(factory);
 			outputProcessor.init();
 
 			Set<String> computedTypeImports = new HashSet<>();
@@ -92,7 +88,7 @@ public class ImportScannerTest {
 			outputProcessor.createJavaFile(ctType);
 			assertEquals(1, outputProcessor.getCreatedFiles().size());
 
-			List<String> content = Files.readAllLines(outputProcessor.getCreatedFiles().get(0).toPath());
+			List<String> content = Files.readAllLines(outputProcessor.getCreatedFiles().get(0).toPath(), Charset.defaultCharset());
 
 			for (String computedImport : content) {
 				if (computedImport.startsWith("import")) {
@@ -174,7 +170,7 @@ public class ImportScannerTest {
 				}
 			}
 
-			assertEquals("Import scanner missed " + countMissingImports + " imports",0, countMissingImports);
+			assertEquals(0, countMissingImports, "Import scanner missed " + countMissingImports + " imports");
 
 			/*
 			Set<CtType> unusedKeys = new HashSet<>(unusedImports.keySet());
@@ -246,17 +242,12 @@ public class ImportScannerTest {
 		assertEquals(2, imports.size());
 	}
 
-	@Test
-	public void testComputeImportsInClassWithSameName() {
+	@ModelTest("src/test/resources/spoon/test/imports/testclasses2/")
+	public void testComputeImportsInClassWithSameName(Factory factory) {
 		String packageName = "spoon.test.imports.testclasses2";
 		String className = "ImportSameName";
 		String qualifiedName = packageName + "." + className;
-
-		Launcher spoon = new Launcher();
-		spoon.addInputResource("src/test/resources/spoon/test/imports/testclasses2/");
-		spoon.buildModel();
-		Factory aFactory = spoon.getFactory();
-		CtType<?> theClass = aFactory.Type().get(qualifiedName);
+		CtType<?> theClass = factory.Type().get(qualifiedName);
 
 		ImportScanner importContext = new ImportScannerImpl();
 		importContext.computeImports(theClass);
@@ -282,9 +273,7 @@ public class ImportScannerTest {
 
 		ImportScanner importScanner = new ImportScannerImpl();
 		importScanner.computeImports(classes.get(0));
-		// as ArithmeticException come from java.lang it is not imported anymore
-		//assertTrue( importScanner.isImported( factory.Type().createReference( ArithmeticException.class ) ));
-		assertTrue( importScanner.isImported( factory.Type().createReference( AccessControlException.class ) ));
+		assertTrue(importScanner.isImported(factory.Type().createReference(AccessControlException.class)));
 	}
 
 	@Test

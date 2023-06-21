@@ -16,18 +16,22 @@
  */
 package spoon.reflect.ast;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
+import spoon.reflect.code.CtStatement;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.support.modelobs.FineModelChangeListener;
+import spoon.reflect.CtModel;
+import spoon.reflect.code.CtBinaryOperator;
 import spoon.reflect.code.CtBlock;
+import spoon.reflect.code.CtComment;
+import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtFieldRead;
 import spoon.reflect.code.CtIf;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtReturn;
 import spoon.reflect.code.CtThrow;
-import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
@@ -38,19 +42,56 @@ import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.DerivedProperty;
 import spoon.support.UnsettableProperty;
 import spoon.support.comparator.CtLineElementComparator;
+import spoon.support.util.internal.ElementNameMap;
 import spoon.support.util.ModelList;
-import spoon.support.util.ModelSet;
+import spoon.testing.utils.ModelTest;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AstCheckerTest {
+
+	@ModelTest("src/test/resources/comment/CommentsOnCaseExpression.java")
+	void ctLiteralsInCtCaseExpressionShouldHaveCommentsAttached(CtModel model) {
+		// contract: literal nodes should have comments attached to them.
+		// act
+		List<CtComment> comments = model.getElements(new TypeFilter<>(CtComment.class));
+
+		// assert
+		assertThat(comments.size(), equalTo(4));
+	}
+
+	@Test
+	void leftOperandShouldBeGivenPriorityForStoringTheNestedOperator_stringLiteralConcatenation() {
+		// contract: string concatenation should be left associative.
+		// arrange
+		Launcher launcher = new Launcher();
+		Factory factory = launcher.getFactory();
+		CtClass<?> classContainingStringLiteral = Launcher.parseClass("class A { private String x = \"a\" + \"b\" + \"c\" }");
+
+		// act
+		CtBinaryOperator<?> binaryOperator = classContainingStringLiteral
+				.filterChildren(element -> element instanceof CtBinaryOperator)
+				.first();
+
+		// assert
+		CtExpression<?> firstOperand = ((CtBinaryOperator<?>)binaryOperator.getLeftHandOperand()).getLeftHandOperand();
+		CtExpression<?> secondOperand = ((CtBinaryOperator<?>)binaryOperator.getLeftHandOperand()).getRightHandOperand();
+		CtExpression<?> thirdOperand = binaryOperator.getRightHandOperand();
+
+		assertThat(firstOperand, equalTo(factory.createLiteral("a")));
+		assertThat(secondOperand, equalTo(factory.createLiteral("b")));
+		assertThat(thirdOperand, equalTo(factory.createLiteral("c")));
+	}
 
 	@Test
 	public void testExecutableReference() {
@@ -169,9 +210,12 @@ public class AstCheckerTest {
 					"CtModuleImpl#addRequiredModule",
 					"CtModuleImpl#addProvidedService",
 					"CtArrayTypeReferenceImpl#setSimpleName",
+					"CtTypeImpl#setSimpleName",
+					"CtPackageImpl#setSimpleName",
 					"CtCompilationUnitImpl#addDeclaredType",
 					"CtCompilationUnitImpl#setFile",
-					"CtCompilationUnitImpl#setLineSeparatorPositions"
+					"CtCompilationUnitImpl#setLineSeparatorPositions",
+					"CtRecordImpl#setRecordComponents"
 			);
 		}
 
@@ -203,32 +247,46 @@ public class AstCheckerTest {
 		}
 
 		private boolean isSurcharged(CtMethod<?> candidate) {
-			CtBlock<?> block = candidate.getBody();
-			if (block.getStatements().isEmpty()) {
-				return false;
+			return !extractPotentialSurchargeDelegateDeclaration(candidate)
+					.filter(this::isToBeProcessed)
+					.isPresent();
+		}
+
+		private Optional<CtMethod<?>> extractPotentialSurchargeDelegateDeclaration(CtMethod<?> candidate) {
+			Optional<CtInvocation<?>> maybePotentialDelegate = extractPotentialSurchargeDelegate(candidate);
+			return maybePotentialDelegate
+					.map(CtInvocation::getExecutable)
+					.map(CtExecutableReference::getDeclaration)
+					.filter(CtMethod.class::isInstance)
+					.map(ref -> (CtMethod<?>) ref);
+		}
+
+		private Optional<CtInvocation<?>> extractPotentialSurchargeDelegate(CtMethod<?> candidate) {
+			final CtBlock<?> body = candidate.getBody();
+			if (body.getStatements().isEmpty()) {
+				return Optional.empty();
 			}
-			CtInvocation potentialDelegate;
-			if (block.getLastStatement() instanceof CtReturn) {
-				if (!(((CtReturn) block.getLastStatement()).getReturnedExpression() instanceof CtInvocation)) {
-					if (block.getStatement(0) instanceof CtInvocation) {
-						potentialDelegate = block.getStatement(0);
-					} else {
-						return false;
-					}
-				} else {
-					potentialDelegate = (CtInvocation) ((CtReturn) block.getLastStatement()).getReturnedExpression();
-				}
-			} else if (block.getStatement(0) instanceof CtInvocation && block.getStatements().size() == 1) {
-				potentialDelegate = block.getStatement(0);
+
+			final CtStatement firstStatement = body.getStatement(0);
+			final CtStatement lastStatement = body.getLastStatement();
+			if (firstStatement instanceof CtInvocation &&
+					(body.getStatements().size() == 1 || isReturnWithoutInvocation(lastStatement))) {
+				return Optional.of((CtInvocation<?>) firstStatement);
+			} else if (isReturnWithInvocation(lastStatement)) {
+				CtReturn<?> lastStatementReturn = (CtReturn<?>) lastStatement;
+				return Optional.of((CtInvocation<?>) lastStatementReturn.getReturnedExpression());
 			} else {
-				return false;
+				return Optional.empty();
 			}
-			CtExecutable declaration = potentialDelegate.getExecutable().getDeclaration();
-			if (!(declaration instanceof CtMethod)) {
-				return false;
-			}
-			// check if the invocation has a model change listener
-			return !isToBeProcessed((CtMethod<?>) declaration);
+		}
+
+		private boolean isReturnWithoutInvocation(CtStatement statement) {
+			return statement instanceof CtReturn && !isReturnWithInvocation(statement);
+		}
+
+		private boolean isReturnWithInvocation(CtStatement statement) {
+			return statement instanceof CtReturn
+					&& ((CtReturn<?>) statement).getReturnedExpression() instanceof CtInvocation;
 		}
 
 		private boolean isDelegateMethod(CtMethod<?> candidate) {
@@ -269,7 +327,7 @@ public class AstCheckerTest {
 				if (inv.getTarget() instanceof CtFieldRead) {
 					CtFieldRead fielRead = (CtFieldRead) inv.getTarget();
 					if (isModelCollection(fielRead.getType())) {
-						//it is invocation on ModelList, ModelSet or ModelMap
+						//it is invocation on ModelList, ElementNameMap or ModelMap
 						return true;
 					}
 				}
@@ -282,7 +340,7 @@ public class AstCheckerTest {
 			if (typeRef.isSubtypeOf(f.Type().createReference(ModelList.class))) {
 				return true;
 			}
-			if (typeRef.isSubtypeOf(f.Type().createReference(ModelSet.class))) {
+			if (typeRef.isSubtypeOf(f.Type().createReference(ElementNameMap.class))) {
 				return true;
 			}
 			return false;

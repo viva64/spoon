@@ -16,17 +16,13 @@
  */
 package spoon.test.position;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import spoon.Launcher;
 import spoon.SpoonModelBuilder;
@@ -39,29 +35,63 @@ import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtNewClass;
 import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.cu.SourcePositionHolder;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtCompilationUnit;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtFieldReference;
-import spoon.support.sniper.internal.SourceFragment;
-import spoon.support.sniper.internal.CollectionSourceFragment;
-import spoon.support.sniper.internal.ElementSourceFragment;
 import spoon.support.reflect.cu.CompilationUnitImpl;
 import spoon.support.reflect.cu.position.SourcePositionImpl;
+import spoon.support.sniper.internal.CollectionSourceFragment;
+import spoon.support.sniper.internal.ElementSourceFragment;
+import spoon.support.sniper.internal.SourceFragment;
 import spoon.test.position.testclasses.AnnonymousClassNewIface;
 import spoon.test.position.testclasses.FooField;
 import spoon.test.position.testclasses.FooSourceFragments;
 import spoon.test.position.testclasses.NewArrayList;
+import spoon.test.prettyprinter.testclasses.OneLineMultipleVariableDeclaration;
 import spoon.testing.utils.ModelUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSourceFragment {
 
 	@Test
+	public void testSourceFragmentField() {
+		Launcher spoon = new Launcher();
+		spoon.addInputResource("./src/test/java/spoon/test/prettyprinter/testclasses/OneLineMultipleVariableDeclaration.java");
+		spoon.buildModel();
+
+		CtType t = spoon.getFactory().Type().get(OneLineMultipleVariableDeclaration.class);
+
+		ElementSourceFragment fragment = ElementSourceFragment.createSourceFragmentsFrom(t);
+
+		// contract: there is no full fragment for joint fields
+		// the fragment of the type of field a
+		assertEquals("|int|", fragment.getChildrenFragments().get(8).toString());
+
+	}
+
+
+	@Test
 	public void testSourcePositionFragment() {
 		SourcePosition sp = new SourcePositionImpl(DUMMY_COMPILATION_UNIT, 10, 20, null);
-		ElementSourceFragment sf = new ElementSourceFragment(() -> sp, null);
+		ElementSourceFragment sf = new ElementSourceFragment(new SourcePositionHolder() {
+			@Override
+			public SourcePosition getPosition() {
+				return sp;
+			}
+
+			@Override
+			public SourceFragment getOriginalSourceFragment() {
+				return null;
+			}
+		}, null);
 		assertEquals(10, sf.getStart());
 		assertEquals(21, sf.getEnd());
 		assertSame(sp, sf.getSourcePosition());
@@ -102,14 +132,15 @@ public class TestSourceFragment {
 
 	@Test
 	public void testSourceFragmentAddChildBeforeOrAfter() {
-		//contract: start / end of root fragment is moved when child is added
+		//contract: fragments are linked with sibling relation when child is added
 		ElementSourceFragment rootFragment = createFragment(10, 20);
-		rootFragment.addChild(createFragment(5, 7));
-		assertEquals(5, rootFragment.getStart());
-		assertEquals(20, rootFragment.getEnd());
-		rootFragment.addChild(createFragment(20, 25));
-		assertEquals(5, rootFragment.getStart());
-		assertEquals(25, rootFragment.getEnd());
+		assertEquals(null, rootFragment.getNextSibling());
+		ElementSourceFragment fragment1 = createFragment(5, 7);
+		rootFragment.add(fragment1);
+		assertSame(rootFragment, fragment1.getNextSibling());
+		ElementSourceFragment fragment = createFragment(20, 25);
+		rootFragment.add(fragment);
+		assertSame(fragment, rootFragment.getNextSibling());
 	}
 
 	@Test
@@ -145,7 +176,6 @@ public class TestSourceFragment {
 		assertSame(childA, childWrapper.getFirstChild());
 		assertSame(child, childA.getNextSibling());
 		assertSame(childB, child.getFirstChild());
-		assertSame(childC, child.getNextSibling());
 		assertSame(childD, childC.getNextSibling());
 	}
 
@@ -168,7 +198,17 @@ public class TestSourceFragment {
 	
 	private ElementSourceFragment createFragment(int start, int end) {
 		SourcePosition sp = new SourcePositionImpl(DUMMY_COMPILATION_UNIT, start, end - 1, null);
-		return new ElementSourceFragment(() -> sp, null);
+		return new ElementSourceFragment(new SourcePositionHolder() {
+			@Override
+			public SourcePosition getPosition() {
+				return sp;
+			}
+
+			@Override
+			public SourceFragment getOriginalSourceFragment() {
+				return null;
+			}
+		}, null);
 	}
 
 	@Test
@@ -196,8 +236,8 @@ public class TestSourceFragment {
 		checkElementFragments(foo.getMethodsByName("m3").get(0),
 				"/**\n" + 
 				"	 * c0\n" + 
-				"	 */", 
-				group("\n\t", "public", "\n\t", "@Deprecated", " ", "//c1 ends with tab and space\t ", "\n\t", "static"), " ", "/*c2*/", " ",
+				"	 */", "\n\t",
+				group("public", "\n\t", "@Deprecated", " ", "//c1 ends with tab and space\t ", "\n\t", "static"), " ", "/*c2*/", " ",
 				"<", group("T", ",", " ", "U"), ">",
 				" ", "T", " ", "m3", "(", group("U param", ",", " ", "@Deprecated int p2"), ")", " ", "{\n" + 
 						"		return null;\n" + 

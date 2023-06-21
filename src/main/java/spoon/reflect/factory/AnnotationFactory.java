@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -111,7 +111,7 @@ public class AnnotationFactory extends TypeFactory {
 		} else {
 			Method m;
 			try {
-				m = annotation.getAnnotationType().getActualClass().getMethod(annotationElementName, new Class[0]);
+				m = annotation.getAnnotationType().getActualClass().getMethod(annotationElementName);
 			} catch (Exception ex) {
 				annotation.addValue(annotationElementName, value);
 				return annotation;

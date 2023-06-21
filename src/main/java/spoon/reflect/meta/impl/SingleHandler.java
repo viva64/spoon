@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -92,7 +92,7 @@ abstract class SingleHandler<T, U> extends AbstractRoleHandler<T, U, U> {
 
 			@Override
 			public boolean remove(Object value) {
-				if (hasValue == false) {
+				if (!hasValue) {
 					return false;
 				}
 				X oldValue = get(0);

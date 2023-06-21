@@ -23,11 +23,37 @@ maven-eclipse.xml
 !.idea/codeStyleSettings.xml
 *.iml
 
+# VSCode
+.vscode
+
 # Spoon
 spooned-classes/
 spooned/
 doc/_jekyll/_site/
 *.tmp
+testResults.spoon
 
 # Nodejs
 node_modules/
+
+### Gradle ###
+.gradle
+build/
+
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+
+# Cache of project
+.gradletasknamecache
+
+# # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
+# gradle/wrapper/gradle-wrapper.properties
+
+### Gradle Patch ###
+**/build/
+
+## Gradle Enterprise ID File ##
+.mvn/.gradle-enterprise/gradle-enterprise-workspace-id

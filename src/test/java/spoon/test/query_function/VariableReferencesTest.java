@@ -16,9 +16,15 @@
  */
 package spoon.test.query_function;
 
-import org.junit.Before;
-import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.reflect.code.CtAbstractInvocation;
 import spoon.reflect.code.CtBinaryOperator;
@@ -59,18 +65,17 @@ import spoon.test.query_function.testclasses.VariableReferencesFromStaticMethod;
 import spoon.test.query_function.testclasses.VariableReferencesModelTest;
 import spoon.testing.utils.ModelUtils;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class VariableReferencesTest {
 	CtClass<?> modelClass;
 
-	@Before
+	@BeforeEach
 	public void setup() {
 		final Launcher launcher = new Launcher();
 		launcher.setArgs(new String[] {"--output-type", "nooutput","--level","info" });
@@ -111,8 +116,8 @@ public class VariableReferencesTest {
 			return false;
 		}).list();
 		assertFalse(context.unique.isEmpty());
-		assertEquals("Only these keys were found: "+context.unique.keySet(), context.maxKey, context.unique.size());
-		assertEquals("AllLocalVars#maxValue must be equal to maximum value number ", (int)getLiteralValue((CtVariable)modelClass.filterChildren(new NamedElementFilter<>(CtVariable.class,"maxValue")).first()), context.maxKey);
+		assertEquals(context.maxKey, context.unique.size(), "Only these keys were found: " + context.unique.keySet());
+		assertEquals((int) getLiteralValue((CtVariable<?>) modelClass.filterChildren(new NamedElementFilter<>(CtVariable.class, "maxValue")).first()), context.maxKey, "AllLocalVars#maxValue must be equal to maximum value number ");
 	}
 
 	@Test
@@ -196,8 +201,6 @@ public class VariableReferencesTest {
 				CtElement[] real = var.map(new VariableScopeFunction()).list().toArray(new CtElement[0]);
 				if(var instanceof CtLocalVariable) {
 					assertArrayEquals(var.map(new LocalVariableScopeFunction()).list().toArray(new CtElement[0]), real);
-				} else if(var instanceof CtField) {
-					assertArrayEquals(var.map(new FieldScopeFunction()).list().toArray(new CtElement[0]), real);
 				} else if(var instanceof CtParameter) {
 					assertArrayEquals(var.map(new ParameterScopeFunction()).list().toArray(new CtElement[0]), real);
 				} else if(var instanceof CtCatchVariable) {
@@ -213,12 +216,20 @@ public class VariableReferencesTest {
 	}
 
 	@Test
+	public void testFieldScopeFunction() {
+		// contract: FieldScopeFunction matches the right elements
+		CtElement[] real0 = modelClass.getFields().get(0).map(new FieldScopeFunction()).list().toArray(new CtElement[0]);
+		assertTrue(real0.length > 0);
+		CtElement[] real1 = modelClass.getFields().get(1).map(new FieldScopeFunction()).list().toArray(new CtElement[0]);
+		assertTrue(real1.length > 0);
+	}
+	@Test
 	public void testLocalVariableReferenceDeclarationFunction() {
 		modelClass.filterChildren((CtLocalVariableReference<?> varRef)->{
 			if(isTestFieldName(varRef.getSimpleName())) {
 				CtLocalVariable<?> var = varRef.getDeclaration();
-				assertNotNull("The declaration of variable "+varRef.getSimpleName()+" in "+getParentMethodName(varRef)+" on line "+var.getPosition().getLine()+" with value "+getVariableReferenceValue(varRef)+" was not found", var);
-				assertEquals("CtLocalVariableReference#getDeclaration returned wrong declaration in "+getParentMethodName(varRef), getVariableReferenceValue(varRef), (int)getLiteralValue(var));
+				assertNotNull(var, "The declaration of variable " + varRef.getSimpleName() + " in " + getParentMethodName(varRef) + " on line " + var.getPosition().getLine() + " with value " + getVariableReferenceValue(varRef) + " was not found");
+				assertEquals(getVariableReferenceValue(varRef), (int) getLiteralValue(var), "CtLocalVariableReference#getDeclaration returned wrong declaration in " + getParentMethodName(varRef));
 			}
 			return false;
 		}).list();
@@ -254,7 +265,7 @@ public class VariableReferencesTest {
 				}
 			});
 			//check that both scans found same number of references
-			assertEquals("Number of references to field="+value+" does not match", context.expectedCount, context.realCount);
+			assertEquals(context.expectedCount, context.realCount, "Number of references to field=" + value + " does not match");
 			
 		} catch (Throwable e) {
 			e.printStackTrace();
@@ -359,9 +370,9 @@ public class VariableReferencesTest {
 		CtClass<?> clazz = factory.Class().get(VariableReferencesFromStaticMethod.class);
 		CtMethod staticMethod = clazz.getMethodsByName("staticMethod").get(0);
 		CtStatement stmt = staticMethod.getBody().getStatements().get(1);
-		assertEquals("org.junit.Assert.assertTrue(field == 2)", stmt.toString());
+		assertEquals("org.junit.jupiter.api.Assertions.assertTrue(field == 2)", stmt.toString());
 		CtLocalVariableReference varRef = stmt.filterChildren(new TypeFilter<>(CtLocalVariableReference.class)).first();
 		List<CtVariable> vars = varRef.map(new PotentialVariableDeclarationFunction()).list();
-		assertEquals("Found unexpected variable declaration.", 1, vars.size());
+		assertEquals(1, vars.size(), "Found unexpected variable declaration.");
 	}
 }

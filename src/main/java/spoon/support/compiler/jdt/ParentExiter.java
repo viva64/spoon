@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -14,7 +14,6 @@ import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.AnnotationMethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.ArrayAllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
-import org.eclipse.jdt.internal.compiler.ast.BreakStatement;
 import org.eclipse.jdt.internal.compiler.ast.CaseStatement;
 import org.eclipse.jdt.internal.compiler.ast.CastExpression;
 import org.eclipse.jdt.internal.compiler.ast.ExplicitConstructorCall;
@@ -24,7 +23,6 @@ import org.eclipse.jdt.internal.compiler.ast.IfStatement;
 import org.eclipse.jdt.internal.compiler.ast.MessageSend;
 import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedAllocationExpression;
-import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.Statement;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteralConcatenation;
 import org.eclipse.jdt.internal.compiler.ast.TypeParameter;
@@ -60,6 +58,7 @@ import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtLoop;
 import spoon.reflect.code.CtNewArray;
 import spoon.reflect.code.CtNewClass;
+import spoon.reflect.code.CtResource;
 import spoon.reflect.code.CtReturn;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.code.CtSuperAccess;
@@ -72,8 +71,11 @@ import spoon.reflect.code.CtThrow;
 import spoon.reflect.code.CtTry;
 import spoon.reflect.code.CtTryWithResource;
 import spoon.reflect.code.CtTypeAccess;
+import spoon.reflect.code.CtTypePattern;
 import spoon.reflect.code.CtUnaryOperator;
+import spoon.reflect.code.CtVariableRead;
 import spoon.reflect.code.CtWhile;
+import spoon.reflect.code.CtYieldStatement;
 import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtAnnotatedElementType;
@@ -91,6 +93,8 @@ import spoon.reflect.declaration.CtFormalTypeDeclarer;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtParameter;
+import spoon.reflect.declaration.CtRecord;
+import spoon.reflect.declaration.CtRecordComponent;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeParameter;
 import spoon.reflect.declaration.CtTypedElement;
@@ -99,15 +103,19 @@ import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtIntersectionTypeReference;
 import spoon.reflect.reference.CtTypeParameterReference;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.reference.CtWildcardReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.reflect.visitor.CtScanner;
+import spoon.reflect.visitor.filter.TypeFilter;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static spoon.reflect.code.BinaryOperatorKind.INSTANCEOF;
 
 @SuppressWarnings("unchecked")
 public class ParentExiter extends CtInheritanceScanner {
@@ -116,7 +124,7 @@ public class ParentExiter extends CtInheritanceScanner {
 
 	private CtElement child;
 	private ASTNode childJDT;
-	private ASTNode parentJDT;
+	private ASTPair parentPair;
 	private Map<CtTypedElement<?>, List<CtAnnotation>> annotationsMap = new HashMap<>();
 
 	/**
@@ -126,16 +134,16 @@ public class ParentExiter extends CtInheritanceScanner {
 		this.jdtTreeBuilder = jdtTreeBuilder;
 	}
 
+	public void exitParent(ASTPair pair) {
+		this.parentPair = pair;
+		scan(pair.element);
+	}
 	public void setChild(CtElement child) {
 		this.child = child;
 	}
 
 	public void setChild(ASTNode child) {
 		this.childJDT = child;
-	}
-
-	public void setParent(ASTNode parent) {
-		this.parentJDT = parent;
 	}
 
 	@Override
@@ -407,6 +415,16 @@ public class ParentExiter extends CtInheritanceScanner {
 
 	@Override
 	public <T> void visitCtBinaryOperator(CtBinaryOperator<T> operator) {
+		CtElement child = this.child;
+		// check if this is a type pattern, as it needs special treatment
+		// patterns are only allowed for instanceof and on the right hand
+		if (child instanceof CtLocalVariable && operator.getKind() == INSTANCEOF && operator.getLeftHandOperand() != null) {
+			CtTypePattern typePattern = child.getFactory().Core().createTypePattern();
+			typePattern.setVariable((CtLocalVariable<?>) child);
+			// as we create the type pattern just here, we need to set its source position - which is luckily the same
+			typePattern.setPosition(child.getPosition());
+			child = typePattern; // replace the local variable with a pattern (which is a CtExpression)
+		}
 		if (child instanceof CtExpression) {
 			if (operator.getLeftHandOperand() == null) {
 				operator.setLeftHandOperand((CtExpression<?>) child);
@@ -429,10 +447,11 @@ public class ParentExiter extends CtInheritanceScanner {
 			} else if (jdtTreeBuilder.getContextBuilder().stack.peek().node instanceof StringLiteralConcatenation) {
 				CtBinaryOperator<?> op = operator.getFactory().Core().createBinaryOperator();
 				op.setKind(BinaryOperatorKind.PLUS);
-				op.setLeftHandOperand(operator.getRightHandOperand());
-				op.setRightHandOperand((CtExpression<?>) child);
+				op.setLeftHandOperand(operator.getLeftHandOperand());
+				op.setRightHandOperand(operator.getRightHandOperand());
 				op.setType((CtTypeReference) operator.getFactory().Type().STRING.clone());
-				operator.setRightHandOperand(op);
+				operator.setLeftHandOperand(op);
+				operator.setRightHandOperand(((CtExpression<?>) child));
 				int[] lineSeparatorPositions = jdtTreeBuilder.getContextBuilder().getCompilationUnitLineSeparatorPositions();
 				SourcePosition leftPosition = op.getLeftHandOperand().getPosition();
 				SourcePosition rightPosition = op.getRightHandOperand().getPosition();
@@ -454,16 +473,6 @@ public class ParentExiter extends CtInheritanceScanner {
 
 	@Override
 	public void visitCtBreak(CtBreak b) {
-		if (child instanceof CtExpression) {
-			if (!(childJDT instanceof SingleNameReference && ((SingleNameReference) childJDT).isLabel)) {
-				b.setExpression((CtExpression) child);
-				ASTNode node = jdtTreeBuilder.getContextBuilder().stack.peek().node;
-				if (node instanceof BreakStatement) {
-					b.setImplicit(((BreakStatement) node).isImplicit);
-				}
-				return;
-			}
-		}
 		super.visitCtBreak(b);
 	}
 
@@ -473,7 +482,7 @@ public class ParentExiter extends CtInheritanceScanner {
 		if (node instanceof CaseStatement) {
 			caseStatement.setCaseKind(((CaseStatement) node).isExpr ? CaseKind.ARROW : CaseKind.COLON);
 		}
-		if (node instanceof CaseStatement && ((CaseStatement) node).constantExpression != null && child instanceof CtExpression
+		if (node instanceof CaseStatement && ((CaseStatement) node).constantExpressions != null && child instanceof CtExpression
 				&& caseStatement.getCaseExpressions().size() < ((CaseStatement) node).constantExpressions.length) {
 			caseStatement.addCaseExpression((CtExpression<E>) child);
 			return;
@@ -494,7 +503,7 @@ public class ParentExiter extends CtInheritanceScanner {
 			// Catch annotations are processed before actual CtCatchVariable is created and because of that they attach to CtCatch.
 			// Since annotations cannot be attached to CtCatch itself, we can simply transfer them to CtCatchVariable.
 			catchBlock.getAnnotations().forEach(a -> { a.setParent(child); child.addAnnotation(a); });
-			catchBlock.setAnnotations(Collections.unmodifiableList(Collections.emptyList()));
+			catchBlock.setAnnotations(List.of());
 			return;
 		}
 		super.visitCtCatch(catchBlock);
@@ -512,12 +521,39 @@ public class ParentExiter extends CtInheritanceScanner {
 	@Override
 	public <T> void visitCtClass(CtClass<T> ctClass) {
 		if (child instanceof CtConstructor) {
-			ctClass.addConstructor((CtConstructor<T>) child);
+			CtConstructor<T> constructor = (CtConstructor<T>) child;
+			ctClass.addConstructor(constructor);
+			fixJdtEnumConstructorSuperCall(ctClass, constructor);
 		}
 		if (child instanceof CtAnonymousExecutable) {
 			ctClass.addAnonymousExecutable((CtAnonymousExecutable) child);
 		}
 		super.visitCtClass(ctClass);
+	}
+
+	private <T> void fixJdtEnumConstructorSuperCall(CtClass<T> ctClass, CtConstructor<T> constructor) {
+		// For some reason JDT inserts a `super()` call in implicit enum constructors.
+		// Explicit super calls are forbidden as java.lang.Enum subclasses are permitted by the JLS to delegate
+		// to the Enum constructor in whatever way they like.
+		// The constructor is implicit so this isn't *technically* illegal, but it doesn't really make much sense
+		// as explicit constructors can never contain such a call. Additionally, the Enum class from the standard
+		// library has a "String, int" constructor, rendering the parameterless supercall semantically invalid.
+		// We just remove the call to make it a bit more consistent.
+		// See https://github.com/INRIA/spoon/issues/4758 for more details.
+		if (!child.isImplicit() || !ctClass.isEnum() || !constructor.getParameters().isEmpty()) {
+			return;
+		}
+		if (constructor.getBody().getStatements().isEmpty()) {
+			return;
+		}
+		if (!(constructor.getBody().getStatement(0) instanceof CtInvocation)) {
+			return;
+		}
+
+		CtInvocation<?> superCall = constructor.getBody().getStatement(0);
+		if (superCall.getExecutable().getSimpleName().equals("<init>")) {
+			constructor.getBody().removeStatement(superCall);
+		}
 	}
 
 	@Override
@@ -651,7 +687,7 @@ public class ParentExiter extends CtInheritanceScanner {
 				child.setPosition(this.child.getPosition());
 			}
 
-			IfStatement ifJDT = (IfStatement) this.parentJDT;
+			IfStatement ifJDT = (IfStatement) this.parentPair.node;
 			if (ifJDT.thenStatement == this.childJDT) {
 				//we are visiting `then` of `if`
 				ifElement.setThenStatement(child);
@@ -684,11 +720,13 @@ public class ParentExiter extends CtInheritanceScanner {
 		} else if (child instanceof CtExpression) {
 			if (hasChildEqualsToReceiver(invocation) || hasChildEqualsToQualification(invocation)) {
 				if (child instanceof CtThisAccess) {
-					final CtTypeReference<?> declaringType = invocation.getExecutable().getDeclaringType();
-					if (declaringType != null && invocation.getExecutable().isStatic() && child.isImplicit()) {
-						invocation.setTarget(jdtTreeBuilder.getFactory().Code().createTypeAccess(declaringType, true));
-					} else {
-						invocation.setTarget((CtThisAccess<?>) child);
+					if (!setTargetFromUnqualifiedAccess(invocation)) {
+						final CtTypeReference<?> declaringType = invocation.getExecutable().getDeclaringType();
+						if (declaringType != null && invocation.getExecutable().isStatic() && child.isImplicit()) {
+							invocation.setTarget(jdtTreeBuilder.getFactory().Code().createTypeAccess(declaringType, true));
+						} else {
+							invocation.setTarget((CtThisAccess<?>) child);
+						}
 					}
 				} else {
 					invocation.setTarget((CtExpression<?>) child);
@@ -699,6 +737,51 @@ public class ParentExiter extends CtInheritanceScanner {
 			return;
 		}
 		super.visitCtInvocation(invocation);
+	}
+
+	private <T> boolean setTargetFromUnqualifiedAccess(CtInvocation<T> invocation) {
+		// A call to a statically imported method (e.g. assertTrue(false)) is modelled as
+		// "this.assertTrue(false)" by JDT. We need to unscramble that heuristically and replace the
+		// "this" reference with the correct type (e.g. org.junit.api.Assertions)
+
+		// Additionally, references to methods of enclosing classes are also modelled as "this" by JDT.
+		// Compare with Test "correctlySetsThisTargetForUnqualifiedCalls".
+
+		// We need a MessageSend as the parent to resolve the actualType from the receiver
+		if (!(parentPair.node instanceof MessageSend)) {
+			return false;
+		}
+		MessageSend messageSend = (MessageSend) parentPair.node;
+		if (messageSend.actualReceiverType == null || messageSend.receiver.resolvedType == null) {
+			return false;
+		}
+
+		ReferenceBuilder referenceBuilder = jdtTreeBuilder.getReferencesBuilder();
+		CtTypeReference<?> actualReceiverType = referenceBuilder.getTypeReference(messageSend.actualReceiverType);
+		CtTypeReference<?> resolvedReceiverType = referenceBuilder.getTypeReference(messageSend.receiver.resolvedType);
+
+		// If they match we have a normal "this" reference
+		if (actualReceiverType.equals(resolvedReceiverType)) {
+			return false;
+		}
+
+		if (messageSend.binding() == null || !messageSend.binding().isStatic()) {
+			// Emulate outer this access
+			while (resolvedReceiverType != null) {
+				resolvedReceiverType = resolvedReceiverType.getDeclaringType();
+				if (actualReceiverType.equals(resolvedReceiverType)) {
+					invocation.setTarget(jdtTreeBuilder.getFactory().Code().createThisAccess(actualReceiverType, true));
+					return true;
+				}
+			}
+			// I don't think this can happen but let's be conservative and preserve the previous behaviour
+			return false;
+		}
+
+		// If not, we probably had a static import/static outer method reference here and should use the actual type
+		// instead
+		invocation.setTarget(jdtTreeBuilder.getFactory().Code().createTypeAccess(actualReceiverType, true));
+		return true;
 	}
 
 	private <T> boolean hasChildEqualsToQualification(CtInvocation<T> ctInvocation) {
@@ -799,7 +882,6 @@ public class ParentExiter extends CtInheritanceScanner {
 		return parent.type != null && parent.type.equals(childJDT);
 	}
 
-	private static final String KEYWORD_NEW = "new";
 
 	@Override
 	public <T> void visitCtNewClass(CtNewClass<T> newClass) {
@@ -850,6 +932,8 @@ public class ParentExiter extends CtInheritanceScanner {
 	public <T, E extends CtExpression<?>> void visitCtExecutableReferenceExpression(CtExecutableReferenceExpression<T, E> expression) {
 		if (child instanceof CtExpression) {
 			expression.setTarget((E) child);
+		} else if (child instanceof CtTypeParameterReference) {
+			expression.getExecutable().addActualTypeArgument((CtTypeReference<?>) child);
 		}
 		super.visitCtExecutableReferenceExpression(expression);
 	}
@@ -970,7 +1054,30 @@ public class ParentExiter extends CtInheritanceScanner {
 	@Override
 	public void visitCtTryWithResource(CtTryWithResource tryWithResource) {
 		if (child instanceof CtLocalVariable) {
-			tryWithResource.addResource((CtLocalVariable<?>) child);
+			// normal, happy path of declaring a new variable
+			tryWithResource.addResource((CtLocalVariable) child);
+		} else if (child instanceof CtVariableRead) {
+			// special case of the resource being declared before
+			final CtVariableReference<?> variableRef = ((CtVariableRead<?>) child).getVariable();
+			if (variableRef.getDeclaration() != null) {
+				// getDeclaration works
+				tryWithResource.addResource((CtResource<?>) variableRef.getDeclaration().clone().setImplicit(true));
+			} else {
+				// we have to find it manually
+				for (ASTPair pair: this.jdtTreeBuilder.getContextBuilder().stack) {
+					final List<CtLocalVariable> variables = pair.element.getElements(new TypeFilter<>(CtLocalVariable.class));
+					for (CtLocalVariable v: variables) {
+						if (v.getSimpleName().equals(variableRef.getSimpleName())) {
+							// we found the resource
+							// we clone it in order to comply with the contract of being a tree
+							final CtLocalVariable clone = v.clone();
+							clone.setImplicit(true);
+							tryWithResource.addResource(clone);
+							break;
+						}
+					}
+				}
+			}
 		}
 		super.visitCtTryWithResource(tryWithResource);
 	}
@@ -990,5 +1097,49 @@ public class ParentExiter extends CtInheritanceScanner {
 			e.setBoundingType(((CtTypeAccess) child).getAccessedType());
 		}
 		super.visitCtWildcardReference(e);
+	}
+
+	@Override
+	public void visitCtYieldStatement(CtYieldStatement e) {
+		if (child instanceof CtExpression) {
+			e.setExpression((CtExpression<?>) child);
+			if (e.isImplicit()) {
+				e.setPosition(child.getPosition());
+			}
+			return;
+		}
+		super.visitCtYieldStatement(e);
+	}
+
+	@Override
+	public void visitCtTypePattern(CtTypePattern pattern) {
+		if (child instanceof CtLocalVariable) {
+			pattern.setVariable((CtLocalVariable<?>) child);
+		}
+		super.visitCtTypePattern(pattern);
+	}
+
+	@Override
+	public void visitCtRecord(CtRecord recordType) {
+		if (child instanceof CtConstructor) {
+			recordType.addConstructor((CtConstructor) child);
+		}
+		if (child instanceof CtAnonymousExecutable) {
+			recordType.addAnonymousExecutable((CtAnonymousExecutable) child);
+		}
+		if (child instanceof CtRecordComponent) {
+			((CtRecord) recordType).addRecordComponent((CtRecordComponent) child);
+		}
+		super.visitCtRecord(recordType);
+	}
+
+	@Override
+	public void visitCtRecordComponent(CtRecordComponent recordComponent) {
+		if (childJDT instanceof TypeReference && child instanceof CtTypeAccess) {
+			recordComponent.setType(((CtTypeAccess) child).getAccessedType());
+			substituteAnnotation((CtTypedElement) recordComponent);
+			return;
+		}
+		scanCtElement(recordComponent);
 	}
 }

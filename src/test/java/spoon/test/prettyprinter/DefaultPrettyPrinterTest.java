@@ -16,8 +16,22 @@
  */
 package spoon.test.prettyprinter;
 
-import org.apache.commons.io.IOUtils;
-import org.junit.Test;
+import org.apache.commons.io.FileUtils;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.shared.invoker.DefaultInvocationRequest;
+import org.apache.maven.shared.invoker.DefaultInvoker;
+import org.apache.maven.shared.invoker.InvocationRequest;
+import org.apache.maven.shared.invoker.InvocationResult;
+import org.apache.maven.shared.invoker.Invoker;
+import org.apache.maven.shared.invoker.MavenInvocationException;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import spoon.Launcher;
 import spoon.SpoonModelBuilder;
 import spoon.compiler.Environment;
@@ -42,24 +56,60 @@ import spoon.reflect.visitor.Query;
 import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.JavaOutputProcessor;
+import spoon.support.compiler.SpoonPom;
 import spoon.test.imports.ImportTest;
 import spoon.test.prettyprinter.testclasses.AClass;
+import spoon.test.prettyprinter.testclasses.ClassUsingStaticMethod;
+import spoon.testing.utils.LineSeparatorExtension;
 import spoon.testing.utils.ModelUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static spoon.testing.utils.ModelUtils.build;
 
 public class DefaultPrettyPrinterTest {
 	private static final String nl = System.lineSeparator();
+
+	@Test
+	public void testPrintClassWithStaticImportOfMethod() {
+		// contract: prettyprinter does not add static variables as imports after generating code
+		final Launcher launcher = new Launcher();
+		final Factory factory = launcher.getFactory();
+		factory.getEnvironment().setAutoImports(true);
+		final SpoonModelBuilder compiler = launcher.createCompiler();
+		compiler.addInputSource(new File("./src/test/java/spoon/test/prettyprinter/testclasses/ClassWithStaticMethod.java"));
+		compiler.addInputSource(new File("./src/test/java/spoon/test/prettyprinter/testclasses/ClassUsingStaticMethod.java"));
+		compiler.build();
+
+		final String expected =
+				"package spoon.test.prettyprinter.testclasses;" + nl +
+				"import static spoon.test.prettyprinter.testclasses.ClassWithStaticMethod.findFirst;" + nl +
+				"public class ClassUsingStaticMethod {" + nl +
+				"    public void callFindFirst() {" + nl +
+				"        findFirst();" + nl +
+                "        new ClassWithStaticMethod().notStaticFindFirst();" + nl +
+				"    }" + nl +
+				"}";
+
+		final CtClass<?> classUsingStaticMethod = (CtClass<?>) factory.Type().get(ClassUsingStaticMethod.class);
+		final String printed = factory.getEnvironment().createPrettyPrinter().printTypes(classUsingStaticMethod);
+		assertEquals(expected, printed);
+	}
 
 	@Test
 	public void printerCanPrintInvocationWithoutException() throws Exception {
@@ -127,7 +177,7 @@ public class DefaultPrettyPrinterTest {
 		final CtClass<?> aClass = (CtClass<?>) factory.Type().get(AClass.class);
 		//TODO remove that after implicit is set correctly for these cases
 		assertTrue(factory.getEnvironment().createPrettyPrinter().printTypes(aClass).contains(expected));
-		
+
 		assertEquals(expected, aClass.prettyprint());
 
 		final CtConstructorCall<?> constructorCall = aClass.getElements(new TypeFilter<CtConstructorCall<?>>(CtConstructorCall.class)).get(0);
@@ -209,13 +259,13 @@ public class DefaultPrettyPrinterTest {
 
 		String expected =
 			"public void setFieldUsingExternallyDefinedEnumWithSameNameAsLocal() {" + nl
-			+ "    localField = TypeIdentifierCollision.ENUM.E1.ordinal();" + nl
+			+ "    localField = spoon.test.prettyprinter.testclasses.sub.TypeIdentifierCollision.ENUM.E1.ordinal();" + nl
 			+ "}";
 
 		String computed = aClass.getMethodsByName("setFieldUsingExternallyDefinedEnumWithSameNameAsLocal").get(0).toString();
-		assertEquals("We use FQN for E1", expected, computed);
+		assertEquals(expected, computed, "We use FQN for E1");
 
-		expected = 
+		expected =
 			"public void setFieldUsingLocallyDefinedEnum() {" + nl
 			+ "    localField = ENUM.E1.ordinal();" + nl
 			+ "}";
@@ -229,7 +279,7 @@ public class DefaultPrettyPrinterTest {
 			+ "}";
 
 		computed = aClass.getMethodsByName("setFieldOfClassWithSameNameAsTheCompilationUnitClass").get(0).toString();
-		assertEquals("The static field of an external type with the same identifier as the compilation unit is printed with FQN", expected, computed);
+		assertEquals(expected, computed, "The static field of an external type with the same identifier as the compilation unit is printed with FQN");
 
 		expected =
 			"public void referToTwoInnerClassesWithTheSameName() {" + nl
@@ -240,11 +290,11 @@ public class DefaultPrettyPrinterTest {
 		//Ensure the ClassA of Class0 takes precedence over an import statement for ClassA in Class1, and its identifier can be the short version.
 
 		computed = aClass.getMethodsByName("referToTwoInnerClassesWithTheSameName").get(0).prettyprint();
-		assertEquals("where inner types have the same identifier only one may be shortened and the other should be fully qualified", expected, computed);
+		assertEquals(expected, computed, "where inner types have the same identifier only one may be shortened and the other should be fully qualified");
 
 		expected =
 			"public enum ENUM {" + nl + nl
-			+ "    E1(TypeIdentifierCollision.globalField, TypeIdentifierCollision.ENUM.E1);" + nl
+			+ "    E1(spoon.test.prettyprinter.testclasses.sub.TypeIdentifierCollision.globalField, spoon.test.prettyprinter.testclasses.sub.TypeIdentifierCollision.ENUM.E1);" + nl
 			+ "    final int NUM;" + nl + nl
 			+ "    final Enum<?> e;" + nl + nl
 			+ "    private ENUM(int num, Enum<?> e) {" + nl
@@ -268,7 +318,7 @@ public class DefaultPrettyPrinterTest {
 			"public java.util.List<?> aMethod() {" + nl
 			+ "    return new java.util.ArrayList<>();" + nl
 			+ "}";
-		assertEquals("the toString method of CtElementImpl should not shorten type names as it has no context or import statements", expected, computed);
+		assertEquals(expected, computed, "the toString method of CtElementImpl should not shorten type names as it has no context or import statements");
 	}
 
 	@Test
@@ -294,7 +344,7 @@ public class DefaultPrettyPrinterTest {
 		assertTrue(javaFile.exists());
 
 		assertEquals("package foo;" + nl + "class Bar {}",
-				IOUtils.toString(new FileInputStream(javaFile), "UTF-8"));
+				Files.readString(javaFile.toPath(), StandardCharsets.UTF_8));
 	}
 
 	@Test
@@ -368,7 +418,7 @@ public class DefaultPrettyPrinterTest {
 		CtConstructor<?> constr = type.getConstructors().stream().filter(c -> c.getParameters().size() == 1).findFirst().get();
 		assertEquals("this(v, true)", constr.getBody().getStatement(0).toString());
 	}
-	
+
 	@Test
 	public void testThisConstructorCall2() throws Exception {
 		// contract: the this(...) call of another constructor is printed well
@@ -381,8 +431,8 @@ public class DefaultPrettyPrinterTest {
 		CtClass<?> type = (CtClass) f.Class().get("org.apache.commons.math4.linear.ArrayRealVector");
 		{
 			CtConstructor<?> constr = type.getConstructors().stream()
-					.filter(c -> 
-						c.getParameters().size() == 1 
+					.filter(c ->
+						c.getParameters().size() == 1
 						&& "ArrayRealVector".equals(c.getParameters().get(0).getType().getSimpleName())
 					).findFirst().get();
 			assertEquals("this(v, true)", constr.getBody().getStatement(0).toString());
@@ -397,6 +447,7 @@ public class DefaultPrettyPrinterTest {
 	}
 
 	@Test
+	@ExtendWith(LineSeparatorExtension.class)
 	public void testElseIf() {
 		//contract: else if statements should be printed without break else and if
 		Launcher launcher = new Launcher();
@@ -415,5 +466,102 @@ public class DefaultPrettyPrinterTest {
 				"    }\n" +
 				"}";
 		assertEquals(expected, result);
+	}
+
+	/**
+	 * This test parses Spoon sources (src/main/java) and pretty prints them in a temporary directory
+	 * to check the compliance of the pretty printer to the set of checkstyle rules used by the Spoon repo.
+	 * As the test takes a long time to run, it is only meant to detect exemples of violation that can, then, be
+	 * used as unit test.
+	 * Note that this test can be reused to check the compliance of any pretty printer with any set of styling rules.
+	*/
+	@Disabled // disabled as long as 1) it is too long 2) we don't implement a SpoonCompliantPrettyPrinter
+	@Test
+	public void testCheckstyleCompliance() throws IOException, XmlPullParserException {
+		File tmpDir = new File("./target/tmp-checkstyle");
+		if(tmpDir.exists()) {
+			FileUtils.deleteDirectory(tmpDir);
+		}
+
+		//Build spoon AST and pretty print it in tmpDir
+		Launcher launcher = new Launcher();
+		launcher.addInputResource("./src/main/java");
+		launcher.setSourceOutputDirectory(tmpDir.getPath() + "/src/main/java");
+		launcher.buildModel();
+		launcher.prettyprint();
+
+		//copy pom and modify relative path
+		File originalPom = new File("pom.xml");
+		File tmpPom = new File(tmpDir, "pom.xml");
+
+		MavenXpp3Reader pomReader = new MavenXpp3Reader();
+		try (FileReader reader = new FileReader(originalPom)) {
+			Model model = pomReader.read(reader);
+			model.getParent().setRelativePath("../../" + model.getParent().getRelativePath());
+			Plugin checkstyle = null;
+			for(Plugin p : model.getBuild().getPlugins()) {
+				if(p.getArtifactId().equals("maven-checkstyle-plugin")) {
+					checkstyle = p;
+					break;
+				}
+			}
+			assertNotNull(checkstyle);
+			Xpp3Dom config = (Xpp3Dom) checkstyle.getConfiguration();
+			config.getChild("configLocation").setValue("../../checkstyle.xml");
+			//config.setAttribute("configLocation", "../../checkstyle.xml");
+
+			MavenXpp3Writer writer = new MavenXpp3Writer();
+			writer.write(new FileOutputStream(tmpPom), model);
+
+			//run checkstyle
+			//contract: PrettyPrinted sources should not contain errors
+			assertTrue(runCheckstyle(new File(SpoonPom.guessMavenHome()),tmpPom));
+
+		} catch (FileNotFoundException e) {
+			throw new IOException("Pom does not exists.");
+		}
+
+	}
+
+	private boolean runCheckstyle(File mvnHome, File pomFile) {
+		InvocationRequest request = new DefaultInvocationRequest();
+		request.setBatchMode(true);
+		request.setPomFile(pomFile);
+		request.setGoals(Collections.singletonList("checkstyle:checkstyle"));
+
+		Invoker invoker = new DefaultInvoker();
+		invoker.setMavenHome(mvnHome);
+		invoker.setWorkingDirectory(pomFile.getParentFile());
+
+		Map<String, List<String>> errors = new HashMap<>();
+		Pattern checkstylViolationPattern = Pattern.compile("\\[ERROR] [^\\s]* .* \\[[^\\s]*]");
+
+
+		invoker.setOutputHandler(s -> {
+			Matcher m = checkstylViolationPattern.matcher(s);
+			//System.out.println("r: " + s);
+			if(m.matches()) {
+				String fileName = s.split(" ")[1];
+				String violationName = "[" + s.split("\\[")[2];
+				List<String> files = errors.computeIfAbsent(violationName, str -> new LinkedList<>());
+				files.add(fileName);
+			}
+		});
+
+
+		try {
+			InvocationResult result = invoker.execute(request);
+
+
+			System.err.println("Violations: ");
+			for(String violationName: errors.keySet()) {
+				System.err.println("V: " + violationName + " -> " + errors.get(violationName).size());
+				System.err.println("   Ex: " +  errors.get(violationName).get(0));
+			}
+
+			return result.getExitCode() == 0;
+		} catch (MavenInvocationException e) {
+			return false;
+		}
 	}
 }

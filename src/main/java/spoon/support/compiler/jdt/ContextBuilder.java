@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -66,11 +66,11 @@ public class ContextBuilder {
 
 	CompilationUnit compilationUnitSpoon;
 
-	boolean isBuildLambda = false;
+	boolean isBuildLambda;
 
-	boolean isBuildTypeCast = false;
+	boolean isBuildTypeCast;
 
-	boolean ignoreComputeImports = false;
+	boolean ignoreComputeImports;
 
 	/**
 	 * Stack of all parents elements
@@ -114,7 +114,6 @@ public class ContextBuilder {
 		} catch (UnsupportedOperationException ignore) {
 			// For some element, we throw an UnsupportedOperationException when we call setType().
 		}
-
 	}
 
 	void exit(ASTNode node) {
@@ -127,9 +126,7 @@ public class ContextBuilder {
 			this.jdtTreeBuilder.getExiter().setChild(current);
 			this.jdtTreeBuilder.getExiter().setChild(pair.node);
 			ASTPair parentPair = stack.peek();
-			this.jdtTreeBuilder.getExiter().setParent(parentPair.node);
-			//visit ParentExiter using parent Spoon node, while it has access to parent's JDT node and child Spoon and JDT node
-			this.jdtTreeBuilder.getExiter().scan(parentPair.element);
+			this.jdtTreeBuilder.getExiter().exitParent(parentPair);
 		}
 	}
 
@@ -209,7 +206,7 @@ public class ContextBuilder {
 	private static String getNormalQualifiedName(ReferenceBinding referenceBinding) {
 		String pkg = new String(referenceBinding.getPackage().readableName()).replaceAll("\\.", "\\" + CtPackage.PACKAGE_SEPARATOR);
 		String name = new String(referenceBinding.qualifiedSourceName()).replaceAll("\\.", "\\" + CtType.INNERTTYPE_SEPARATOR);
-		return pkg.equals("") ? name : pkg + "." + name;
+		return pkg.isEmpty() ? name : pkg + "." + name;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -268,7 +265,7 @@ public class ContextBuilder {
 									EnumSet.noneOf(ModifierKind.class),
 									referenceBuilder.getTypeReference(fieldBinding.type),
 									name);
-							return field.setExtendedModifiers(JDTTreeBuilderQuery.getModifiers(fieldBinding.modifiers, true, false));
+							return field.setExtendedModifiers(JDTTreeBuilderQuery.getModifiers(fieldBinding.modifiers, true, ModifierTarget.FIELD));
 						}
 					}
 					// add super class if any

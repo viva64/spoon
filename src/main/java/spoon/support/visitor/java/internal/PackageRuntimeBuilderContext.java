@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -19,6 +19,15 @@ public class PackageRuntimeBuilderContext extends AbstractRuntimeBuilderContext 
 	public PackageRuntimeBuilderContext(CtPackage ctPackage) {
 		super(ctPackage);
 		this.ctPackage = ctPackage;
+	}
+
+	/**
+	 * Returns the package belonging to this context.
+	 *
+	 * @return the package of this context
+	 */
+	public CtPackage getPackage() {
+		return ctPackage;
 	}
 
 	@Override

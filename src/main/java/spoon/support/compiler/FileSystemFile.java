@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -110,6 +110,9 @@ public class FileSystemFile implements SpoonFile {
 
 	@Override
 	public boolean equals(Object obj) {
+		if (obj == null || getClass() != obj.getClass()) {
+			return false;
+		}
 		return toFile().equals(((SpoonResource) obj).toFile());
 	}
 

@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -21,7 +21,7 @@ import spoon.SpoonException;
 public abstract class ResultHolder<T> {
 	private final Class<T> requiredClass;
 
-	public ResultHolder(Class<T> requiredClass) {
+	protected ResultHolder(Class<T> requiredClass) {
 		this.requiredClass = requiredClass;
 	}
 

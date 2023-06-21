@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,9 +7,8 @@
  */
 package spoon.support.compiler.jdt;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.eclipse.jdt.core.compiler.CharOperation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
 import spoon.SpoonException;
@@ -23,6 +22,7 @@ import spoon.reflect.code.CtComment;
 import spoon.reflect.code.CtConditional;
 import spoon.reflect.code.CtIf;
 import spoon.reflect.code.CtLambda;
+import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtNewArray;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.code.CtStatementList;
@@ -62,6 +62,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -72,10 +73,9 @@ import java.util.regex.Pattern;
  */
 public class JDTCommentBuilder {
 
-	private static final Logger LOGGER = LogManager.getLogger();
+	private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
 	private final CompilationUnitDeclaration declarationUnit;
-	private String filePath;
 	private CompilationUnit spoonUnit;
 	private Factory factory;
 	private ICompilationUnit sourceUnit;
@@ -94,7 +94,6 @@ public class JDTCommentBuilder {
 		this.factory = factory;
 		this.sourceUnit = declarationUnit.compilationResult.compilationUnit;
 		this.contents = sourceUnit.getContents();
-		this.filePath = CharOperation.charToString(sourceUnit.getFileName());
 		this.spoonUnit = JDTTreeBuilder.getOrCreateCompilationUnit(declarationUnit, factory);
 	}
 
@@ -157,7 +156,7 @@ public class JDTCommentBuilder {
 		int smallDistance = Integer.MAX_VALUE;
 
 		for (CtElement element : elements) {
-			if (element.getPosition().isValidPosition() == false) {
+			if (!element.getPosition().isValidPosition()) {
 				continue;
 			}
 			if (element.isImplicit()) {
@@ -437,6 +436,11 @@ public class JDTCommentBuilder {
 			}
 
 			@Override
+			public <T> void visitCtLiteral(CtLiteral<T> e) {
+				e.addComment(comment);
+			}
+
+			@Override
 			public void scanCtStatement(CtStatement s) {
 				if (!(s instanceof CtStatementList || s instanceof CtSwitch || s instanceof CtVariable)) {
 					s.addComment(comment);
@@ -542,7 +546,7 @@ public class JDTCommentBuilder {
 					return;
 				}
 				CtElement body = getBody(element);
-				if (body != null && body.getPosition().isValidPosition() == false) {
+				if (body != null && !body.getPosition().isValidPosition()) {
 					body = null;
 				}
 
@@ -623,9 +627,6 @@ public class JDTCommentBuilder {
 			//append first line
 			ret.append(line);
 			while ((line = br.readLine()) != null) {
-				if (isLastLine) {
-					throw new SpoonException("Unexpected next line after last line");
-				}
 				if (line.endsWith("*/")) {
 					//it is last line
 					line = endCommentRE.matcher(line).replaceFirst("");

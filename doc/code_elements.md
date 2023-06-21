@@ -347,6 +347,16 @@ int x = switch(i) { // <-- switch expression
    }
 
 ```
+### CtTextBlock
+[(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtTextBlock.html)
+
+```java
+
+    String example = """
+		      Test String
+       	      """;
+
+```
 ### CtThisAccess
 [(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtThisAccess.html)
 
@@ -416,6 +426,19 @@ int x = switch(i) { // <-- switch expression
     Class x = Number.class
 
 ```
+### CtTypePattern
+[(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtTypePattern.html)
+
+```java
+
+    Object obj = null;
+    boolean longerThanTwo = false;
+    // String s is the type pattern, declaring a local variable
+    if (obj instanceof String s) {
+        longerThanTwo = s.length() > 2;
+    }
+
+```
 ### CtUnaryOperator
 [(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtUnaryOperator.html)
 
@@ -460,6 +483,26 @@ int x = switch(i) { // <-- switch expression
     };
 
 ```
+### CtYieldStatement
+[(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/code/CtYieldStatement.html)
+
+```java
+
+    int x = 0;
+    x = switch ("foo") {
+        default -> {
+					x=x+1;
+					yield x; //<--- yield statement
+					}
+    };
+
+
+    int x = 0;
+    x = switch ("foo") {
+        default -> 4; //<---  implicit yield statement
+    };
+
+```
 ### CtAnnotation
 [(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/declaration/CtAnnotation.html)
 
@@ -479,5 +522,25 @@ int x = switch(i) { // <-- switch expression
     class Foo {
        int x;
     }
+
+```
+### CtInterface
+[(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/declaration/CtInterface.html)
+
+```java
+
+    // an interface definition
+    interface Foo {
+       void bar();
+    }
+
+```
+### CtRecord
+[(javadoc)](http://spoon.gforge.inria.fr/mvnsites/spoon-core/apidocs/spoon/reflect/declaration/CtRecord.html)
+
+```java
+
+   record Point(int x, int y) {
+   }
 
 ```

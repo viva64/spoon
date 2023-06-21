@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -7,12 +7,12 @@
  */
 package spoon.support.compiler.jdt;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.Level;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.IProblem;
+import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.env.INameEnvironment;
+import org.eclipse.jdt.internal.compiler.lookup.CompilationUnitScope;
 import spoon.OutputType;
 import spoon.SpoonException;
 import spoon.compiler.Environment;
@@ -39,6 +39,7 @@ import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
 import spoon.reflect.visitor.Filter;
 import spoon.reflect.visitor.PrettyPrinter;
 import spoon.reflect.visitor.Query;
+import spoon.support.Level;
 import spoon.support.QueueProcessingManager;
 import spoon.support.comparator.FixedOrderBasedOnFileNameCompilationUnitComparator;
 import spoon.support.compiler.SnippetCompilationError;
@@ -49,9 +50,11 @@ import spoon.support.sniper.SniperJavaPrettyPrinter;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -200,9 +203,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 
 	@Override
 	public void generateProcessedSourceFiles(OutputType outputType, Filter<CtType<?>> typeFilter) {
-		if (getEnvironment().getSpoonProgress() != null) {
-			getEnvironment().getSpoonProgress().start(SpoonProgress.Process.PRINT);
-		}
+		getEnvironment().getSpoonProgress().start(SpoonProgress.Process.PRINT);
 		switch (outputType) {
 		case CLASSES:
 			generateProcessedSourceFilesUsingTypes(typeFilter);
@@ -212,9 +213,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 			break;
 		case NO_OUTPUT:
 		}
-		if (getEnvironment().getSpoonProgress() != null) {
-			getEnvironment().getSpoonProgress().end(SpoonProgress.Process.PRINT);
-		}
+		getEnvironment().getSpoonProgress().end(SpoonProgress.Process.PRINT);
 	}
 
 	@Override
@@ -354,7 +353,9 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 	}
 
 	protected boolean buildTemplates(JDTBuilder jdtBuilder) {
-		return buildUnitsAndModel(jdtBuilder, templates, getTemplateClasspath(), "template ");
+		CompilationUnitDeclaration[] units = buildUnits(jdtBuilder, templates, getTemplateClasspath(), "template ");
+		buildModel(units, factory.Templates());
+		return true;
 	}
 
 	/**
@@ -369,7 +370,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		CompilationUnitDeclaration[] units = buildUnits(jdtBuilder, sourcesFolder, classpath, debugMessagePrefix);
 
 		// here we build the model in the template factory
-		buildModel(units);
+		buildModel(units, factory);
 
 		return probs.isEmpty();
 	}
@@ -428,22 +429,22 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		return unitList;
 	}
 
-	protected void buildModel(CompilationUnitDeclaration[] units) {
-		JDTTreeBuilder builder = new JDTTreeBuilder(factory);
+	protected void buildModel(CompilationUnitDeclaration[] units, Factory aFactory) {
+		JDTTreeBuilder builder = new JDTTreeBuilder(aFactory);
 		List<CompilationUnitDeclaration> unitList = this.sortCompilationUnits(units);
 
 		forEachCompilationUnit(unitList, SpoonProgress.Process.MODEL, unit -> {
 			// we need first to go through the whole model before getting the right reference for imports
-			unit.traverse(builder, unit.scope);
+			traverseUnitDeclaration(builder, unit);
 		});
 		//we need first imports before we can place comments. Mainly comments on imports need that
 		forEachCompilationUnit(unitList, SpoonProgress.Process.IMPORT, unit -> {
-			new JDTImportBuilder(unit, factory).build();
+			new JDTImportBuilder(unit, aFactory).build();
 		});
 		if (getFactory().getEnvironment().isCommentsEnabled()) {
 			forEachCompilationUnit(unitList, SpoonProgress.Process.COMMENT_LINKING, unit -> {
 				try {
-					new JDTCommentBuilder(unit, factory).build();
+					new JDTCommentBuilder(unit, aFactory).build();
 				} catch (Exception e) {
 					getEnvironment().report(null, Level.ERROR, "JDTCommentBuilder crashed with the error, some comments may be missing in the model: " + e.toString());
 				}
@@ -452,9 +453,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 	}
 
 	private void forEachCompilationUnit(List<CompilationUnitDeclaration> unitList, SpoonProgress.Process process, Consumer<CompilationUnitDeclaration> consumer) {
-		if (getEnvironment().getSpoonProgress() != null) {
-			getEnvironment().getSpoonProgress().start(process);
-		}
+		getEnvironment().getSpoonProgress().start(process);
 		int i = 0;
 		for (CompilationUnitDeclaration unit : unitList) {
 			if (unit.isModuleInfo() && factory.getEnvironment().getComplianceLevel() < 9) {
@@ -465,15 +464,23 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 				if (canProcessCompilationUnit(unitPath)) {
 					consumer.accept(unit);
 				}
-				if (getEnvironment().getSpoonProgress() != null) {
-					getEnvironment().getSpoonProgress().step(process, unitPath, ++i, unitList.size());
-				}
+				getEnvironment().getSpoonProgress().step(process, unitPath, ++i, unitList.size());
 			}
 		}
-		if (getEnvironment().getSpoonProgress() != null) {
-			getEnvironment().getSpoonProgress().end(process);
-		}
+		getEnvironment().getSpoonProgress().end(process);
 	}
+
+	/**
+	 * Invokes the traversal of the given compilation unit declaration using the given builder as a visitor.
+	 * Overriders of this method must either invoke {@link CompilationUnitDeclaration#traverse(ASTVisitor, CompilationUnitScope)})} )}
+	 * or this method before returning.
+	 * @param builder the builder to use to traverse the unit.
+	 * @param unitDeclaration the unit declaration.
+	 */
+	protected void traverseUnitDeclaration(JDTTreeBuilder builder, CompilationUnitDeclaration unitDeclaration) {
+		unitDeclaration.traverse(builder, unitDeclaration.scope);
+	}
+
 
 	private boolean canProcessCompilationUnit(String unitPath) {
 		for (final CompilationUnitFilter cuf : compilationUnitFilters) {
@@ -500,32 +507,22 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 
 	protected void generateProcessedSourceFilesUsingCUs() {
 
-		File outputDirectory = getSourceOutputDirectory();
+		File outputDirectoryFile = getSourceOutputDirectory();
 
 		factory.getEnvironment().debugMessage("Generating source using compilation units...");
 		// Check output directory
-		if (outputDirectory == null) {
+		if (outputDirectoryFile == null) {
 			throw new RuntimeException("You should set output directory before generating source files");
 		}
-		// Create spooned directory
-		if (outputDirectory.isFile()) {
+		Path outputDirectory = outputDirectoryFile.toPath().toAbsolutePath().normalize();
+		if (Files.exists(outputDirectory) && !Files.isDirectory(outputDirectory)) {
 			throw new RuntimeException("Output must be a directory");
 		}
-		if (!outputDirectory.exists()) {
-			if (!outputDirectory.mkdirs()) {
-				throw new RuntimeException("Error creating output directory");
-			}
-		}
-
-		try {
-			outputDirectory = outputDirectory.getCanonicalFile();
-		} catch (IOException e1) {
-			throw new SpoonException(e1);
-		}
+		// Create spooned directory
+		createDirectories(outputDirectory);
 
 		factory.getEnvironment().debugMessage("Generating source files to: " + outputDirectory);
 
-		List<File> printedFiles = new ArrayList<>();
 		for (spoon.reflect.cu.CompilationUnit cu : factory.CompilationUnit().getMap().values()) {
 
 			if (cu.getDeclaredTypes().isEmpty()) { // case of package-info
@@ -537,41 +534,41 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 			CtPackage pack = element.getPackage();
 
 			// create package directory
-			File packageDir;
-			if (pack.isUnnamedPackage()) {
-				packageDir = new File(outputDirectory.getAbsolutePath());
-			} else {
-				// Create current package directory
-				packageDir = new File(outputDirectory.getAbsolutePath() + File.separatorChar + pack.getQualifiedName().replace('.', File.separatorChar));
-			}
-			if (!packageDir.exists()) {
-				if (!packageDir.mkdirs()) {
-					throw new RuntimeException("Error creating output directory");
-				}
-			}
+			Path packageDir = getPackageDir(outputDirectory, pack);
+			createDirectories(packageDir);
 
 			// print type
-			try {
-				File file = new File(packageDir.getAbsolutePath() + File.separatorChar + element.getSimpleName() + DefaultJavaPrettyPrinter.JAVA_FILE_EXTENSION);
-				file.createNewFile();
-
-				// the path must be given relatively to to the working directory
-				try (InputStream is = getCompilationUnitInputStream(cu.getFile().getPath());
-					FileOutputStream outFile = new FileOutputStream(file)) {
-
-					IOUtils.copy(is, outFile);
-				}
-
-				if (!printedFiles.contains(file)) {
-					printedFiles.add(file);
-				}
-
+			String fileName = element.getSimpleName() + DefaultJavaPrettyPrinter.JAVA_FILE_EXTENSION;
+			Path file = packageDir.resolve(fileName);
+			// order is important here, as the new file needs to exist so the CompilationUnit
+			// can fetch its (still empty) source code. See CtCompilationUnitImpl#getOriginalSourceCode
+			// (this will be called by getCompilationUnitInputStream(cu))
+			try (OutputStream outFile = Files.newOutputStream(file);
+					InputStream is = getCompilationUnitInputStream(cu)) {
+				is.transferTo(outFile);
+			} catch (RuntimeException e) {
+				throw e; // rethrow directly
 			} catch (Exception e) {
-				if (e instanceof RuntimeException) {
-					throw (RuntimeException) e;
-				}
 				throw new SpoonException(e);
 			}
+		}
+	}
+
+	private Path getPackageDir(Path outputDirectory, CtPackage pack) {
+		if (pack.isUnnamedPackage()) {
+			return outputDirectory;
+		} else {
+			// Create current package directory
+			String packagePath = pack.getQualifiedName().replace('.', File.separatorChar);
+			return outputDirectory.resolve(packagePath);
+		}
+	}
+
+	private void createDirectories(Path outputDirectory) {
+		try {
+			Files.createDirectories(outputDirectory);
+		} catch (IOException e) {
+			throw new RuntimeException("Error creating output directory", e);
 		}
 	}
 
@@ -590,7 +587,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		// we can not accept this problem, even in noclasspath mode
 		// otherwise a nasty null pointer exception occurs later
 		if (pb.getID() == IProblem.DuplicateTypes) {
-			if (getFactory().getEnvironment().isIgnoreDuplicateDeclarations() == false) {
+			if (!getFactory().getEnvironment().isIgnoreDuplicateDeclarations()) {
 				throw new ModelBuildingException(pb.getMessage());
 			}
 		} else {
@@ -669,9 +666,8 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		return templates;
 	}
 
-	protected InputStream getCompilationUnitInputStream(String path) {
+	protected InputStream getCompilationUnitInputStream(spoon.reflect.cu.CompilationUnit cu) {
 		Environment env = factory.getEnvironment();
-		spoon.reflect.cu.CompilationUnit cu = factory.CompilationUnit().getMap().get(path);
 		List<CtType<?>> toBePrinted = cu.getDeclaredTypes();
 
 		PrettyPrinter printer = env.createPrettyPrinter();

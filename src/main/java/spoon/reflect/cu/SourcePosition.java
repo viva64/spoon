@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -72,7 +72,7 @@ public interface SourcePosition extends Serializable {
 	int getEndColumn();
 
 	/**
-	 * Gets the index at which the position ends in the source file.
+	 * Gets the index at which the position ends in the source file. Heavily used for the sniper mode.
 	 */
 	int getSourceEnd();
 

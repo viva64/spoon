@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -88,6 +88,11 @@ public abstract class ActionBasedChangeListenerImpl implements ActionBasedChange
 	@Override
 	public <K, V> void onMapAdd(CtElement currentElement, CtRole role, Map<K, V> field, K key, CtElement newValue) {
 		propagateModelChange(new AddAction<>(new MapContext<>(currentElement, role, field, key), newValue));
+	}
+
+	@Override
+	public <K, V> void onMapDelete(CtElement currentElement, CtRole role, Map<K, V> field, K key, CtElement oldValue) {
+		propagateModelChange(new DeleteAction<>(new MapContext<>(currentElement, role, field, key), oldValue));
 	}
 
 	@Override

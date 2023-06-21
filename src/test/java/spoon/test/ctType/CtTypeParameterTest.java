@@ -1,18 +1,16 @@
 /**
- * Copyright (C) 2006-2018 INRIA and contributors
- * Spoon - http://spoon.gforge.inria.fr/
+ * Copyright (C) 2006-2018 INRIA and contributors Spoon - http://spoon.gforge.inria.fr/
  *
- * This software is governed by the CeCILL-C License under French law and
- * abiding by the rules of distribution of free software. You can use, modify
- * and/or redistribute the software under the terms of the CeCILL-C license as
- * circulated by CEA, CNRS and INRIA at http://www.cecill.info.
+ * This software is governed by the CeCILL-C License under French law and abiding by the rules of
+ * distribution of free software. You can use, modify and/or redistribute the software under the
+ * terms of the CeCILL-C license as circulated by CEA, CNRS and INRIA at http://www.cecill.info.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the CeCILL-C License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * CeCILL-C License for more details.
  *
- * The fact that you are presently reading this means that you have had
- * knowledge of the CeCILL-C license and that you accept its terms.
+ * The fact that you are presently reading this means that you have had knowledge of the CeCILL-C
+ * license and that you accept its terms.
  */
 package spoon.test.ctType;
 
@@ -21,8 +19,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
+import spoon.FluentLauncher;
+import spoon.processing.AbstractProcessor;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtConstructor;
 import spoon.reflect.declaration.CtExecutable;
@@ -37,11 +36,11 @@ import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.test.ctType.testclasses.ErasureModelA;
 import spoon.testing.utils.ModelUtils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CtTypeParameterTest {
 
@@ -84,13 +83,13 @@ public class CtTypeParameterTest {
 
 	private void checkTypeParamErasureOfType(CtTypeParameter typeParam, Class<?> clazz) throws NoSuchFieldException, SecurityException {
 		Field field = clazz.getDeclaredField("param" + typeParam.getSimpleName());
-		assertEquals("TypeErasure of type param " + getTypeParamIdentification(typeParam), field.getType().getName(), typeParam.getTypeErasure().getQualifiedName());
+		assertEquals(field.getType().getName(), typeParam.getTypeErasure().getQualifiedName(), "TypeErasure of type param " + getTypeParamIdentification(typeParam));
 	}
 
 	private void checkTypeParamErasureOfExecutable(CtTypeParameter typeParam) throws SecurityException {
 		CtExecutable<?> exec = (CtExecutable<?>) typeParam.getParent();
 		CtParameter<?> param = exec.filterChildren(new NamedElementFilter<>(CtParameter.class, "param" + typeParam.getSimpleName())).first();
-		assertNotNull("Missing param" + typeParam.getSimpleName() + " in " + exec.getSignature(), param);
+		assertNotNull(param, "Missing param" + typeParam.getSimpleName() + " in " + exec.getSignature());
 		int paramIdx = exec.getParameters().indexOf(param);
 		Class declClass = exec.getParent(CtType.class).getActualClass();
 		Executable declExec;
@@ -101,7 +100,7 @@ public class CtTypeParameterTest {
 		}
 		Class<?> paramType = declExec.getParameterTypes()[paramIdx];
 		// contract the type erasure given with Java reflection is the same as the one computed by spoon
-		assertEquals("TypeErasure of executable param " + getTypeParamIdentification(typeParam), paramType.getTypeName(), param.getType().getTypeErasure().toString());
+		assertEquals(paramType.getTypeName(), param.getType().getTypeErasure().toString(), "TypeErasure of executable param " + getTypeParamIdentification(typeParam));
 	}
 
 	private void checkParameterErasureOfExecutable(CtParameter<?> param) {
@@ -118,7 +117,7 @@ public class CtTypeParameterTest {
 		Class<?> paramType = declExec.getParameterTypes()[paramIdx];
 		assertEquals(0, typeErasure.getActualTypeArguments().size());
 		// contract the type erasure of the method parameter given with Java reflection is the same as the one computed by spoon
-		assertEquals("TypeErasure of executable " + exec.getSignature() + " parameter " + param.getSimpleName(), paramType.getTypeName(), typeErasure.getQualifiedName());
+		assertEquals(paramType.getTypeName(), typeErasure.getQualifiedName(), "TypeErasure of executable " + exec.getSignature() + " parameter " + param.getSimpleName());
 	}
 
 	private Executable getMethodByName(Class declClass, String simpleName) {
@@ -219,5 +218,20 @@ public class CtTypeParameterTest {
 			return false;
 		}
 		return thisType.getQualifiedName().equals(thatAdaptedType.getQualifiedName());
+	}
+
+	@Test
+	public void test() {
+		// testcase for issue 3275. The issue was a nullpointer in this code. Was fixed in #3276
+		new FluentLauncher()
+			.inputResource("src/test/resources/issue3275/BOMCostPrice.java")
+			.noClasspath(true)
+			.processor(new AbstractProcessor<CtTypeReference<?>>() {
+					public void process(CtTypeReference<?> element) {
+						// just a operation to enforce the method 
+					String a = element.getSimpleName();
+				}
+			})
+			.buildModel();
 	}
 }

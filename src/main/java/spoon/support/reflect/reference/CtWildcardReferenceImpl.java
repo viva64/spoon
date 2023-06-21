@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -33,7 +33,6 @@ public class CtWildcardReferenceImpl extends CtTypeParameterReferenceImpl implem
 
 	public CtWildcardReferenceImpl() {
 		simplename = "?";
-		setBoundingType(null);
 	}
 
 	@Override

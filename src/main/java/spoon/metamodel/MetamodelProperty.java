@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -8,13 +8,13 @@
 package spoon.metamodel;
 
 import static spoon.metamodel.Metamodel.addUniqueObject;
-import static spoon.metamodel.Metamodel.getOrCreate;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -75,7 +75,7 @@ public class MetamodelProperty {
 	private Boolean derived;
 	private Boolean unsettable;
 
-	private Map<MMMethodKind, List<MMMethod>> methodsByKind = new HashMap<>();
+	private Map<MMMethodKind, List<MMMethod>> methodsByKind = new EnumMap<>(MMMethodKind.class);
 	private Map<String, MMMethod> methodsBySignature;
 
 	/**
@@ -93,8 +93,6 @@ public class MetamodelProperty {
 	 * List of {@link MetamodelProperty} with same `role`, from super type of `ownerConcept` {@link MetamodelConcept}
 	 */
 	private final List<MetamodelProperty> superProperties = new ArrayList<>();
-
-	private List<MMMethodKind> ambiguousMethodKinds = new ArrayList<>();
 
 	MetamodelProperty(String name, CtRole role, MetamodelConcept ownerConcept) {
 		this.name = name;
@@ -122,7 +120,7 @@ public class MetamodelProperty {
 		if (createIfNotExist) {
 			MMMethod mmMethod = new MMMethod(this, method);
 			roleMethods.add(mmMethod);
-			getOrCreate(methodsByKind, mmMethod.getKind(), () -> new ArrayList<>()).add(mmMethod);
+			methodsByKind.computeIfAbsent(mmMethod.getKind(), k -> new ArrayList<>()).add(mmMethod);
 			MMMethod conflict = roleMethodsBySignature.put(mmMethod.getSignature(), mmMethod);
 			if (conflict != null) {
 				throw new SpoonException("Conflict on " + getOwner().getName() + "." + name + " method signature: " + mmMethod.getSignature());
@@ -300,14 +298,9 @@ public class MetamodelProperty {
 		List<MMMethod> methods = methodsByKind.get(key);
 		if (methods != null && methods.size() > 1) {
 			int idx = getIdxOfBestMatch(methods, key);
-			if (idx >= 0) {
 				if (idx > 0) {
 					//move the matching to the beginning
 					methods.add(0, methods.remove(idx));
-				}
-			} else {
-				//add all methods as ambiguous
-				ambiguousMethodKinds.add(key);
 			}
 		}
 	}
@@ -334,7 +327,7 @@ public class MetamodelProperty {
 
 	private int getIdxOfBestMatchByReturnType(List<MMMethod> methods, MMMethodKind key) {
 		if (methods.size() > 2) {
-			throw new SpoonException("Resolving of more then 2 conflicting getters is not supported. There are: " + methods.toString());
+			throw new SpoonException("Resolving of more then 2 conflicting getters is not supported. There are: " + methods);
 		}
 		// There is no input parameter. We are resolving getter field.
 		// choose the getter whose return value is a collection
@@ -412,7 +405,7 @@ public class MetamodelProperty {
 		}
 		CtTypeReference<?> itemValueType;
 		if (valueContainerType == ContainerKind.MAP) {
-			if (String.class.getName().equals(valueType.getActualTypeArguments().get(0).getQualifiedName()) == false) {
+			if (!String.class.getName().equals(valueType.getActualTypeArguments().get(0).getQualifiedName())) {
 				throw new SpoonException("Unexpected container of type: " + valueType.toString());
 			}
 			itemValueType = valueType.getActualTypeArguments().get(1);
@@ -457,20 +450,6 @@ public class MetamodelProperty {
 			 * type CtFieldReference<T>, when setter has CtVariableReference<T>
 			 */
 			return MatchLevel.SUBTYPE;
-		}
-		return null;
-	}
-
-	/**
-	 * @param valueType whose Map value type is needed
-	 * @return Map value type If valueType is an Map. null if it is not
-	 */
-	private CtTypeReference<?> getMapValueType(CtTypeReference<?> valueType) {
-		if (valueType != null) {
-			Factory f = valueType.getFactory();
-			if (valueType.isSubtypeOf(f.Type().MAP) && valueType.getActualTypeArguments().size() == 2) {
-				return valueType.getActualTypeArguments().get(1);
-			}
 		}
 		return null;
 	}
@@ -572,7 +551,7 @@ public class MetamodelProperty {
 			CtTypeReference<?> expectedValueType = this.getTypeOfField().getTypeErasure();
 			for (int i = 1; i < potentialRootSuperFields.size(); i++) {
 				MetamodelProperty superField = potentialRootSuperFields.get(i);
-				if (superField.getTypeOfField().getTypeErasure().equals(expectedValueType) == false) {
+				if (!superField.getTypeOfField().getTypeErasure().equals(expectedValueType)) {
 					break;
 				}
 				if (needsSetter && superField.getMethod(MMMethodKind.SET) == null) {

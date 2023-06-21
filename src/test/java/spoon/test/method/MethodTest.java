@@ -16,29 +16,44 @@
  */
 package spoon.test.method;
 
-import org.junit.Test;
+import org.hamcrest.CoreMatchers;
+import spoon.reflect.factory.Factory;
+import spoon.reflect.declaration.CtParameter;
+import spoon.test.method.testclasses.Hierarchy;
+import spoon.test.method.testclasses.Tacos;
+import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.filter.NamedElementFilter;
+import spoon.reflect.declaration.CtTypeParameter;
+import spoon.test.delete.testclasses.Adobada;
+import spoon.reflect.declaration.ModifierKind;
+import spoon.reflect.declaration.CtType;
 import spoon.Launcher;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
-import spoon.reflect.declaration.CtType;
-import spoon.reflect.declaration.ModifierKind;
-import spoon.reflect.factory.Factory;
-import spoon.reflect.visitor.filter.NamedElementFilter;
-import spoon.test.delete.testclasses.Adobada;
 import spoon.test.method.testclasses.Methods;
-import spoon.test.method.testclasses.Tacos;
+import org.junit.jupiter.api.Test;
+import spoon.testing.utils.ModelTest;
 
-import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+import java.util.ConcurrentModificationException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static spoon.testing.utils.ModelUtils.build;
+import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.sameInstance;
 import static spoon.testing.utils.ModelUtils.buildClass;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static spoon.testing.utils.ModelUtils.build;
 import static spoon.testing.utils.ModelUtils.createFactory;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MethodTest {
 
@@ -132,5 +147,102 @@ public class MethodTest {
 		}
 
 		assertTrue(compareFound);
+	}
+
+	@Test
+	public void test_addParameterAt_addsParameterToSpecifiedPosition() {
+		// contract: the parameter should be added at the specified position
+		Factory factory = new Launcher().getFactory();
+
+		CtMethod<?> method = factory.createMethod();
+
+		CtParameter<String> first = factory.createParameter();
+		CtTypeReference<String> firstType = factory.Type().stringType();
+		first.setSimpleName("x");
+		first.setType(firstType);
+
+		CtParameter<Integer> second = factory.createParameter();
+		CtTypeReference<Integer> secondType = factory.Type().integerType();
+		second.setSimpleName("y");
+		second.setType(secondType);
+
+		CtParameter<Boolean> third = factory.createParameter();
+		CtTypeReference<Boolean> thirdType = factory.Type().booleanType();
+		third.setSimpleName("z");
+		third.setType(thirdType);
+
+		method.addParameterAt(0, second);
+		method.addParameterAt(1, third);
+		method.addParameterAt(0, first);
+
+		assertThat(method.getParameters(), equalTo(Arrays.asList(first, second, third)));
+	}
+
+	@Test
+	public void test_addParameterAt_throwsOutOfBoundsException_whenPositionIsOutOfBounds() {
+		// contract: `addParameterAt` should throw an out of bounds exception when the specified position is out of
+		// bounds of the parameter collection
+		Factory factory = new Launcher().getFactory();
+		CtMethod<?> method = factory.createMethod();
+		CtParameter<?> paramater = factory.createParameter();
+
+		assertThrows(IndexOutOfBoundsException.class,
+				() -> method.addParameterAt(2, paramater));
+	}
+
+	@Test
+	public void test_addFormalCtTypeParameterAt_addsTypeParameterToSpecifiedPosition() {
+		// contract: addFormalCtTypeParameterAt should respect the position provided to it.
+
+		// arrange
+		Factory factory = new Launcher().getFactory();
+
+		CtMethod<?> method = factory.createMethod();
+
+		CtTypeParameter first = factory.createTypeParameter();
+		first.setSimpleName("T");
+		CtTypeParameter second = factory.createTypeParameter();
+		second.setSimpleName("E");
+		CtTypeParameter third = factory.createTypeParameter();
+		third.setSimpleName("C");
+
+		// act
+		// add the type parameters out-of-order but in the correct positions
+		method.addFormalCtTypeParameterAt(0, second);
+		method.addFormalCtTypeParameterAt(0, first);
+		method.addFormalCtTypeParameterAt(2, third);
+
+		assertThat(method.getFormalCtTypeParameters(), equalTo(Arrays.asList(first, second, third)));
+	}
+
+	@Test
+	public void test_addFormalCtTypeParameterAt_throwsOutOfBoundsException_whenPositionIsOutOfBounds() {
+		// contract: addFormalCtTypeParameterAt should throw an out ouf bounds exception when the
+		// specified position is out of bounds
+		Factory factory = new Launcher().getFactory();
+		CtMethod<?> method = factory.createMethod();
+		CtTypeParameter typeParam = factory.createTypeParameter();
+
+		assertThrows(IndexOutOfBoundsException.class,
+				() -> method.addFormalCtTypeParameterAt(1, typeParam));
+	}
+
+	@ModelTest("src/test/java/spoon/test/method/testclasses/Hierarchy.java")
+	void test_getTopDefinitions_findsTopOnly(Factory factory) {
+		// contract: getTopDefinitions should find top-level definitions only
+		CtMethod<?> method = factory.Interface().get(Hierarchy.D.class).getMethods().iterator().next();
+		List<CtMethod<?>> topDefinitions = new ArrayList<>(method.getTopDefinitions());
+		assertThat(topDefinitions.size(), equalTo(2));
+		CtMethod<?> m0 = topDefinitions.get(0);
+		CtMethod<?> m1 = topDefinitions.get(1);
+		// two distinct elements
+		assertThat(m0, not(sameInstance(m1)));
+		// A1 and A2 declare the top-level methods
+		assertThat(m0.getDeclaringType(), not(equalTo(m1.getDeclaringType())));
+		assertThat(m0.getDeclaringType().getSimpleName(), anyOf(equalTo("A1"), equalTo("A2")));
+		assertThat(m1.getDeclaringType().getSimpleName(), anyOf(equalTo("A1"), equalTo("A2")));
+		// top-level definitions don't have top-level definitions
+		assertThat(m0.getTopDefinitions().size(), equalTo(0));
+		assertThat(m1.getTopDefinitions().size(), equalTo(0));
 	}
 }

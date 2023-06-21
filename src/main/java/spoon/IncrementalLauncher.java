@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -94,8 +94,8 @@ public class IncrementalLauncher extends Launcher {
 	}
 
 	private static void saveFactory(Factory factory, File file) {
-		try {
-			new SerializationModelStreamer().save(factory, new FileOutputStream(file));
+		try (FileOutputStream fileStream = new FileOutputStream(file)) {
+			new SerializationModelStreamer().save(factory, fileStream);
 		} catch (IOException e) {
 			throw new SpoonException("unable to save factory");
 		}
@@ -223,7 +223,7 @@ public class IncrementalLauncher extends Launcher {
 
 			Collection<CtPackage> oldPackages = oldFactory.Package().getAll();
 			for (CtPackage pkg : oldPackages) {
-				if (pkg.getTypes().isEmpty() && pkg.getPackages().isEmpty() && !pkg.isUnnamedPackage()) {
+				if (pkg.isEmpty() && !pkg.isUnnamedPackage()) {
 					pkg.delete();
 				}
 			}
@@ -236,6 +236,8 @@ public class IncrementalLauncher extends Launcher {
 		}
 
 		getEnvironment().setSourceClasspath(mSourceClasspath.toArray(new String[0]));
+
+		this.getEnvironment().setShouldCompile(true);
 	}
 
 	/**
@@ -266,7 +268,9 @@ public class IncrementalLauncher extends Launcher {
 			throw new SpoonException("factory is null");
 		}
 
-		getModelBuilder().compile(SpoonModelBuilder.InputType.FILES);
+		if (this.getEnvironment().shouldCompile()) {
+			getModelBuilder().compile(SpoonModelBuilder.InputType.FILES);
+		}
 
 		saveFactory(factory, mModelFile);
 

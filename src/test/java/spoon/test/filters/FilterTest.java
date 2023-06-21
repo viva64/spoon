@@ -16,9 +16,11 @@
  */
 package spoon.test.filters;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import spoon.Launcher;
+import spoon.legacy.NameFilter;
+import spoon.reflect.CtModel;
 import spoon.reflect.code.CtCFlowBreak;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtFieldAccess;
@@ -86,9 +88,9 @@ import spoon.test.filters.testclasses.SubTostada;
 import spoon.test.filters.testclasses.Tacos;
 import spoon.test.filters.testclasses.Tostada;
 import spoon.test.imports.testclasses.internal4.Constants;
+import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -97,16 +99,58 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static spoon.testing.utils.ModelUtils.build;
 
 public class FilterTest {
 
 	Factory factory;
 
-	@Before
+	@BeforeEach
 	public void setup() throws Exception {
 		factory = build(Foo.class);
+	}
+
+	@Test
+	public void testNameFilter() throws Exception {
+		// contract: NameFilter finds the expected amount of elements when filtering
+
+		CtClass<?> foo = factory.Package().get("spoon.test.filters.testclasses").getType("Foo");
+		assertEquals("Foo", foo.getSimpleName());
+		List<CtNamedElement> elements = foo.getElements(new NameFilter<>("i"));
+		assertEquals(1, elements.size());
+	}
+
+	@Test
+	void testNameFilterMatchesReturnsTrueForMatchingName() {
+		// contract: NameFilter.matches should return true for an element with a matching name
+
+		// arrange
+		String name = "someNiceName";
+		NameFilter<CtNamedElement> nameFilter = new NameFilter<>(name);
+		CtNamedElement elemWithMatchingName = new Launcher().getFactory().createLocalVariable();
+		elemWithMatchingName.setSimpleName(name);
+
+		// act
+		boolean matches = nameFilter.matches(elemWithMatchingName);
+
+		// assert
+		assertTrue(matches);
+	}
+
+	@Test
+	public void testNameFilterThrowsExceptionForNull() {
+		// contract: NameFilter constructor should throw IllegalArgumentException when passed null
+
+		assertThrows(IllegalArgumentException.class, () -> new NameFilter<>(null));
+	}
+
+	@Test
+	public void testNameFilterGetType() {
+		// contract: NameFilter.getType() should return the CtNamedElement class
+
+		NameFilter<CtNamedElement> nameFilter = new NameFilter<>("i");
+		assertEquals(CtNamedElement.class, nameFilter.getType());
 	}
 
 	@Test
@@ -415,9 +459,8 @@ public class FilterTest {
 		List<CtMethod<?>> methods;
 
 		methods = orderByName(aTostada.getMethodsByName("make").get(0).getTopDefinitions());
-		assertEquals(2, methods.size());
-		assertEquals("AbstractTostada", methods.get(0).getDeclaringType().getSimpleName());
-		assertEquals("ITostada", methods.get(1).getDeclaringType().getSimpleName());
+		assertEquals(1, methods.size());
+		assertEquals("ITostada", methods.get(0).getDeclaringType().getSimpleName());
 
 		methods = orderByName(aTostada.getMethodsByName("prepare").get(0).getTopDefinitions());
 		assertEquals(1, methods.size());
@@ -1125,7 +1168,7 @@ public class FilterTest {
 		class Context {
 			boolean wasTerminated = false;
 			void failIfTerminated(String place) {
-				assertTrue("The "+place+" is called after query was terminated.", wasTerminated==false);
+				assertTrue(wasTerminated==false, "The "+place+" is called after query was terminated.");
 			}
 		}
 		
@@ -1268,7 +1311,7 @@ public class FilterTest {
 			
 		})).forEach(ele->{
 			context2.nrOfResults++;
-			assertTrue("ele instanceof "+ele.getClass(),ele instanceof CtPackage || ele instanceof CtType || ele instanceof CtModule);
+			assertTrue(ele instanceof CtPackage || ele instanceof CtType || ele instanceof CtModule, "ele instanceof "+ele.getClass());
 			//check that first and second query returned same results
 			assertSame(ele, iter.next());
 		});
@@ -1337,15 +1380,10 @@ public class FilterTest {
 		assertEquals(1, c2.counter);
 	}
 
-	@Test
-	public void testNameFilterWithGenericType() {
+	@ModelTest("./src/test/java/spoon/test/imports/testclasses/internal4/Constants.java")
+	public void testNameFilterWithGenericType(Factory factory) {
 		// contract: NamedElementFilter of T should only return T elements
-
-		Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/java/spoon/test/imports/testclasses/internal4/Constants.java");
-		spoon.buildModel();
-
-		CtType type = spoon.getFactory().Type().get(Constants.class);
+		CtType type = factory.Type().get(Constants.class);
 		List<CtMethod> ctMethods = type.getElements(new NamedElementFilter<>(CtMethod.class, "CONSTANT"));
 		assertTrue(ctMethods.isEmpty());
 
@@ -1354,31 +1392,21 @@ public class FilterTest {
 		assertTrue(ctFields.get(0) instanceof CtField);
 	}
 
-	@Test
-	public void testSubTypeFilter() {
+	@ModelTest("./src/test/java/spoon/test/filters/testclasses")
+	public void testSubTypeFilter(Factory factory, CtModel model) {
 		// contract: SubtypeFilter correctly filters subtypes
-
-		Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/java/spoon/test/filters/testclasses");
-		spoon.buildModel();
-
-		CtType type = spoon.getFactory().Type().get(AbstractTostada.class);
-		List<CtType<?>> types = spoon.getModel().getRootPackage().getElements(new SubtypeFilter(type.getReference()));
+		CtType type = factory.Type().get(AbstractTostada.class);
+		List<CtType<?>> types = model.getRootPackage().getElements(new SubtypeFilter(type.getReference()));
 		assertEquals(6, types.size());
 
-		List<CtType<?>> types2 = spoon.getModel().getRootPackage().getElements(new SubtypeFilter(type.getReference()).includingSelf(false));
+		List<CtType<?>> types2 = model.getRootPackage().getElements(new SubtypeFilter(type.getReference()).includingSelf(false));
 		assertEquals(5, types2.size());
 	}
 
-	@Test
-	public void testFilterContains() {
+	@ModelTest("./src/test/java/spoon/test/filters/testclasses")
+	public void testFilterContains(Factory factory) {
 		// ref: https://github.com/INRIA/spoon/issues/3058
-
-		Launcher spoon = new Launcher();
-		spoon.addInputResource("./src/test/java/spoon/test/filters/testclasses");
-		spoon.buildModel();
-
-		CtType<?> type = spoon.getFactory().Type().get(Foo.class);
+		CtType<?> type = factory.Type().get(Foo.class);
 		CtStatement s = type.getMethodsByName("foo").get(0).getBody().getStatement(0);
 		assertEquals("int x = 3", s.toString());
 
@@ -1392,7 +1420,7 @@ public class FilterTest {
 		}
 
 		// we look for this AST in the new class
-		List<CtElement> l = spoon.getFactory().Type().get(FooLine.class).filterChildren(new ContainFilter(s)).list();
+		List<CtElement> l = factory.Type().get(FooLine.class).filterChildren(new ContainFilter(s)).list();
 
 		assertEquals(1, l.size());
 

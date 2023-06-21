@@ -1,4 +1,4 @@
-/**
+/*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
  * Copyright (C) 2006-2019 INRIA and contributors
@@ -135,9 +135,7 @@ public final class ModelUtils {
 		try {
 			compiler.build();
 		} catch (Exception e) {
-			final AssertionError error = new AssertionError("Can't compile " + outputDirectoryFile.getName() + " because " + e.getMessage());
-			error.initCause(e);
-			throw error;
+			throw new AssertionError("Can't compile " + outputDirectoryFile.getName() + " because " + e.getMessage(), e);
 		}
 	}
 

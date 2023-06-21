@@ -16,12 +16,12 @@
  */
 package spoon.test.template;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static spoon.testing.utils.ModelUtils.getOptimizedString;
 
 import java.io.File;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import spoon.Launcher;
 import spoon.OutputType;
@@ -44,7 +44,7 @@ public class TemplateReplaceReturnTest {
 		launcher.buildModel();
 		Factory factory = launcher.getFactory();
 
-		CtBlock<String> model = (CtBlock) factory.Class().get(ReturnReplaceTemplate.class).getMethod("sample").getBody();
+		CtBlock<String> model = (CtBlock) factory.Templates().Class().get(ReturnReplaceTemplate.class).getMethod("sample").getBody();
 		
 		CtClass<?> resultKlass = factory.Class().create(factory.Package().getOrCreate("spoon.test.template"), "ReturnReplaceResult");
 		new ReturnReplaceTemplate(model).apply(resultKlass);
