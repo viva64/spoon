@@ -41,16 +41,10 @@ import spoon.support.visitor.MethodTypingContext;
 import spoon.support.visitor.java.JavaReflectionTreeBuilder;
 
 import java.lang.reflect.TypeVariable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * The {@link CtType} sub-factory.
@@ -465,9 +459,10 @@ public class TypeFactory extends SubFactory {
 				// If the class name is an integer, the class is an anonymous class, otherwise,
 				// it is a standard class.
 				//TODO reset cache when type is modified
-				return getFromCache(t, className, k -> {
+				return getFromCache(t, className, () -> {
 					//the searching for declaration of anonymous class is expensive
 					//do that only once and store it in cache of CtType
+					Integer.parseInt(className);
 					final List<CtNewClass> anonymousClasses = t.getElements(new TypeFilter<CtNewClass>(CtNewClass.class) {
 						@Override
 						public boolean matches(CtNewClass element) {
@@ -488,13 +483,43 @@ public class TypeFactory extends SubFactory {
 
 	private static final String CACHE_KEY = TypeFactory.class.getName() + "-AnnonymousTypeCache";
 
-	private <T, K> T getFromCache(CtElement element, K key, Function<K, T> valueResolver) {
+	private <T, K> T getFromCache(CtElement element, K key, Supplier<T> valueResolver) {
 		Map<K, T> cache = (Map<K, T>) element.getMetadata(CACHE_KEY);
 		if (cache == null) {
 			cache = new HashMap<>();
 			element.putMetadata(CACHE_KEY, cache);
 		}
-		return cache.computeIfAbsent(key, valueResolver);
+		return MapUtils.getOrCreate(cache, key, valueResolver);
+	}
+
+	public static abstract class MapUtils {
+
+		private MapUtils() {
+		}
+
+		/**
+		 * @return existing value of `key` from `map`. If value doesn't exist yet for `key` yet,
+		 * then `valueCreator` is used to create new value, which is then assigned to `key` and returned
+		 */
+		public static <K, V> V getOrCreate(Map<K, V> map, K key, Supplier<V> valueCreator) {
+			return getOrCreate(map, key, valueCreator, null);
+		}
+		/**
+		 * @param initializer is called immediately after the value is added to the map
+		 * @return existing value of `key` from `map`. If value doesn't exist yet for `key` yet,
+		 * then `valueCreator` is used to create new value, which is then assigned to `key` and returned
+		 */
+		public static <K, V> V getOrCreate(Map<K, V> map, K key, Supplier<V> valueCreator, Consumer<V> initializer) {
+			V value = map.get(key);
+			if (value == null) {
+				value = valueCreator.get();
+				map.put(key, value);
+				if (initializer != null) {
+					initializer.accept(value);
+				}
+			}
+			return value;
+		}
 	}
 
 	private boolean isNumber(String str) {
@@ -553,37 +578,39 @@ public class TypeFactory extends SubFactory {
 	 */
 	@SuppressWarnings("unchecked")
 	public <T> CtType<T> get(Class<?> cl) {
-		final CtType<T> aType = get(cl.getName());
-		if (aType == null) {
-			final CtType<T> shadowClass = (CtType<T>) this.shadowCache.get(cl);
-			if (shadowClass == null) {
-				CtType<T> newShadowClass;
-				try {
-					newShadowClass = new JavaReflectionTreeBuilder(getShadowFactory()).scan((Class<T>) cl);
-				} catch (Throwable e) {
-					Launcher.LOGGER.warn("cannot create shadow class: {}", cl.getName(), e);
+		synchronized (getClass()) {
+			final CtType<T> aType = get(cl.getName());
+			if (aType == null) {
+				final CtType<T> shadowClass = (CtType<T>) this.shadowCache.get(cl);
+				if (shadowClass == null) {
+					CtType<T> newShadowClass;
+					try {
+						newShadowClass = new JavaReflectionTreeBuilder(getShadowFactory()).scan((Class<T>) cl);
+					} catch (Throwable e) {
+						Launcher.LOGGER.warn("cannot create shadow class: {}", cl.getName(), e);
 
-					newShadowClass = getShadowFactory().Core().createClass();
-					newShadowClass.setSimpleName(cl.getSimpleName());
-					newShadowClass.setShadow(true);
-					getShadowFactory().Package().getOrCreate(cl.getPackage().getName()).addType(newShadowClass);
-				}
-				newShadowClass.setFactory(factory);
-				newShadowClass.accept(new CtScanner() {
-					@Override
-					public void scan(CtElement element) {
-						if (element != null) {
-							element.setFactory(factory);
-						}
+						newShadowClass = getShadowFactory().Core().createClass();
+						newShadowClass.setSimpleName(cl.getSimpleName());
+						newShadowClass.setShadow(true);
+						getShadowFactory().Package().getOrCreate(cl.getPackage().getName()).addType(newShadowClass);
 					}
-				});
-				this.shadowCache.put(cl, newShadowClass);
-				return newShadowClass;
-			} else {
-				return shadowClass;
+					newShadowClass.setFactory(factory);
+					newShadowClass.accept(new CtScanner() {
+						@Override
+						public void scan(CtElement element) {
+							if (element != null) {
+								element.setFactory(factory);
+							}
+						}
+					});
+					this.shadowCache.put(cl, newShadowClass);
+					return newShadowClass;
+				} else {
+					return shadowClass;
+				}
 			}
+			return aType;
 		}
-		return aType;
 	}
 
 	private transient Factory shadowFactory;
