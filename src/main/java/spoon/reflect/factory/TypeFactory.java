@@ -41,7 +41,14 @@ import spoon.support.visitor.MethodTypingContext;
 import spoon.support.visitor.java.JavaReflectionTreeBuilder;
 
 import java.lang.reflect.TypeVariable;
-import java.util.*;
+import java.util.Set;
+import java.util.Date;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -492,7 +499,7 @@ public class TypeFactory extends SubFactory {
 		return MapUtils.getOrCreate(cache, key, valueResolver);
 	}
 
-	public static abstract class MapUtils {
+	public static class MapUtils {
 
 		private MapUtils() {
 		}
