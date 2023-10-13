@@ -19,8 +19,8 @@ import spoon.support.visitor.equals.CloneHelper;
  */
 class CloneVisitorTemplate extends CtScanner {
 	private final CloneHelper cloneHelper;
-	private final CloneBuilder builder = new CloneBuilder();
-	private CtElement other;
+	protected final CloneBuilder builder = new CloneBuilder();
+	protected CtElement other;
 
 	CloneVisitorTemplate(CloneHelper cloneHelper) {
 		this.cloneHelper = cloneHelper;

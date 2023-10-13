@@ -75,11 +75,13 @@ public class EnumFactory extends TypeFactory {
 	 * 		then poses problem when T is a generic type itself
 	 */
 	public <T extends Enum<?>> CtEnum<T> getEnum(Class<T> cl) {
-		try {
-			CtType<T> t = super.get(cl);
-			return (CtEnum<T>) t;
-		} catch (Exception e) {
-			return null;
+		synchronized (EnumFactory.class) {
+			try {
+				CtType<T> t = super.get(cl);
+				return (CtEnum<T>) t;
+			} catch (Exception e) {
+				return null;
+			}
 		}
 	}
 

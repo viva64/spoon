@@ -585,7 +585,7 @@ public class TypeFactory extends SubFactory {
 	 */
 	@SuppressWarnings("unchecked")
 	public <T> CtType<T> get(Class<?> cl) {
-		synchronized (getClass()) {
+		synchronized (TypeFactory.class) {
 			final CtType<T> aType = get(cl.getName());
 			if (aType == null) {
 				final CtType<T> shadowClass = (CtType<T>) this.shadowCache.get(cl);

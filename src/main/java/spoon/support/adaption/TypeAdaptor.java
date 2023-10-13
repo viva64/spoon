@@ -23,6 +23,7 @@ import spoon.reflect.reference.CtTypeParameterReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.support.visitor.ClassTypingContext;
 import spoon.support.visitor.MethodTypingContext;
+import spoon.support.reflect.declaration.CtMethodImpl;
 
 import java.util.ArrayDeque;
 import java.util.HashMap;
@@ -207,7 +208,9 @@ public class TypeAdaptor {
 		if (useLegacyTypeAdaption(inputMethod)) {
 			return legacyAdaptMethod(inputMethod);
 		}
-		CtMethod<?> clonedMethod = inputMethod.clone();
+
+		// We don't need to clone the body here, so we use not standard clone method for this
+		CtMethod<?> clonedMethod = ((CtMethodImpl<?>)inputMethod).cloneWithoutMethodBody();
 
 		for (int i = 0; i < clonedMethod.getFormalCtTypeParameters().size(); i++) {
 			CtTypeParameter clonedParameter = clonedMethod.getFormalCtTypeParameters().get(i);
@@ -404,12 +407,8 @@ public class TypeAdaptor {
 			return false;
 		}
 
-		// We don't need to clone the body here, so leave it out
-		CtBlock<?> superBody = superMethod.getBody();
-		superMethod.setBody(null);
 		CtMethod<?> adapted = new TypeAdaptor(subMethod.getDeclaringType())
 			.adaptMethod(superMethod);
-		superMethod.setBody(superBody);
 
 		for (int i = 0; i < subMethod.getParameters().size(); i++) {
 			CtParameter<?> subParam = subMethod.getParameters().get(i);

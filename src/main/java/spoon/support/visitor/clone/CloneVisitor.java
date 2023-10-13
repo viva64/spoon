@@ -14,9 +14,9 @@ package spoon.support.visitor.clone;
 public class CloneVisitor extends spoon.reflect.visitor.CtScanner {
 	private final spoon.support.visitor.equals.CloneHelper cloneHelper;
 
-	private final spoon.support.visitor.clone.CloneBuilder builder = new spoon.support.visitor.clone.CloneBuilder();
+	protected final spoon.support.visitor.clone.CloneBuilder builder = new spoon.support.visitor.clone.CloneBuilder();
 
-	private spoon.reflect.declaration.CtElement other;
+	protected spoon.reflect.declaration.CtElement other;
 
 	public CloneVisitor(spoon.support.visitor.equals.CloneHelper cloneHelper) {
 		this.cloneHelper = cloneHelper;

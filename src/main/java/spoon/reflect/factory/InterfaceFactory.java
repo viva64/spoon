@@ -93,10 +93,12 @@ public class InterfaceFactory extends TypeFactory {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> CtInterface<T> get(Class<?> cl) {
-		try {
-			return (CtInterface<T>) super.get(cl);
-		} catch (Exception e) {
-			return null;
+		synchronized (InterfaceFactory.class) {
+			try {
+				return (CtInterface<T>) super.get(cl);
+			} catch (Exception e) {
+				return null;
+			}
 		}
 	}
 

@@ -24,6 +24,7 @@ import spoon.reflect.visitor.filter.AllTypeMembersFunction;
 import spoon.support.adaption.TypeAdaptor;
 import spoon.support.reflect.CtExtendedModifier;
 import spoon.support.reflect.CtModifierHandler;
+import spoon.support.visitor.equals.PvsCloneHelper;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -204,6 +205,11 @@ public class CtMethodImpl<T> extends CtExecutableImpl<T> implements CtMethod<T> 
 		getFactory().getEnvironment().getModelChangeListener().onObjectUpdate(this, CtRole.IS_SHADOW, isShadow, this.isShadow);
 		this.isShadow = isShadow;
 		return (E) this;
+	}
+
+	public CtMethod<T> cloneWithoutMethodBody()
+	{
+		return PvsCloneHelper.INSTANCE.clone(this);
 	}
 
 	@Override

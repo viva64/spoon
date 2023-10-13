@@ -103,10 +103,12 @@ public class ClassFactory extends TypeFactory {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> CtClass<T> get(String qualifiedName) {
-		try {
-			return (CtClass<T>) super.get(qualifiedName);
-		} catch (Exception e) {
-			return null;
+		synchronized (ClassFactory.class) {
+			try {
+				return (CtClass<T>) super.get(qualifiedName);
+			} catch (Exception e) {
+				return null;
+			}
 		}
 	}
 
