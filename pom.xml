@@ -172,6 +172,11 @@
       <optional>true</optional>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-utils</artifactId>
+      <version>3.5.0</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -285,7 +290,36 @@
           </classpathDependencyExcludes>
         </configuration>
       </plugin>
-
+    
+    <!--
+      Удаляем sign файлы из зависимости Spoon, в которой мы пофиксили зависание в либе Eclipse компилятора,
+      создав в нашей ветке Spoon класс org.eclipse.jdt.internal.compiler.ast.Statement с правкой.
+      Благодаря удалению sign файлов Java не ругается во время прохождения тестов (при команде: mvn package) на отличающихся sign-еров для нашего класса с правкой
+      и классами из либы Eclipse компилятора, так как не происходит проверка подписи либы Eclipse компилятора 
+    -->
+    <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+               <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>7z</executable>
+              <arguments>
+                 <argument>d</argument>
+                 <argument>${env.HOME}/.m2/repository/org/eclipse/jdt/org.eclipse.jdt.core/3.32.0/org.eclipse.jdt.core-3.32.0.jar</argument>
+                 <argument>ECLIPSE_*</argument>
+                 <argument>-r</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+    </plugin>
+    
     </plugins>
   </build>
 </project>
