@@ -92,6 +92,8 @@ public abstract class Statement extends ASTNode {
 //		}
 		return false;
 	}
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public abstract FlowInfo analyseCode(BlockScope currentScope, FlowContext flowContext, FlowInfo flowInfo);
 /** Lambda shape analysis: *Assuming* this is reachable, analyze if this completes normally i.e control flow can reach the textually next statement.
    For blocks, we don't perform intra-reachability analysis. We assume the lambda body is free of intrinsic control flow errors (if such errors
@@ -304,6 +306,8 @@ public void branchChainTo(BranchLabel label) {
 }
 
 // Inspect AST nodes looking for a break statement, descending into nested control structures only when necessary (looking for a break with a specific label.)
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public boolean breaksOut(final char[] label) {
 	return new ASTVisitor() {
 
@@ -346,6 +350,8 @@ public boolean breaksOut(final char[] label) {
    The label is presumed to be NOT attached to this. This condition is certainly true for lambda shape analysis
    where this analysis triggers only from do {} while (false); situations. See LabeledStatement.continuesAtOuterLabel
 */
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public boolean continuesAtOuterLabel() {
 	return new ASTVisitor() {
 		boolean continuesToLabel;
@@ -364,6 +370,8 @@ public boolean continuesAtOuterLabel() {
 
 // Report an error if necessary (if even more unreachable than previously reported
 // complaintLevel = 0 if was reachable up until now, 1 if fake reachable (deadcode), 2 if fatal unreachable (error)
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public int complainIfUnreachable(FlowInfo flowInfo, BlockScope scope, int previousComplaintLevel, boolean endOfBlock) {
 	if ((flowInfo.reachMode() & FlowInfo.UNREACHABLE) != 0) {
 		if ((flowInfo.reachMode() & FlowInfo.UNREACHABLE_OR_DEAD) != 0)
@@ -451,6 +459,8 @@ public void generateArguments(MethodBinding binding, Expression[] arguments, Blo
 	}
 }
 
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public abstract void generateCode(BlockScope currentScope, CodeStream codeStream);
 
 public boolean isBoxingCompatible(TypeBinding expressionType, TypeBinding targetType, Expression expression, Scope scope) {
@@ -489,8 +499,12 @@ public StringBuffer print(int indent, StringBuffer output) {
 	return printStatement(indent, output);
 }
 
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public abstract StringBuffer printStatement(int indent, StringBuffer output);
 
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public abstract void resolve(BlockScope scope);
 public LocalVariableBinding[] getPatternVariablesWhenTrue() {
 	return this.patternVarsWhenTrue;
@@ -537,6 +551,9 @@ public void promotePatternVariablesIfApplicable(LocalVariableBinding[] patternVa
 		}
 	}
 }
+
+/** Documentation for tests SpoonArchitectureEnforcerTest.testSrcMainJava SUCCESS COMPLETE
+*/
 public void resolveWithPatternVariablesInScope(LocalVariableBinding[] patternVariablesInScope, BlockScope scope) {
 	if (patternVariablesInScope != null) {
 		for (LocalVariableBinding binding : patternVariablesInScope) {
