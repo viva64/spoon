@@ -373,16 +373,6 @@ public class SpoonArchitectureEnforcerTest {
 		// when a pull-request introduces a new package, this test fails and the author has to explicitly declare the new package here
 
 		Set<String> officialPackages = new HashSet<>();
-		
-		// Эти пакеты были добавлены для прохождения теста после добавления хака по использованию файла 
-		// spoon\src\main\java\org\eclipse\jdt\internal\compiler\ast\Statement.java вместо файла из org.eclipse.jdt.core-3.32.0.jar
-		officialPackages.add("org.eclipse.jdt.internal.compiler");
-		officialPackages.add("org.eclipse.jdt");
-		officialPackages.add("org.eclipse.jdt.internal.compiler.ast");
-		officialPackages.add("org.eclipse.jdt.internal");
-		officialPackages.add("org.eclipse");
-		officialPackages.add("org");
-		
 		officialPackages.add("spoon.compiler.builder");
 		officialPackages.add("spoon.compiler");
 		officialPackages.add("spoon.javadoc");
