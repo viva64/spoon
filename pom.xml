@@ -23,6 +23,13 @@
   <description>Spoon is a tool for meta-programming, analysis and transformation of Java programs.</description>
   <url>http://spoon.gforge.inria.fr/</url>
 
+  <repositories>
+    <repository>
+      <id>pvs-studio-repo</id>
+      <url>https://files.pvs-studio.com/java/spoon</url>
+    </repository>
+  </repositories>
+
   <licenses>
       <license>
           <name>CeCILL-C</name>
@@ -48,7 +55,7 @@
     <dependency>
       <groupId>org.eclipse.jdt</groupId>
       <artifactId>org.eclipse.jdt.core</artifactId>
-      <version>3.32.0</version>
+      <version>3.32.0-PVS-STUDIO</version>
       <exclusions>
         <exclusion>
           <groupId>org.eclipse.platform</groupId>
