@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static spoon.testing.utils.ModelUtils.createFactory;
 import java.io.File;
 import java.io.ObjectInputStream;
-import java.io.Serial;
+//import java.io.Serial;
 import java.lang.annotation.Retention;
 import java.net.CookieManager;
 import java.net.URLClassLoader;
@@ -391,9 +391,9 @@ public class JavaReflectionTreeBuilderTest {
 				if (myAnnotation.getAnnotationType().getQualifiedName().equals(Root.class.getName())) {
 					return;
 				}
-				if (myAnnotation.getAnnotationType().getQualifiedName().equals(Serial.class.getName())) {
-					return;
-				}
+				//if (myAnnotation.getAnnotationType().getQualifiedName().equals(Serial.class.getName())) {
+					//return;
+				//}
 				if (myAnnotation.getAnnotationType().getQualifiedName().equals(Nullable.class.getName())) {
 					return;
 				}
@@ -433,7 +433,7 @@ public class JavaReflectionTreeBuilderTest {
 					CtTypeReference<?> at = a.getAnnotationType();
 					Class ac = at.getActualClass();
 					return ac != Override.class && ac != SuppressWarnings.class && ac != Root.class
-						   && ac != Serial.class && ac != Nullable.class;
+						   /*&& ac != Serial.class*/ && ac != Nullable.class;
 				}).collect(Collectors.toList());
 				super.biScan(role, fileteredElements, others);
 				return;

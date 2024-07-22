@@ -207,8 +207,8 @@ public class ParentExiter extends CtInheritanceScanner {
 		} else if (child instanceof CtBlock && !(e instanceof CtMethod || e instanceof CtConstructor)) {
 			e.setBody((CtBlock<R>) child);
 			return;
-		} else if (child instanceof CtReceiverParameter ctReceiverParameter) {
-			e.setReceiverParameter(ctReceiverParameter);
+		} else if (child instanceof CtReceiverParameter) {
+			e.setReceiverParameter((CtReceiverParameter) child);
 		}
 		super.scanCtExecutable(e);
 	}
@@ -502,8 +502,8 @@ public class ParentExiter extends CtInheritanceScanner {
 		}
 		if (node instanceof CaseStatement && ((CaseStatement) node).constantExpressions != null && child instanceof CtExpression
 				&& caseStatement.getCaseExpressions().size() < ((CaseStatement) node).constantExpressions.length) {
-			if (child instanceof CtPattern pattern) {
-				caseStatement.addCaseExpression((CtExpression<E>) jdtTreeBuilder.getFactory().Core().createCasePattern().setPattern(pattern));
+			if (child instanceof CtPattern) {
+				caseStatement.addCaseExpression((CtExpression<E>) jdtTreeBuilder.getFactory().Core().createCasePattern().setPattern((CtPattern)child));
 			} else {
 				caseStatement.addCaseExpression((CtExpression<E>) child);
 			}
@@ -511,8 +511,8 @@ public class ParentExiter extends CtInheritanceScanner {
 		} else if (child instanceof CtStatement) {
 			caseStatement.addStatement((CtStatement) child);
 			return;
-		} else if (child instanceof CtExpression<?> guard) {
-			caseStatement.setGuard(guard);
+		} else if (child instanceof CtExpression<?>) {
+			caseStatement.setGuard((CtExpression<?>) child);
 		}
 		super.visitCtCase(caseStatement);
 	}
@@ -544,8 +544,8 @@ public class ParentExiter extends CtInheritanceScanner {
 
 	@Override
 	public void visitCtCasePattern(CtCasePattern casePattern) {
-		if (child instanceof CtPattern pattern) {
-			casePattern.setPattern(pattern);
+		if (child instanceof CtPattern) {
+			casePattern.setPattern((CtPattern)child);
 		}
 		super.visitCtCasePattern(casePattern);
 	}
@@ -779,9 +779,11 @@ public class ParentExiter extends CtInheritanceScanner {
 		// Compare with Test "correctlySetsThisTargetForUnqualifiedCalls".
 
 		// We need a MessageSend as the parent to resolve the actualType from the receiver
-		if (!(parentPair.node() instanceof MessageSend messageSend)) {
+		if (!(parentPair.node() instanceof MessageSend)) {
 			return false;
 		}
+
+        final MessageSend messageSend = (MessageSend) parentPair.node();
 		if (messageSend.actualReceiverType == null || messageSend.receiver.resolvedType == null) {
 			return false;
 		}
@@ -1151,8 +1153,8 @@ public class ParentExiter extends CtInheritanceScanner {
 
 	@Override
 	public void visitCtRecord(CtRecord recordType) {
-		if (child instanceof CtConstructor newConstructor) {
-			adjustConstructors(recordType, newConstructor);
+		if (child instanceof CtConstructor) {
+			adjustConstructors(recordType, (CtConstructor) child);
 		}
 		if (child instanceof CtAnonymousExecutable) {
 			recordType.addAnonymousExecutable((CtAnonymousExecutable) child);
@@ -1166,10 +1168,10 @@ public class ParentExiter extends CtInheritanceScanner {
 	@Override
 	public void visitCtRecordPattern(CtRecordPattern pattern) {
 		CtElement child = adjustIfLocalVariableToTypePattern(this.child);
-		if (child instanceof CtTypeReference<?> typeReference) {
-			pattern.setRecordType(typeReference);
-		} else if (child instanceof CtPattern innerPattern) {
-			pattern.addPattern(innerPattern);
+		if (child instanceof CtTypeReference) {
+			pattern.setRecordType((CtTypeReference<?>) child);
+		} else if (child instanceof CtPattern) {
+			pattern.addPattern((CtPattern) child);
 		}
 	}
 

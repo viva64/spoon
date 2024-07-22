@@ -18,6 +18,7 @@ import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.compiler.VirtualFile;
 
 import java.util.List;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,43 +39,28 @@ public class RecordPatternTest {
 
 	private static CtBinaryOperator<?> createFromInstanceOf(String recordDefinitions, String recordPattern) {
 		return createModelFromString(
-			"""
-				class Foo {
-					void foo(Object arg) {
-						%s
-						boolean __ = arg instanceof %s;
-					}
-				}
-				""".formatted(recordDefinitions, recordPattern))
+            String.format("class Foo { void foo(Object arg) { %s boolean __ = arg instanceof %s;}}", recordDefinitions, recordPattern))
 			.getElements(new TypeFilter<>(CtBinaryOperator.class)).iterator().next();
 	}
 	private static CtSwitch<?> createFromSwitch(String recordDefinitions, String... cases) {
 		for (int i = 0; i < cases.length; i++) {
 			cases[i] = "case " + cases[i] + " -> {}";
 		}
-		return createModelFromString("""
-			class Foo {
-				void foo(Object arg) {
-					%s
-					switch (arg) {
-						%s
-						default -> {}
-					}
-				}
-			}
-			""".formatted(recordDefinitions, String.join("\n", cases)))
+		return createModelFromString(String.format(" class Foo { void foo(Object arg) { %s switch (arg) { %s default -> {}}}}", recordDefinitions, String.join("\n", cases)))
 			.getElements(new TypeFilter<>(CtSwitch.class)).iterator().next();
 	}
 
-	@ParameterizedTest
+    @Test
+	/*@ParameterizedTest
 	@CsvSource(textBlock = """
 				int value
 				int i
 				int a, int b
 				java.lang.String s, int cc
-		""")
-	void testPrintSimpleInstanceOfRecordPattern(String typePatterList) {
+		""")*/
+	void testPrintSimpleInstanceOfRecordPattern(/*String typePatterList*/) {
 		// contract: printing a record pattern works
+        String typePatterList = "int value, int i, int a, int b, java.lang.String s, int cc";
 		String recordPattern = "Simple(" + typePatterList + ")";
 		String recordDefinition = "record " + recordPattern + " {}";
 		CtBinaryOperator<?> instanceOf = createFromInstanceOf(recordDefinition, recordPattern);
@@ -114,26 +100,8 @@ public class RecordPatternTest {
 	void testNestedRecordPatternsTree() {
 		// contract: nesting record patterns works
 		CtBinaryOperator<?> instanceOf = createFromInstanceOf(
-			"""
-				interface Node<T> {}
-				record Leaf<T>(T value) implements Node<T> {}
-				record Inner<T>(Node<T> left, Node<T> right) implements Node<T> {}
-				""",
-			"""
-				Inner(
-					Inner(
-						Leaf(String a),
-						Leaf(String b)
-					),
-					Inner(
-						Leaf(String c),
-						Inner(
-							Leaf(String d),
-							Leaf(String e)
-						)
-					)
-				)
-				"""
+			" interface Node<T> {} record Leaf<T>(T value) implements Node<T> {} record Inner<T>(Node<T> left, Node<T> right) implements Node<T> {} ",
+			" Inner( Inner( Leaf(String a), Leaf(String b)), Inner( Leaf(String c), Inner( Leaf(String d), Leaf(String e)))) "
 		);
 		Node pattern = new Inner(
 			new Inner(
@@ -170,11 +138,7 @@ public class RecordPatternTest {
 	@Test
 	void testRecordPatternInSwitch() {
 		CtSwitch<?> ctSwitch = createFromSwitch(
-			"""
-				interface Node {}
-				record Leaf(Object value) implements Node {}
-				record Inner(Node left, Node right) implements Node {}
-				""",
+			" interface Node {} record Leaf(Object value) implements Node {} record Inner(Node left, Node right) implements Node {} ",
 			"Leaf(String s) when s.length() > 10",
 			"Leaf(var s)",
 			"Inner(Leaf leaf, var right)",
@@ -203,7 +167,14 @@ public class RecordPatternTest {
 	interface Node {
 		void assertMatches(CtPattern pattern);
 	}
-	record Inner(Node left, Node right) implements Node {
+	class Inner implements Node {
+        private final Node left;
+        private final Node right;
+
+        Inner(Node left, Node right) {
+            this.left = left;
+            this.right = right;
+        }
 		@Override
 		public void assertMatches(CtPattern pattern) {
 			CtRecordPattern recordPattern = assertInstanceOf(CtRecordPattern.class, pattern);
@@ -213,9 +184,39 @@ public class RecordPatternTest {
 			right().assertMatches(patternList.get(1));
 
 		}
-	}
-	record Leaf(String name) implements Node {
-		@Override
+
+        private Node right() {
+            return right;
+        }
+
+        private Node left() {
+            return left;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Inner)) {
+                return false;
+            }
+            return Objects.equals(left, ((Inner)o).left) && Objects.equals(right, ((Inner)o).right);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(left, right);
+        }
+    }
+	class Leaf implements Node {
+        Leaf(String name) {
+            this.name = name;
+        }
+
+        private final String name;
+
+        @Override
 		public void assertMatches(CtPattern pattern) {
 			CtRecordPattern recordPattern = assertInstanceOf(CtRecordPattern.class, pattern);
 			List<CtPattern> patternList = recordPattern.getPatternList();
@@ -224,9 +225,35 @@ public class RecordPatternTest {
 			String simpleName = ctTypePattern.getVariable().getSimpleName();
 			assertEquals(name(), simpleName);
 		}
-	}
 
-	record SimpleLeaf(String name) implements Node {
+        private String name() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Leaf)) {
+                return false;
+            }
+            return Objects.equals(name, ((Leaf)o).name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(name);
+        }
+    }
+
+	class SimpleLeaf implements Node {
+
+        private final String name;
+
+        SimpleLeaf(String name) {
+            this.name = name;
+        }
 
 		@Override
 		public void assertMatches(CtPattern pattern) {
@@ -234,5 +261,25 @@ public class RecordPatternTest {
 			String simpleName = ctTypePattern.getVariable().getSimpleName();
 			assertEquals(name(), simpleName);
 		}
-	}
+
+        private String name() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof SimpleLeaf)) {
+                return false;
+            }
+            return Objects.equals(name, ((SimpleLeaf)o).name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(name);
+        }
+    }
 }

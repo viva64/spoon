@@ -13,10 +13,10 @@ import spoon.reflect.code.CtPattern;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.visitor.CtVisitor;
 
-import java.io.Serial;
+//import java.io.Serial;
 
 public class CtCasePatternImpl extends CtExpressionImpl<Void> implements CtCasePattern {
-	@Serial
+	//@Serial
 	private static final long serialVersionUID = 1L;
 	@MetamodelPropertyField(role = CtRole.PATTERN)
 	private CtPattern pattern;

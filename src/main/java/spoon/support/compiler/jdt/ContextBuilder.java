@@ -265,7 +265,8 @@ public class ContextBuilder {
 			}
 
 			// the variable may have been declared in a super class/interface
-			if (lookingForFields && astPair.node() instanceof TypeDeclaration nodeDeclaration) {
+			if (lookingForFields && astPair.node() instanceof TypeDeclaration) {
+                final TypeDeclaration nodeDeclaration = (TypeDeclaration)astPair.node();
 				final Deque<ReferenceBinding> referenceBindings = new ArrayDeque<>();
 				// add super class if any
 				if (nodeDeclaration.superclass != null
@@ -421,7 +422,8 @@ public class ContextBuilder {
 						if (astPair.element() == parentOfPotentialVariable) {
 							finish(potentialVariable);
 							return;
-						} else if (astPair.element() instanceof CtExecutable<?> executable) {
+						} else if (astPair.element() instanceof CtExecutable<?>) {
+                            final  CtExecutable<?> executable = (CtExecutable<?>) astPair.element();
 							if (executable.getBody() == parentOfPotentialVariable) {
 								finish(potentialVariable);
 								return;

@@ -38,15 +38,7 @@ class SwitchPatternTest {
 
 	private static CtSwitch<?> createFromSwitchStatement(String cases, boolean def) {
 		return createModelFromString(
-			"""
-				class Foo {
-					void foo(Object arg) {
-						switch (arg) {
-							%s -> {}
-							%s
-						}
-				}
-				""".formatted(cases, def ? "default -> {}" : ""))
+            String.format(" class Foo { void foo(Object arg) { switch (arg) { %s -> {} %s}}", cases, def ? "default -> {}" : ""))
 			.getElements(new TypeFilter<>(CtSwitch.class)).iterator().next();
 	}
 

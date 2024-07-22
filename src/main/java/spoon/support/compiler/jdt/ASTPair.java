@@ -11,11 +11,45 @@ import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import spoon.reflect.declaration.CtElement;
 import spoon.support.Internal;
 
-@Internal
-public record ASTPair(CtElement element, ASTNode node) {
+import java.util.Objects;
 
-	@Override
+@Internal
+public class ASTPair {
+
+    private final CtElement element;
+    private final ASTNode node;
+    public ASTPair(CtElement element, ASTNode node) {
+        this.element = element;
+        this.node = node;
+    }
+
+    @Override
 	public String toString() {
 		return element.getClass().getSimpleName() + "-" + node.getClass().getSimpleName();
 	}
+
+    public CtElement element() {
+        return element;
+    }
+
+    public ASTNode node() {
+        return node;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ASTPair)) {
+            return false;
+        }
+        final ASTPair astPair = (ASTPair) o;
+        return Objects.equals(element, astPair.element) && Objects.equals(node, astPair.node);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(element, node);
+    }
 }

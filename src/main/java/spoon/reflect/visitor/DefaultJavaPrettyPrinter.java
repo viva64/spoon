@@ -627,10 +627,11 @@ public class DefaultJavaPrettyPrinter implements CtVisitor, PrettyPrinter {
 			for (int i = 0; i < caseExpressions.size(); i++) {
 				CtExpression<E> caseExpression = caseExpressions.get(i);
 				// writing enum case expression
-				if (caseExpression instanceof CtFieldAccess<E> fieldAccess) {
+				if (caseExpression instanceof CtFieldAccess) {
+                    final CtFieldAccess<?> fieldAccess = (CtFieldAccess<?>) caseExpression;
 					final CtFieldReference variable = ((CtFieldAccess) caseExpression).getVariable();
 					// In noclasspath mode, we don't have always the type of the declaring type.
-					if ((fieldAccess.getTarget().isImplicit() || env.getComplianceLevel() < 21)
+					if ((fieldAccess.getTarget() != null && fieldAccess.getTarget().isImplicit() || env.getComplianceLevel() < 21)
 							&& variable.getType() != null
 							&& variable.getDeclaringType() != null
 							&& variable.getType().getQualifiedName().equals(variable.getDeclaringType().getQualifiedName())) {

@@ -131,18 +131,7 @@ public class SwitchCaseTest {
 		@Test
 		public void testSwitchStatementOnAnEnum() {
 			CtModel model = createModelFromString(
-				"""
-					import java.nio.file.StandardCopyOption;
-					class C {
-						int m(StandardCopyOption option) {
-							return switch (option) {
-								case ATOMIC_MOVE -> 1;
-								case StandardCopyOption.COPY_ATTRIBUTES -> 2;
-								case java.nio.file.StandardCopyOption.REPLACE_EXISTING -> 3;
-							};
-						}
-					}
-					"""
+				"import java.nio.file.StandardCopyOption; class C { int m(StandardCopyOption option) { return switch (option) { case ATOMIC_MOVE -> 1; case StandardCopyOption.COPY_ATTRIBUTES -> 2; case java.nio.file.StandardCopyOption.REPLACE_EXISTING -> 3;};}}"
 			);
 
 			CtSwitchExpression<?, ?> ctSwitch = model.getElements(new TypeFilter<CtSwitchExpression<?, ?>>(CtSwitchExpression.class)).get(0);
@@ -176,18 +165,7 @@ public class SwitchCaseTest {
 		@Test
 		public void testSwitchStatementOnAnEnumPrintPre21() {
 			CtModel model = createModelFromString(
-				"""
-					import java.nio.file.StandardCopyOption;
-					class C {
-						int m(StandardCopyOption option) {
-							return switch (option) {
-								case ATOMIC_MOVE -> 1;
-								case COPY_ATTRIBUTES -> 2;
-								case REPLACE_EXISTING -> 3;
-							};
-						}
-					}
-					""",
+				"import java.nio.file.StandardCopyOption; class C { int m(StandardCopyOption option) { return switch (option) { case ATOMIC_MOVE -> 1; case COPY_ATTRIBUTES -> 2; case REPLACE_EXISTING -> 3;};}} ",
 				20
 			);
 			CtSwitchExpression<?, ?> ctSwitch = model.getElements(new TypeFilter<CtSwitchExpression<?, ?>>(CtSwitchExpression.class)).get(0);
