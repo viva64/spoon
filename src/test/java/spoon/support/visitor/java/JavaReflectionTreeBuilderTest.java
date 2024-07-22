@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static spoon.testing.utils.ModelUtils.createFactory;
 import java.io.File;
 import java.io.ObjectInputStream;
+import java.io.Serial;
 import java.lang.annotation.Retention;
 import java.net.CookieManager;
 import java.net.URLClassLoader;
@@ -52,6 +53,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import com.mysema.query.support.ProjectableQuery;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -64,6 +66,7 @@ import spoon.metamodel.MetamodelConcept;
 import spoon.reflect.code.CtConditional;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtLambda;
+import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtAnnotation;
@@ -106,13 +109,13 @@ import spoon.support.reflect.declaration.CtFieldImpl;
 import spoon.support.util.compilation.JavacFacade;
 import spoon.support.visitor.equals.EqualsChecker;
 import spoon.support.visitor.equals.EqualsVisitor;
-import spoon.test.GitHubIssue;
 import spoon.test.generics.testclasses3.ComparableComparatorBug;
 import spoon.test.innerclasses.InnerClasses;
 import spoon.test.pkg.PackageTest;
 import spoon.test.pkg.cyclic.Outside;
 import spoon.test.pkg.cyclic.direct.Cyclic;
 import spoon.test.pkg.cyclic.indirect.Indirect;
+import spoon.testing.utils.GitHubIssue;
 
 public class JavaReflectionTreeBuilderTest {
 
@@ -388,6 +391,12 @@ public class JavaReflectionTreeBuilderTest {
 				if (myAnnotation.getAnnotationType().getQualifiedName().equals(Root.class.getName())) {
 					return;
 				}
+				if (myAnnotation.getAnnotationType().getQualifiedName().equals(Serial.class.getName())) {
+					return;
+				}
+				if (myAnnotation.getAnnotationType().getQualifiedName().equals(Nullable.class.getName())) {
+					return;
+				}
 			}
 			if (role == CtRole.SUPER_TYPE && other == null && element != null && ((CtTypeReference<?>) element).getQualifiedName().equals(Object.class.getName())) {
 				//class X<T extends Object> cannot be distinguished in runtime from X<T>
@@ -423,7 +432,8 @@ public class JavaReflectionTreeBuilderTest {
 				List<CtAnnotation<?>> fileteredElements = ((List<CtAnnotation<?>>) elements).stream().filter(a -> {
 					CtTypeReference<?> at = a.getAnnotationType();
 					Class ac = at.getActualClass();
-					return ac != Override.class && ac != SuppressWarnings.class && ac != Root.class;
+					return ac != Override.class && ac != SuppressWarnings.class && ac != Root.class
+						   && ac != Serial.class && ac != Nullable.class;
 				}).collect(Collectors.toList());
 				super.biScan(role, fileteredElements, others);
 				return;
@@ -850,6 +860,7 @@ public class JavaReflectionTreeBuilderTest {
 		assertThat(asClass.getConstructors().iterator().next().getParameters().size(), equalTo(inners.size()));
 	}
 
+	@Test
 	@GitHubIssue(issueNumber = 4972, fixed = true)
 	void parameterNamesAreParsedWhenCompilingWithParametersFlag() throws ClassNotFoundException {
 		ClassLoader loader = JavacFacade.compileFiles(
@@ -956,5 +967,32 @@ public class JavaReflectionTreeBuilderTest {
 		assertNull(victim.getField("foo"));
 	}
 
+	@Test
+	void test() throws ClassNotFoundException {
+		// contract: Infinity, -Infinity, NaN are not literals
+		ClassLoader loader = JavacFacade.compileFiles(
+			Map.of(
+				"SpecialValues.java",
+				"public class SpecialValues {\n" +
+				"  public static final double d_inf = 1.0d / 0.0d;\n" +
+				"  public static final double d_m_inf = -1.0d / 0.0d;\n" +
+				"  public static final double d_nan = 0.0d / 0.0d;\n" +
+				"  public static final float f_inf = 1.0f / 0.0f;\n" +
+				"  public static final float f_m_inf = -1.0f / 0.0f;\n" +
+				"  public static final float f_nan = 0.0f / 0.0f;\n" +
+				"}\n"
+			),
+			List.of()
+		);
+
+		Factory factory = createFactory();
+		// Load the class
+		CtType<?> specialValues = factory.Type().get(loader.loadClass("SpecialValues"));
+		for (CtField<?> field : specialValues.getFields()) {
+			assertNotNull(field.getDefaultExpression());
+			assertFalse(field.getDefaultExpression() instanceof CtLiteral<?>, "special value cannot be represented by literal");
+		}
+
+	}
 
 }

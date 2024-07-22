@@ -1,6 +1,10 @@
 package spoon.reflect.visitor;
 
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -32,8 +36,8 @@ import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.reflect.reference.CtArrayTypeReferenceImpl;
-import spoon.test.GitHubIssue;
 import spoon.test.SpoonTestHelpers;
+import spoon.testing.utils.GitHubIssue;
 import spoon.testing.utils.ModelTest;
 
 import java.io.FileNotFoundException;
@@ -48,6 +52,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static spoon.test.SpoonTestHelpers.containsRegexMatch;
 
@@ -271,6 +276,7 @@ public class DefaultJavaPrettyPrinterTest {
 
     @Nested
     class SquareBracketsForArrayInitialization_ArrayIsBuiltUsingFactoryMethods {
+        @Test
         @GitHubIssue(issueNumber = 4887, fixed = true)
         void bracketsShouldBeAttachedToTypeByDefault() {
             // contract: the square brackets should be attached to type by default when array is built using factory methods
@@ -279,7 +285,7 @@ public class DefaultJavaPrettyPrinterTest {
             Factory factory = launcher.getFactory();
 
             CtArrayTypeReference<Integer> arrayTypeReference = factory.createArrayTypeReference();
-            arrayTypeReference.setComponentType(factory.Type().INTEGER_PRIMITIVE);
+            arrayTypeReference.setComponentType(factory.Type().integerPrimitiveType());
             CtNewArray<Integer> newArray = factory.createNewArray();
             newArray.setValueByRole(CtRole.TYPE, arrayTypeReference);
             List<CtLiteral<Integer>> elements = new ArrayList<>(List.of(factory.createLiteral(3)));
@@ -333,6 +339,7 @@ public class DefaultJavaPrettyPrinterTest {
         assertThat(printed, containsRegexMatch("List<.*List<\\? super T>>"));
     }
 
+    @Test
     @GitHubIssue(issueNumber = 4881, fixed = true)
     void bracketsShouldBeMinimallyPrintedForTypeCastOnFieldRead() throws FileNotFoundException {
         // contract: the brackets should be minimally printed for type cast on field read
@@ -391,5 +398,31 @@ public class DefaultJavaPrettyPrinterTest {
 
         assertThrows(SpoonException.class, () -> factory.createLiteral(value).toString());
         assertThrows(SpoonException.class, () -> factory.createLiteral((float) value).toString());
+    }
+
+    @ModelTest("src/test/java/spoon/reflect/visitor/DefaultJavaPrettyPrinterTest.java")
+    void printAnnotationsInOrphanTypeReference(Factory factory) {
+        // contract: Spoon should print annotations for orphaned type references
+        // Used by the test
+        java.lang.@TypeUseAnnotation String ignored;
+
+        CtTypeReference<?> type = factory.Type()
+          .get(getClass().getName())
+          .getMethodsByName("printAnnotationsInOrphanTypeReference")
+          .get(0)
+          .getElements(new TypeFilter<>(CtLocalVariable.class))
+          .get(0)
+          .getType();
+
+        assertEquals(
+          "java.lang.@spoon.reflect.visitor.DefaultJavaPrettyPrinterTest.TypeUseAnnotation String",
+          type.toString().replace(System.lineSeparator(), " ")
+        );
+    }
+
+    @Target({ElementType.TYPE_USE})
+    @Retention(RetentionPolicy.SOURCE)
+    private @interface TypeUseAnnotation {
+
     }
 }

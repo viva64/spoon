@@ -1,16 +1,18 @@
 /*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
- * Copyright (C) 2006-2019 INRIA and contributors
+ * Copyright (C) 2006-2023 INRIA and contributors
  *
- * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) of the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
+ * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) or the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
  */
 package spoon.reflect.declaration;
 
+import org.jspecify.annotations.Nullable;
 import spoon.reflect.annotations.PropertyGetter;
 import spoon.reflect.annotations.PropertySetter;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtBodyHolder;
+import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.support.DerivedProperty;
@@ -140,4 +142,11 @@ public interface CtExecutable<R> extends CtNamedElement, CtTypedElement<R>, CtBo
 
 	@Override
 	CtExecutable<R> clone();
+
+	@PropertySetter(role = CtRole.RECEIVER_PARAMETER)
+	CtExecutable<?> setReceiverParameter(CtReceiverParameter receiverParameter);
+
+	@PropertyGetter(role = CtRole.RECEIVER_PARAMETER)
+	@Nullable
+	CtReceiverParameter getReceiverParameter();
 }

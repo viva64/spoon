@@ -12,147 +12,159 @@ on:
   push:
     branches:
       - master
+      - chore/flakey-flakey-rise-and-shine
   schedule:
-  - cron: "0 0 * * *"
+    - cron: "0 0 * * *"
 
 env:
-  JAVA_DISTRIBUTION: temurin
+  MAVEN_OPTS: >-
+    -Dmaven.resolver.transport=native
+    -Daether.connector.connectTimeout=300000
+    -Daether.connector.requestTimeout=300000
+  NIX_OPTIONS: >-
+    --ignore-environment
+    --keep MAVEN_OPTS --keep PATH --keep LANG
 
 jobs:
-  build:
+  test-linux:
     runs-on: ${{ matrix.os }}
+    name: Tests with Java ${{ matrix.java }} on ${{ matrix.os }}
     strategy:
       matrix:
-        java: [11, 17, 19, 20-ea]
-        os: [ubuntu-latest, windows-latest]
-        exclude:
-          - os: windows-latest
-            java: 17
-          - os: windows-latest
-            java: 19
-          - os: windows-latest
-            java: 20-ea
+        java: [17, 21]
+        os: [ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup env
+        uses: ./.github/actions/setup-tests
 
+      - name: Time nix setup
+        run: nix develop .#jdk${{ matrix.java }} ${{ env.NIX_OPTIONS }} --command true
+      - name: Test
+        run: nix develop .#jdk${{ matrix.java }} ${{ env.NIX_OPTIONS }} --command test
 
-
-    env:
-      MAVEN_OPTS: -Djava.src.version=${{ matrix.java }} -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false
-
-    name: Tests with Java ${{ matrix.java }} on ${{ matrix.os }}
+  test-windows:
+    runs-on: windows-latest
+    name: Tests with Java 17 on windows-latest
     steps:
       - name: Disable Git's autocrlf
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
-      - uses: actions/setup-java@3f07048e3d294f56e9b90ac5ea2c6f74e9ad0f98 # v3.10.0
+      - name: git checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          java-version: ${{ matrix.java }}
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-
-      - name: Get date for cache # see https://github.com/actions/cache README
-        id: get-date
-        run: echo "date=$(/bin/date -u "+%Y%m%d")" >> $GITHUB_OUTPUT
-        shell: bash
-      - name: Use Maven dependency cache
-        uses: actions/cache@69d9d449aced6a2ede0bc19182fadc3a0a42d2b0 # v3.2.6
+          fetch-depth: 0
+      - uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
 
-      - name: Use silent log config
-        run: mv chore/logback.xml src/test/resources/
-      - name: Build
-        run: |
-          mvn -B test-compile
-      - name: Fetch final dependencies
-        # this is a hack to download the final test dependencies required to actually run the tests
-        run: timeout 20 mvn -B test || echo "Done fetching dependencies"
-        shell: bash
       - name: Test
-        run: 
-          mvn test
-      - name: print run tests
-        run: cat testResults.spoon
+        run: |
+          cp chore/logback.xml src/test/resources/
+          mvn -f spoon-pom test
+          cat testResults.spoon
+
   coverage:
     runs-on: ubuntu-latest
-    env:
-      MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false
     name: Test with coverage
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
-      - uses: actions/setup-java@3f07048e3d294f56e9b90ac5ea2c6f74e9ad0f98 # v3.10.0
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
-          java-version: 17
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          fetch-depth: 0
+      - name: Setup env
+        uses: ./.github/actions/setup-tests
 
-      - name: Get date for cache # see https://github.com/actions/cache README
-        id: get-date
-        run: echo "date=$(/bin/date -u "+%Y%m%d")" >> $GITHUB_OUTPUT
-        shell: bash
-      - name: Use Maven dependency cache
-        uses: actions/cache@69d9d449aced6a2ede0bc19182fadc3a0a42d2b0 # v3.2.6
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
-
-      - name: Use silent log config
-        run: mv chore/logback.xml src/test/resources/
-      - name: Build
-        run: |
-          mvn -B test-compile
-      - name: Test with coverage
-        run: mvn -Pcoveralls test jacoco:report coveralls:report -DrepoToken=$GITHUB_TOKEN -DserviceName=github -DpullRequest=$PR_NUMBER --fail-never
+      - name: Time nix setup
+        run: nix develop ${{ env.NIX_OPTIONS }} --command true
+      - name: Run tests with coverage
+        run: nix develop ${{ env.NIX_OPTIONS }} --keep PR_NUMBER --keep GITHUB_TOKEN --command coverage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.number }}
 
   extra:
     runs-on: ubuntu-latest
-    env:
-      MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false
     name: Extra checks
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@3f07048e3d294f56e9b90ac5ea2c6f74e9ad0f98 # v3.10.0
-        with:
-          java-version: 11
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-      - uses: actions/setup-python@d27e3f3d7c64b4bbf8e4abfb9b63b83e846e0435 # v4.5.0
-        with:
-          python-version: 3.11
+      - name: Setup env
+        uses: ./.github/actions/setup-tests
 
-      - name: Get date for cache # see https://github.com/actions/cache README
-        id: get-date
-        run: echo "date=$(/bin/date -u "+%Y%m%d")" >> $GITHUB_OUTPUT
-        shell: bash
-      - name: Use Maven dependency cache
-        uses: actions/cache@69d9d449aced6a2ede0bc19182fadc3a0a42d2b0 # v3.2.6
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
-
-      - name: Use silent log config
-        run: mv chore/logback.xml src/test/resources/
+      - name: Time nix setup
+        run: nix develop ${{ env.NIX_OPTIONS }} .#extraChecks --command true
       - name: Run extra checks
-        run: ./chore/ci-extra.sh
+        run: nix develop ${{ env.NIX_OPTIONS }} .#extraChecks --command extra
+      - name: Trigger extra remote tasks
+        if: github.repository == 'INRIA/spoon' && github.event_name == 'pull_request'
+        run: nix develop ${{ env.NIX_OPTIONS }} .#extraChecks --command extra-remote
+
+  javadoc:
+    runs-on: ubuntu-latest
+    name: Javadoc quality
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup env
+        uses: ./.github/actions/setup-tests
+
+      - name: Time nix setup
+        run: nix develop ${{ env.NIX_OPTIONS }} .#extraChecks --command true
       - name: Run Javadoc quality check
-        run: ./chore/check-javadoc-regressions.py COMPARE_WITH_MASTER
+        run: nix develop ${{ env.NIX_OPTIONS }} .#extraChecks --command ci-javadoc-quality
+
   reproducible-builds:
     runs-on: ubuntu-latest
-    env:
-      MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false
     name: reproducible-builds
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@3f07048e3d294f56e9b90ac5ea2c6f74e9ad0f98 # v3.10.0
-        with:
-          java-version: 17
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
+      - name: Setup env
+        uses: ./.github/actions/setup-tests
+
+      - name: Time nix setup
+        run: nix develop ${{ env.NIX_OPTIONS }} --command true
       - name: Check status
-        run: chore/check-reproducible-builds.sh
+        run: nix develop ${{ env.NIX_OPTIONS }} --command reproducible-builds
+
+  maven-central-requirements:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup env
+        uses: ./.github/actions/setup-tests
+
+      - name: Time nix setup
+        run: nix develop ${{ env.NIX_OPTIONS }} --command true
+      - name: Check maven pom quality
+        run: nix develop ${{ env.NIX_OPTIONS }} --command maven-pom-quality
+
+  codegen:
+    runs-on: ubuntu-latest
+    name: Codegeneration
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0
+      - name: Setup env
+        uses: ./.github/actions/setup-tests
+
+      - name: Time nix setup
+        run: nix develop ${{ env.NIX_OPTIONS }} --command true
+      - name: Run codegen checks
+        run: nix develop ${{ env.NIX_OPTIONS }}  --command codegen

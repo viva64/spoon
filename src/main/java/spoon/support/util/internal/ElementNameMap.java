@@ -1,9 +1,9 @@
 /*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
- * Copyright (C) 2006-2019 INRIA and contributors
+ * Copyright (C) 2006-2023 INRIA and contributors
  *
- * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) of the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
+ * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) or the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
  */
 package spoon.support.util.internal;
 
@@ -23,6 +23,7 @@ import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.path.CtRole;
 import spoon.support.modelobs.FineModelChangeListener;
@@ -91,7 +92,7 @@ public abstract class ElementNameMap<T extends CtElement> extends AbstractMap<St
 	 *     if the element is actually replaced.
 	 */
 	@Override
-	public T put(String key, T e) {
+	public @Nullable T put(String key, T e) {
 		if (e == null) {
 			return null;
 		}
@@ -107,12 +108,12 @@ public abstract class ElementNameMap<T extends CtElement> extends AbstractMap<St
 		return valueOrNull(map.put(key, wrapper));
 	}
 
-	private T valueOrNull(InsertOrderWrapper<T> wrapper) {
+	private @Nullable T valueOrNull(InsertOrderWrapper<T> wrapper) {
 		return wrapper != null ? wrapper.value : null;
 	}
 
 	@Override
-	public T remove(Object key) {
+	public @Nullable T remove(Object key) {
 		T removed = valueOrNull(map.remove(key));
 
 		if (removed == null) {
@@ -165,7 +166,7 @@ public abstract class ElementNameMap<T extends CtElement> extends AbstractMap<St
 	}
 
 	@Override
-	public T get(Object key) {
+	public @Nullable T get(Object key) {
 		InsertOrderWrapper<T> wrapper = map.get(key);
 		if (wrapper == null) {
 			return null;

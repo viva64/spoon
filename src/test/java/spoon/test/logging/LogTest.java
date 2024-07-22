@@ -31,7 +31,7 @@ import spoon.reflect.visitor.Query;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.JavaOutputProcessor;
 import spoon.support.Level;
-import spoon.test.GitHubIssue;
+import spoon.testing.utils.GitHubIssue;
 import uk.org.lidalia.slf4jtest.TestLogger;
 import uk.org.lidalia.slf4jtest.TestLoggerFactory;
 import java.util.List;
@@ -74,7 +74,7 @@ public class LogTest {
 	private static Stream<Pair<Level, Integer>> getLogLevelsAndExpectedCounts() {
 		return Stream.of(
 				Pair.of(Level.DEBUG, 6),
-				Pair.of(Level.INFO, 2),
+				Pair.of(Level.INFO, 1),
 				Pair.of(Level.WARN, 0),
 				Pair.of(Level.ERROR, 0),
 				Pair.of(Level.OFF, 0)
@@ -112,6 +112,7 @@ public class LogTest {
 		assertEquals(0, logger.getLoggingEvents().size());
 	}
 
+	@Test
 	@GitHubIssue(issueNumber = 4997, fixed = true)
 	void innerTypesCrashesLogging() {
 		// contract: when a class has inner types, the logging should not crash with a NPE

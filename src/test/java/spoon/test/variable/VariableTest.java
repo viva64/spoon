@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.api.io.TempDir;
 import spoon.Launcher;
 import spoon.processing.AbstractProcessor;
 import spoon.reflect.CtModel;
@@ -126,10 +127,10 @@ public class VariableTest {
         TypeFactory typeFactory = launcher.getFactory().Type();
 
         assertTrue(localVariables.get(0).isInferred());
-        assertEquals(typeFactory.STRING, localVariables.get(0).getType());
+        assertEquals(typeFactory.stringType(), localVariables.get(0).getType());
 
         assertFalse(localVariables.get(1).isInferred());
-        assertEquals(typeFactory.STRING, localVariables.get(1).getType());
+        assertEquals(typeFactory.stringType(), localVariables.get(1).getType());
 
         assertTrue(localVariables.get(2).isInferred());
         assertEquals("java.io.FileReader", localVariables.get(2).getType().getQualifiedName());
@@ -138,27 +139,26 @@ public class VariableTest {
         assertEquals("java.io.FileReader", localVariables.get(3).getType().getQualifiedName());
 
         assertTrue(localVariables.get(4).isInferred());
-        assertEquals(typeFactory.BOOLEAN_PRIMITIVE, localVariables.get(4).getType());
+        assertEquals(typeFactory.booleanPrimitiveType(), localVariables.get(4).getType());
 
         assertFalse(localVariables.get(5).isInferred());
-        assertEquals(typeFactory.BOOLEAN_PRIMITIVE, localVariables.get(5).getType());
+        assertEquals(typeFactory.booleanPrimitiveType(), localVariables.get(5).getType());
 
         assertTrue(localVariables.get(6).isInferred());
-        assertEquals(typeFactory.INTEGER_PRIMITIVE, localVariables.get(6).getType());
+        assertEquals(typeFactory.integerPrimitiveType(), localVariables.get(6).getType());
 
         assertFalse(localVariables.get(7).isInferred());
-        assertEquals(typeFactory.INTEGER_PRIMITIVE, localVariables.get(7).getType());
+        assertEquals(typeFactory.integerPrimitiveType(), localVariables.get(7).getType());
     }
 
     @Test
     @DisabledForJreRange(max = JRE.JAVA_9)
-    public void testInferredVariableArePrintedWithVar() throws IOException {
+    public void testInferredVariableArePrintedWithVar(@TempDir File outputDir) throws IOException {
         // contract: if a variable is marked as inferred in the model, it must be pretty-printed with a 'var' keyword 
         Launcher launcher = new Launcher();
         launcher.getEnvironment().setComplianceLevel(10);
         launcher.addInputResource("./src/test/resources/spoon/test/var/Main.java");
 
-        File outputDir = Files.createTempDir();
         launcher.setSourceOutputDirectory(outputDir);
 
         launcher.run();

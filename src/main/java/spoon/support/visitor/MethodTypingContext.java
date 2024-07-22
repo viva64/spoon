@@ -1,9 +1,9 @@
 /*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
- * Copyright (C) 2006-2019 INRIA and contributors
+ * Copyright (C) 2006-2023 INRIA and contributors
  *
- * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) of the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
+ * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) or the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
  */
 package spoon.support.visitor;
 
@@ -15,6 +15,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import spoon.SpoonException;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtInvocation;
@@ -170,7 +171,7 @@ public class MethodTypingContext extends AbstractTypingContext {
 	 *  or null if `typeParam` cannot be adapted to target `scope`
 	 */
 	@Override
-	protected CtTypeReference<?> adaptTypeParameter(CtTypeParameter typeParam) {
+	protected @Nullable CtTypeReference<?> adaptTypeParameter(CtTypeParameter typeParam) {
 		if (typeParam == null) {
 			return null;
 		}
@@ -260,7 +261,7 @@ public class MethodTypingContext extends AbstractTypingContext {
 	private static CtTypeReference<?> getBound(CtTypeParameter typeParam) {
 		CtTypeReference<?> bound = typeParam.getSuperclass();
 		if (bound == null) {
-			bound = typeParam.getFactory().Type().OBJECT;
+			bound = typeParam.getFactory().Type().objectType();
 		}
 		return bound;
 	}

@@ -1,9 +1,9 @@
 /*
  * SPDX-License-Identifier: (MIT OR CECILL-C)
  *
- * Copyright (C) 2006-2019 INRIA and contributors
+ * Copyright (C) 2006-2023 INRIA and contributors
  *
- * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) of the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
+ * Spoon is available either under the terms of the MIT License (see LICENSE-MIT.txt) or the Cecill-C License (see LICENSE-CECILL-C.txt). You as the user are entitled to choose the terms under which to adopt Spoon.
  */
 package spoon.support.visitor.java;
 
@@ -22,7 +22,10 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.Set;
-import spoon.reflect.code.CtLiteral;
+
+import spoon.reflect.code.BinaryOperatorKind;
+import spoon.reflect.code.CtBinaryOperator;
+import spoon.reflect.code.CtExpression;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtAnnotationMethod;
 import spoon.reflect.declaration.CtAnnotationType;
@@ -70,11 +73,12 @@ import spoon.support.visitor.java.reflect.RtParameter;
  * element comes from the reflection api, use {@link spoon.reflect.declaration.CtShadowable#isShadow()}.
  */
 public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
-	private Deque<RuntimeBuilderContext> contexts = new ArrayDeque<>();
-	private Factory factory;
+	private final Deque<RuntimeBuilderContext> contexts;
+	private final Factory factory;
 
 	public JavaReflectionTreeBuilder(Factory factory) {
 		this.factory = factory;
+		this.contexts = new ArrayDeque<>();
 	}
 
 	private void enter(RuntimeBuilderContext context) {
@@ -87,47 +91,67 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 
 	/** transforms a java.lang.Class into a CtType (ie a shadow type in Spoon's parlance) */
 	public <T, R extends CtType<T>> R scan(Class<T> clazz) {
-		CtPackage ctPackage;
-		CtType<?> ctEnclosingClass;
-		if (clazz.getEnclosingClass() != null && !clazz.isAnonymousClass()) {
-			ctEnclosingClass = factory.Type().get(clazz.getEnclosingClass());
-			return ctEnclosingClass.getNestedType(clazz.getSimpleName());
-		} else {
-			if (clazz.getPackage() == null) {
-				ctPackage = factory.Package().getRootPackage();
+		// We modify and query our modified model in this part. If another thread were to do the same
+		// on the same model, things will explode (e.g. with a ParentNotInitialized exception).
+		// We only synchronize in the main entrypoint, as that should be enough for normal consumers.
+		// The shadow factory should not be modified in other places and nobody should be directly calling
+		// the visit methods.
+		synchronized (factory) {
+			CtType<?> ctEnclosingClass;
+			if (clazz.getEnclosingClass() != null && !clazz.isAnonymousClass()) {
+				ctEnclosingClass = factory.Type().get(clazz.getEnclosingClass());
+				return ctEnclosingClass.getNestedType(clazz.getSimpleName());
 			} else {
-				ctPackage = factory.Package().getOrCreate(clazz.getPackage().getName());
+				CtPackage ctPackage = getCtPackage(clazz);
+				if (contexts.isEmpty()) {
+					enter(new PackageRuntimeBuilderContext(ctPackage));
+				}
+				boolean visited = false;
+				if (clazz.isAnnotation()) {
+					visited = true;
+					visitAnnotationClass((Class<Annotation>) clazz);
+				}
+				if (clazz.isInterface() && !visited) {
+					visited = true;
+					visitInterface(clazz);
+				}
+				if (clazz.isEnum() && !visited) {
+					visited = true;
+					visitEnum(clazz);
+				}
+				if (MethodHandleUtils.isRecord(clazz) && !visited) {
+					visited = true;
+					visitRecord(clazz);
+				}
+				if (!visited) {
+					visitClass(clazz);
+				}
+				exit();
+				final R type = ctPackage.getType(clazz.getSimpleName());
+				if (clazz.isPrimitive() && type.getParent() instanceof CtPackage) {
+					type.setParent(null); // primitive type isn't in a package.
+				}
+				return type;
 			}
-			if (contexts.isEmpty()) {
-				enter(new PackageRuntimeBuilderContext(ctPackage));
-			}
-			boolean visited = false;
-			if (clazz.isAnnotation()) {
-				visited = true;
-				visitAnnotationClass((Class<Annotation>) clazz);
-			}
-			if (clazz.isInterface() && !visited) {
-				visited = true;
-				visitInterface(clazz);
-			}
-			if (clazz.isEnum() && !visited) {
-				visited = true;
-				visitEnum(clazz);
-			}
-			if (MethodHandleUtils.isRecord(clazz) && !visited) {
-				visited = true;
-				visitRecord(clazz);
-			}
-			if (!visited) {
-				visitClass(clazz);
-			}
-			exit();
-			final R type = ctPackage.getType(clazz.getSimpleName());
-			if (clazz.isPrimitive() && type.getParent() instanceof CtPackage) {
-				type.setParent(null); // primitive type isn't in a package.
-			}
-			return type;
 		}
+	}
+
+	private <T> CtPackage getCtPackage(Class<T> clazz) {
+		Package javaPackage = clazz.getPackage();
+		if (javaPackage == null && clazz.isArray()) {
+			javaPackage = getArrayType(clazz).getPackage();
+		}
+		if (javaPackage == null) {
+			return factory.Package().getRootPackage();
+		}
+		return factory.Package().getOrCreate(javaPackage.getName());
+	}
+
+	private static Class<?> getArrayType(Class<?> array) {
+		if (array.isArray()) {
+			return getArrayType(array.getComponentType());
+		}
+		return array;
 	}
 
 	@Override
@@ -329,7 +353,7 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 			if (modifiers.contains(ModifierKind.STATIC)
 					&& modifiers.contains(ModifierKind.PUBLIC)
 					&& (field.getType().isPrimitive() || String.class.isAssignableFrom(field.getType()))) {
-				CtLiteral<Object> defaultExpression = factory.createLiteral(field.get(null));
+				CtExpression<Object> defaultExpression = buildExpressionForValue(field.get(null));
 				ctField.setDefaultExpression(defaultExpression);
 			}
 		} catch (IllegalAccessException | ExceptionInInitializerError | UnsatisfiedLinkError e) {
@@ -341,6 +365,37 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		exit();
 
 		contexts.peek().addField(ctField);
+	}
+
+	private CtExpression<Object> buildExpressionForValue(Object value) {
+		if (value instanceof Double) {
+			double d = (double) value;
+			if (Double.isNaN(d)) {
+				return buildDivision(0.0d, 0.0d);
+			}
+			if (Double.POSITIVE_INFINITY == d) {
+				return buildDivision(1.0d, 0.0d);
+			}
+			if (Double.NEGATIVE_INFINITY == d) {
+				return buildDivision(-1.0d, 0.0d);
+			}
+		} else if (value instanceof Float) {
+			float f = (float) value;
+			if (Float.isNaN(f)) {
+				return buildDivision(0.0f, 0.0f);
+			}
+			if (Float.POSITIVE_INFINITY == f) {
+				return buildDivision(1.0f, 0.0f);
+			}
+			if (Float.NEGATIVE_INFINITY == f) {
+				return buildDivision(-1.0f, 0.0f);
+			}
+		}
+		return factory.createLiteral(value);
+	}
+
+	private CtBinaryOperator<Object> buildDivision(Object first, Object second) {
+		return factory.createBinaryOperator(factory.createLiteral(first), factory.createLiteral(second), BinaryOperatorKind.DIV);
 	}
 
 	@Override

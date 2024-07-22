@@ -1,18 +1,19 @@
 profile:
   name: qodana.recommended
 version: "1.0"
-linter: jetbrains/qodana-jvm-community:2022.3-eap
 include:
   - name: Anonymous2MethodRef
   - name: AssignmentToCatchBlockParameter
   - name: AssignmentToLambdaParameter
   - name: AssignmentToMethodParameter
-  - name: AssignmentToNull
+  # disabled as it does not support nullability annotations
+  #- name: AssignmentToNull
   - name: Convert2Lambda
   - name: DoubleBraceInitialization
   - name: EqualsAndHashcode
   - name: JavaLangImport
-  - name: MissortedModifiers
+  # Disabled for annotations applied to type
+  #- name: MissortedModifiers
   - name: NestedAssignment
   - name: NonShortCircuitBoolean
   - name: RedundantFieldInitialization
