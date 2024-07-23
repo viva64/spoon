@@ -38,6 +38,7 @@ import org.eclipse.jdt.internal.compiler.lookup.CaptureBinding;
 import org.eclipse.jdt.internal.compiler.lookup.CatchParameterBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ClassScope;
 import org.eclipse.jdt.internal.compiler.lookup.FieldBinding;
+import org.eclipse.jdt.internal.compiler.lookup.InferenceVariable;
 import org.eclipse.jdt.internal.compiler.lookup.IntersectionTypeBinding18;
 import org.eclipse.jdt.internal.compiler.lookup.LocalTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.LocalVariableBinding;
@@ -65,6 +66,7 @@ import org.eclipse.jdt.internal.compiler.lookup.VariableBinding;
 import org.eclipse.jdt.internal.compiler.lookup.VoidTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.WildcardBinding;
 import org.jspecify.annotations.Nullable;
+import spoon.JLSViolation;
 import spoon.NoClasspathWorkaround;
 import spoon.reflect.code.CtLambda;
 import spoon.reflect.declaration.CtModule;
@@ -1023,7 +1025,25 @@ public class ReferenceBuilder {
 			return getTypeReferenceOfBoundingType(binding).clone();
 		} else {
 			CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeParameterReference();
-			ref.setSimpleName(new String(binding.sourceName()));
+
+            try {
+                ref.setSimpleName(new String(binding.sourceName()));
+            } catch (JLSViolation e) {
+                // После вот этой доработки в eclipse.jdt.core https://github.com/eclipse-jdt/eclipse.jdt.core/commit/6b283a369a1704a5c1c6e9d242ee3f66dadf927d
+                // Для WildCard параметра типа, может вернуться тип наподобие "E'", то есть добавляется одиночная кавычка в идентифиатор.
+                // Spoon такой ситуации не ожидают, поэтому обрезаем все одиночные кавычки вконце в случае исключения JLSViolation
+                // Обнаружена эта ситуация ("E'" как тип WildCard параметра) была при вызове наподобие classInstance.setList(new ArrayList(otherGenericCollection)), когда метод setList не существует в исходном коде, его генерирует фреймворк Lombok.
+                String sourceName = new String(binding.sourceName());
+                if (!(binding instanceof InferenceVariable)) {
+                    while (sourceName.endsWith("'")) {
+                        sourceName = sourceName.substring(0, sourceName.length() - 1);
+                    }
+                    ref.setSimpleName(sourceName);
+                } else {
+                    throw e;
+                }
+            }
+
 			return ref;
 		}
 	}
