@@ -683,6 +683,7 @@ public class TypeFactory extends SubFactory {
 	}
 
 	private CtType<?> buildNewShadowClass(Class<?> cl) {
+        boolean strangeSituation = false;
 		CtType<?> newShadowClass;
 		try {
 			newShadowClass = new JavaReflectionTreeBuilder(getShadowFactory()).scan(cl);
@@ -690,9 +691,21 @@ public class TypeFactory extends SubFactory {
 			Launcher.LOGGER.warn("cannot create shadow class: {}", cl.getName(), e);
 
 			newShadowClass = getShadowFactory().Core().createClass();
-			newShadowClass.setSimpleName(cl.getSimpleName());
-			newShadowClass.setShadow(true);
-			getShadowFactory().Package().getOrCreate(cl.getPackage().getName()).addType(newShadowClass);
+            newShadowClass.setShadow(true);
+
+            try {
+                newShadowClass.setSimpleName(cl.getSimpleName());
+                getShadowFactory().Package().getOrCreate(cl.getPackage().getName()).addType(newShadowClass);
+            } catch (NoClassDefFoundError noClassDefFoundError) {
+                // В Selftester для Java в проекте Hibernate при анализе с использованием ранее созданной модели проекта
+                // при попытке загрузить некоторые тестовые классы
+                // (hibernate/hibernate-envers/src/test/java/org/hibernate/envers/test/integration/manytomany/IndexColumnListTest,
+                // hibernate/hibernate-envers/src/test/java/org/hibernate/envers/test/integration/manytomany/OrderColumnListTest),
+                // происходит исключение непонятно с чем связанное при загрузке базового абстрактного класса org.hibernate.envers.test.BaseEnversJPAFunctionalTestCase,
+                // которое на самом деле связано с тем, что в try блоке org.hibernate.envers.test.BaseEnversJPAFunctionalTestCase не смог загрузить Spoon
+                strangeSituation = true;
+                Launcher.LOGGER.warn("Spoon Strange Situation for class: {}", cl.getName(), noClassDefFoundError);
+            }
 		}
 		newShadowClass.setFactory(factory);
 		newShadowClass.accept(new CtScanner() {
@@ -703,6 +716,11 @@ public class TypeFactory extends SubFactory {
 				}
 			}
 		});
+
+        if (strangeSituation) {
+            return null;
+        }
+
 		return newShadowClass;
 	}
 
