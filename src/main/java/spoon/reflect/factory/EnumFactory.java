@@ -58,17 +58,11 @@ public class EnumFactory extends TypeFactory {
 	@Override
 	@SuppressWarnings("unchecked")
 	public CtEnum<?> get(String qualifiedName) {
-        // Fix possible floating exceptions ConcurrentModificationException following the example
-        // of how it is done in TypeFactory.get(Class<?> cl). Synchronization is performed for each
-        // individual subclass from TypeFactory on the instance of this derived class in the
-        // overridden method TypeFactory.get(Class<?> cl).
-        synchronized (EnumFactory.class) {
-            try {
-                return (CtEnum<?>) super.get(qualifiedName);
-            }
-            catch (Exception e) {
-                return null;
-            }
+        try {
+            return (CtEnum<?>) super.get(qualifiedName);
+        }
+        catch (Exception e) {
+            return null;
         }
 	}
 
@@ -82,6 +76,10 @@ public class EnumFactory extends TypeFactory {
 	 * 		then poses problem when T is a generic type itself
 	 */
 	public <T extends Enum<?>> CtEnum<T> getEnum(Class<T> cl) {
+        // Fix possible floating exceptions ConcurrentModificationException following the example
+        // of how it is done in TypeFactory.get(Class<?> cl). Synchronization is performed for each
+        // individual subclass from TypeFactory on the instance of this derived class in the
+        // overridden method TypeFactory.get(Class<?> cl).
 		synchronized (EnumFactory.class) {
 			try {
 				CtType<T> t = super.get(cl);

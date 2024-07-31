@@ -74,17 +74,11 @@ public class InterfaceFactory extends TypeFactory {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> CtInterface<T> get(String qualifiedName) {
-        // Fix possible floating exceptions ConcurrentModificationException following the example
-        // of how it is done in TypeFactory.get(Class<?> cl). Synchronization is performed for each
-        // individual subclass from TypeFactory on the instance of this derived class in the
-        // overridden method TypeFactory.get(Class<?> cl).
-        synchronized (InterfaceFactory.class) {
-            try {
-                return (CtInterface<T>) super.get(qualifiedName);
-            }
-            catch (Exception e) {
-                return null;
-            }
+        try {
+            return (CtInterface<T>) super.get(qualifiedName);
+        }
+        catch (Exception e) {
+            return null;
         }
 	}
 
@@ -100,6 +94,10 @@ public class InterfaceFactory extends TypeFactory {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> CtInterface<T> get(Class<?> cl) {
+        // Fix possible floating exceptions ConcurrentModificationException following the example
+        // of how it is done in TypeFactory.get(Class<?> cl). Synchronization is performed for each
+        // individual subclass from TypeFactory on the instance of this derived class in the
+        // overridden method TypeFactory.get(Class<?> cl).
 		synchronized (InterfaceFactory.class) {
 			try {
 				return (CtInterface<T>) super.get(cl);
@@ -108,5 +106,4 @@ public class InterfaceFactory extends TypeFactory {
 			}
 		}
 	}
-
 }
