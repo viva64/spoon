@@ -84,11 +84,18 @@ public class ClassFactory extends TypeFactory {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> CtClass<T> get(Class<?> cl) {
-		try {
-			return (CtClass<T>) super.get(cl);
-		} catch (Exception e) {
-			return null;
-		}
+        // Fix possible floating exceptions ConcurrentModificationException following the example
+        // of how it is done in TypeFactory.get(Class<?> cl). Synchronization is performed for each
+        // individual subclass from TypeFactory on the instance of this derived class in the
+        // overridden method TypeFactory.get(Class<?> cl).
+        synchronized (ClassFactory.class) {
+            try {
+                return (CtClass<T>) super.get(cl);
+            }
+            catch (Exception e) {
+                return null;
+            }
+        }
 	}
 
 	/**

@@ -58,11 +58,18 @@ public class EnumFactory extends TypeFactory {
 	@Override
 	@SuppressWarnings("unchecked")
 	public CtEnum<?> get(String qualifiedName) {
-		try {
-			return (CtEnum<?>) super.get(qualifiedName);
-		} catch (Exception e) {
-			return null;
-		}
+        // Fix possible floating exceptions ConcurrentModificationException following the example
+        // of how it is done in TypeFactory.get(Class<?> cl). Synchronization is performed for each
+        // individual subclass from TypeFactory on the instance of this derived class in the
+        // overridden method TypeFactory.get(Class<?> cl).
+        synchronized (EnumFactory.class) {
+            try {
+                return (CtEnum<?>) super.get(qualifiedName);
+            }
+            catch (Exception e) {
+                return null;
+            }
+        }
 	}
 
 	/**
