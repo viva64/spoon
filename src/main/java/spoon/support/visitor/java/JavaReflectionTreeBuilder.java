@@ -356,7 +356,7 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				CtExpression<Object> defaultExpression = buildExpressionForValue(field.get(null));
 				ctField.setDefaultExpression(defaultExpression);
 			}
-		} catch (IllegalAccessException | ExceptionInInitializerError | UnsatisfiedLinkError e) {
+		} catch (IllegalAccessException | ExceptionInInitializerError | UnsatisfiedLinkError | SecurityException e) {
 			// ignore
 		}
 
