@@ -23,6 +23,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Set;
 
+import spoon.Launcher;
 import spoon.reflect.code.BinaryOperatorKind;
 import spoon.reflect.code.CtBinaryOperator;
 import spoon.reflect.code.CtExpression;
@@ -356,9 +357,21 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				CtExpression<Object> defaultExpression = buildExpressionForValue(field.get(null));
 				ctField.setDefaultExpression(defaultExpression);
 			}
-		} catch (IllegalAccessException | ExceptionInInitializerError | UnsatisfiedLinkError | SecurityException e) {
-			// ignore
-		}
+        } catch (NoClassDefFoundError e) {
+            // see all exceptions caught in JavaReflectionVisitorImpl
+            throw e;
+        } catch (SecurityException e) {
+            if (e.getClass().getName().equals("com.pvsstudio.PvsStudioSecurityException")) {
+                // ignore
+            } else {
+                throw e;
+            }
+        } catch (Throwable e) {
+            // Related to com.pvsstudio.security.PvsStudioSecurityException, which was caught in a static class initialization block (<clinit>) 
+            // and another exception type was thrown instead.
+            // Code in static class blocks may be executed when building a Spoon model.
+            Launcher.LOGGER.warn("An exception occurred while initializing primitive public fields of a shadow class: ", e);
+        }
 
 		enter(new VariableRuntimeBuilderContext(ctField));
 		super.visitField(field);
