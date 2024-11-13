@@ -1809,7 +1809,12 @@ public class JDTTreeBuilder extends ASTVisitor {
 			// we create a unique class name for this anonymous class
 			// see https://github.com/INRIA/spoon/issues/2974
 			t.setSimpleName(Integer.toString(localTypeDeclaration.sourceStart()));
-			((CtClass) t).setSuperclass(references.getTypeReference(null, localTypeDeclaration.allocation.type));
+			TypeReference type = localTypeDeclaration.allocation != null ? localTypeDeclaration.allocation.type : null;
+			if (type == null) {
+				// This is an unusual situation with a local type having no binding
+				LOGGER.warn("Allocation type for a local type declaration is not defined. File: {}", context.compilationUnitSpoon.getFile().getName());
+			}
+			((CtClass) t).setSuperclass(references.getTypeReference(null, type));
 			context.enter(t, localTypeDeclaration);
 		} else {
 			helper.createType(localTypeDeclaration);

@@ -177,6 +177,9 @@ class JDTTreeBuilderQuery {
 		boolean targetAnnotationExists = false;
 
 		for (AnnotationBinding annotation : a.resolvedType.getAnnotations()) {
+			if (annotation == null) {
+				continue;
+			}
 			if (!"Target".equals(CharOperation.charToString(annotation.getAnnotationType().sourceName()))) {
 				continue;
 			}
