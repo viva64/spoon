@@ -7,24 +7,16 @@
  */
 package spoon.compiler.builder;
 
+import spoon.compiler.SpoonFile;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
-import org.apache.commons.io.IOUtils;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import spoon.compiler.SpoonFile;
-
 public class SourceOptions<T extends SourceOptions<T>> extends Options<T> {
-	private static final Logger log = LoggerFactory.getLogger(SourceOptions.class);
-
 	public SourceOptions() {
 		super(SourceOptions.class);
 	}
@@ -53,46 +45,22 @@ public class SourceOptions<T extends SourceOptions<T>> extends Options<T> {
 			args.add(".");
 			return myself;
 		}
-		try {
-			Path path = Files.createTempDirectory("spoon-container");
-
-			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+		for (SpoonFile source : sources) {
+			if (source.isActualFile()) {
+				args.add(source.toString());
+			} else {
 				try {
-					Files.walk(path).sorted(Comparator.reverseOrder()).forEach(
-							path1 -> {
-								try {
-									Files.deleteIfExists(path1);
-								} catch (IOException e) {
-									log.error("An error occurred: ", e);
-								}
-							});
-				} catch (IOException e) {
-					log.error("An error occurred: ", e);
-				}
-			}));
-
-			for (SpoonFile source : sources) {
-				if (source.isActualFile()) {
-					args.add(source.toString());
-				} else {
-					try {
-						String name = source.getName();
-						if (name.startsWith(File.separator)) {
-							name = name.substring(1);
-						}
-						File file = path.resolve(name).toFile();
-						file.getParentFile().mkdirs();
-						try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-							IOUtils.copy(source.getContent(), fileOutputStream);
-						}
-						args.add(file.toString());
-					} catch (IOException e) {
-						throw new RuntimeException(e.getMessage(), e);
+					File file = File.createTempFile(source.getName(), ".java");
+					file.deleteOnExit();
+					try (FileOutputStream fileOutputStream = new FileOutputStream(file);
+						 InputStream content = source.getContent()) {
+						content.transferTo(fileOutputStream);
 					}
+					args.add(file.toString());
+				} catch (IOException e) {
+					throw new RuntimeException(e.getMessage(), e);
 				}
 			}
-		} catch (IOException e) {
-			log.error("An error occurred: ", e);
 		}
 		return myself;
 	}
