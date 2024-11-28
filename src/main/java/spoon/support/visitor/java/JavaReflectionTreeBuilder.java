@@ -361,7 +361,7 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
             // see all exceptions caught in JavaReflectionVisitorImpl
             throw e;
         } catch (SecurityException e) {
-            if (e.getClass().getName().equals("com.pvsstudio.PvsStudioSecurityException")) {
+            if (e.getClass().getName().equals("com.pvsstudio.security.PvsStudioSecurityException")) {
                 // ignore
             } else {
                 throw e;
