@@ -23,6 +23,8 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Set;
 
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ScanResult;
 import spoon.Launcher;
 import spoon.reflect.code.BinaryOperatorKind;
 import spoon.reflect.code.CtBinaryOperator;
@@ -354,8 +356,26 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 			if (modifiers.contains(ModifierKind.STATIC)
 					&& modifiers.contains(ModifierKind.PUBLIC)
 					&& (field.getType().isPrimitive() || String.class.isAssignableFrom(field.getType()))) {
-				CtExpression<Object> defaultExpression = buildExpressionForValue(field.get(null));
-				ctField.setDefaultExpression(defaultExpression);
+				var className = field.getDeclaringClass().getCanonicalName();
+				try (ScanResult scanResult = new ClassGraph().enableClassInfo()
+															 .enableFieldInfo()
+															 .enableStaticFinalFieldConstantInitializerValues()
+															 .acceptClasses(className)
+															 .overrideClasspath(Arrays.asList(factory.getEnvironment().getSourceClasspath()))
+															 .scan()) {
+					var classInfo = scanResult.getAllClassesAsMap().get(className);
+
+					if (classInfo != null) {
+						var fieldInfo = classInfo.getFieldInfo(field.getName());
+						if (fieldInfo != null) {
+							var initValue = fieldInfo.getConstantInitializerValue();
+							if (initValue != null) {
+								CtExpression<Object> defaultExpression = buildExpressionForValue(initValue);
+								ctField.setDefaultExpression(defaultExpression);
+							}
+						}
+					}
+				}
 			}
         } catch (NoClassDefFoundError e) {
             // see all exceptions caught in JavaReflectionVisitorImpl
