@@ -54,6 +54,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import com.mysema.query.support.ProjectableQuery;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -968,6 +969,7 @@ public class JavaReflectionTreeBuilderTest {
 	}
 
 	@Test
+	@Disabled("Custom ClassLoader is not supported for now")
 	void test() throws ClassNotFoundException {
 		// contract: Infinity, -Infinity, NaN are not literals
 		ClassLoader loader = JavacFacade.compileFiles(

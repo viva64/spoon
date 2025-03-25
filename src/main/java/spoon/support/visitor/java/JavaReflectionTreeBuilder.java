@@ -357,12 +357,18 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 					&& modifiers.contains(ModifierKind.PUBLIC)
 					&& (field.getType().isPrimitive() || String.class.isAssignableFrom(field.getType()))) {
 				var className = field.getDeclaringClass().getCanonicalName();
-				try (ScanResult scanResult = new ClassGraph().enableClassInfo()
-															 .enableFieldInfo()
-															 .enableStaticFinalFieldConstantInitializerValues()
-															 .acceptClasses(className)
-															 .overrideClasspath(Arrays.asList(factory.getEnvironment().getSourceClasspath()))
-															 .scan()) {
+
+				var classGraph = new ClassGraph().enableClassInfo()
+												 .enableFieldInfo()
+												 .enableStaticFinalFieldConstantInitializerValues()
+												 .enableSystemJarsAndModules()
+												 .addClassLoader(field.getDeclaringClass().getClassLoader())
+												 .acceptClasses(className);
+				if (factory.getEnvironment().getSourceClasspath() != null) {
+					classGraph = classGraph.overrideClasspath(Arrays.asList(factory.getEnvironment().getSourceClasspath()));
+				}
+
+				try (ScanResult scanResult = classGraph.scan()) {
 					var classInfo = scanResult.getAllClassesAsMap().get(className);
 
 					if (classInfo != null) {

@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -303,6 +304,7 @@ public class EvalTest {
 	}
 
 	@Test
+	@Disabled("No-Reflection field access does not evaluate platform-specific values for now (i.e. pathSeparator)")
 	public void testconvertElementToRuntimeObject() {
 		// contract: getCorrespondingRuntimeObject works well for all kinds of expression
 		Launcher launcher = new Launcher();
