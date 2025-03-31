@@ -38,7 +38,7 @@ import spoon.support.StandardEnvironment;
 import spoon.support.visitor.ClassTypingContext;
 import spoon.support.visitor.GenericTypeAdapter;
 import spoon.support.visitor.MethodTypingContext;
-import spoon.support.visitor.java.JavaReflectionTreeBuilder;
+import spoon.support.visitor.java.ClassGraphTreeBuilder;
 
 import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
@@ -693,7 +693,7 @@ public class TypeFactory extends SubFactory {
         boolean strangeSituation = false;
 		CtType<?> newShadowClass;
 		try {
-			newShadowClass = new JavaReflectionTreeBuilder(getShadowFactory()).scan(cl);
+			newShadowClass = new ClassGraphTreeBuilder(getShadowFactory()).scan(cl);
 		} catch (Throwable e) {
 			Launcher.LOGGER.warn("cannot create shadow class: {}", cl.getName(), e);
 
