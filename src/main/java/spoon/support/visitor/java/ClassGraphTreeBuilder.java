@@ -2,6 +2,7 @@ package spoon.support.visitor.java;
 
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
@@ -22,7 +23,7 @@ public class ClassGraphTreeBuilder extends JavaReflectionTreeBuilder {
                                          .enableSystemJarsAndModules();
 
         var sourceClasspath = factory.getEnvironment().getSourceClasspath();
-        if (sourceClasspath != null) {
+        if (ArrayUtils.isNotEmpty(sourceClasspath)) {
             classGraph = classGraph.overrideClasspath(List.of(sourceClasspath));
         }
 
@@ -31,9 +32,15 @@ public class ClassGraphTreeBuilder extends JavaReflectionTreeBuilder {
 
     @Override
     public <T, R extends CtType<T>> R scan(Class<T> clazz) {
-        scanResult = classGraph.acceptClasses(clazz.getCanonicalName()).scan();
+        if (clazz.getCanonicalName() != null) {
+            scanResult = classGraph.acceptClasses(clazz.getCanonicalName()).scan();
+        }
+
         R result = super.scan(clazz);
-        scanResult.close();
+
+        if (scanResult != null) {
+            scanResult.close();
+        }
         return result;
     }
 
@@ -47,6 +54,10 @@ public class ClassGraphTreeBuilder extends JavaReflectionTreeBuilder {
     protected Pair<Boolean, Object> getConstantValue(Field field) {
         var className = field.getDeclaringClass().getCanonicalName();
         var classInfo = scanResult.getAllClassesAsMap().get(className);
+
+        if (scanResult == null) {
+            return Pair.of(false, null);
+        }
 
         if (classInfo != null) {
             var fieldInfo = classInfo.getFieldInfo(field.getName());
