@@ -33,9 +33,8 @@ public class AsmTreeBuilder extends JavaReflectionTreeBuilder {
         String fieldName = field.getName();
         String fieldDescriptor = Type.getDescriptor(fieldType);
         var inputClassLoader = factory.getEnvironment().getInputClassLoader();
-        var classFile = inputClassLoader.getResourceAsStream(declaringClassName);
 
-        try {
+        try (var classFile = inputClassLoader.getResourceAsStream(declaringClassName)) {
             if (classFile == null) {
                 throw new IOException();
             }
@@ -45,13 +44,11 @@ public class AsmTreeBuilder extends JavaReflectionTreeBuilder {
             classReader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
             var constantValue = visitor.getConstantValue();
-            classFile.close();
             return Pair.of(true, typeMap(fieldType, constantValue));
-        } catch (IOException e) {
-            log.warn("Could not read the class file: {}", declaringClassName ,e);
+        } catch (Exception e) {
+            log.warn("Could not read the class file: {}", declaringClassName, e);
             return Pair.of(false, null);
         }
-
     }
 
     /**
@@ -66,7 +63,7 @@ public class AsmTreeBuilder extends JavaReflectionTreeBuilder {
         }
         // ASM returns int, long, float, double with the correct type
         if (fieldType == int.class) {
-            return (obj);
+            return obj;
         }
         if (fieldType == long.class) {
             return obj;
@@ -88,7 +85,7 @@ public class AsmTreeBuilder extends JavaReflectionTreeBuilder {
             return ((Integer) obj).shortValue();
         }
         if (fieldType == char.class) {
-            return (char)((Integer) obj).byteValue();
+            return (char)((Integer) obj).intValue();
         }
         if (fieldType == String.class) {
             return obj.toString();
