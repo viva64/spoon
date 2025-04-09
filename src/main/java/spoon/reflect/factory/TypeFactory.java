@@ -694,7 +694,6 @@ public class TypeFactory extends SubFactory {
 		CtType<?> newShadowClass;
 		try {
 			newShadowClass = new AsmTreeBuilder(getShadowFactory()).scan(cl);
-			//newShadowClass = new ClassGraphTreeBuilder(classGraphResult, getShadowFactory()).scan(cl);
 		} catch (Throwable e) {
 			Launcher.LOGGER.warn("cannot create shadow class: {}", cl.getName(), e);
 
