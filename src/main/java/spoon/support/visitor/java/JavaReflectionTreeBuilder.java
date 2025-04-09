@@ -76,7 +76,7 @@ import spoon.support.visitor.java.reflect.RtParameter;
  */
 public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 	private final Deque<RuntimeBuilderContext> contexts;
-	private final Factory factory;
+	protected final Factory factory;
 
 	public JavaReflectionTreeBuilder(Factory factory) {
 		this.factory = factory;
