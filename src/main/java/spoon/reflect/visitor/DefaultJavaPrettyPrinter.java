@@ -453,13 +453,16 @@ public class DefaultJavaPrettyPrinter implements CtVisitor, PrettyPrinter {
 	 * Note: This method does not consider casts.
 	 */
 	private static boolean requiresParenthesesInTargetContext(CtExpression<?> expression) {
-		if (expression.isParentInitialized() && expression.getParent() instanceof CtTargetedExpression<?, ?> targeted && targeted.getTarget() == expression) {
-			return !expression.getTypeCasts().isEmpty()
-				|| expression instanceof CtBinaryOperator<?>
-				|| expression instanceof CtSwitchExpression<?, ?>
-				|| expression instanceof CtAssignment<?, ?>
-				|| expression instanceof CtConditional<?>
-				|| expression instanceof CtUnaryOperator<?>;
+		if (expression.isParentInitialized() && expression.getParent() instanceof CtTargetedExpression<?, ?>) {
+			CtTargetedExpression<?, ?> targeted = (CtTargetedExpression<?, ?>) expression.getParent();
+			if (targeted.getTarget() == expression) {
+				return !expression.getTypeCasts().isEmpty()
+					   || expression instanceof CtBinaryOperator<?>
+					   || expression instanceof CtSwitchExpression<?, ?>
+					   || expression instanceof CtAssignment<?, ?>
+					   || expression instanceof CtConditional<?>
+					   || expression instanceof CtUnaryOperator<?>;
+			}
 		}
 		return false;
 	}
@@ -645,7 +648,8 @@ public class DefaultJavaPrettyPrinter implements CtVisitor, PrettyPrinter {
 			for (int i = 0; i < caseExpressions.size(); i++) {
 				CtExpression<E> caseExpression = caseExpressions.get(i);
 				// writing enum case expression
-				if (caseExpression instanceof CtFieldAccess<E> fieldAccess) {
+				if (caseExpression instanceof CtFieldAccess<?>) {
+					CtFieldAccess<E> fieldAccess = (CtFieldAccess<E>) caseExpression;
 					final CtFieldReference variable = ((CtFieldAccess) caseExpression).getVariable();
 					// In noclasspath mode, we don't have always the type of the declaring type.
 					if (((fieldAccess.getTarget() != null && fieldAccess.getTarget().isImplicit()) || env.getComplianceLevel() < 21)

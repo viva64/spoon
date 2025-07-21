@@ -44,10 +44,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static spoon.testing.assertions.SpoonAssertions.assertThat;
 
 public class VariableTest {
@@ -214,12 +215,15 @@ public class VariableTest {
 			assertThat(locals).describedAs(method.getSimpleName()).hasSize(1);
 			CtVariable<?> variable = locals.get(0);
 			assertThat(variable).getSimpleName().isEqualTo("_");
-			if (variable instanceof CtLocalVariable<?> v) {
-				assertTrue(v.isUnnamed());
-			} else if (variable instanceof CtParameter<?> v) {
-				assertTrue(v.isUnnamed());
-			} else if (variable instanceof CtCatchVariable<?> v) {
-				assertTrue(v.isUnnamed());
+			if (variable instanceof CtLocalVariable<?>) {
+                CtLocalVariable<?> v = (CtLocalVariable<?>) variable;
+                assertTrue(v.isUnnamed());
+			} else if (variable instanceof CtParameter<?>) {
+                CtParameter<?> v = (CtParameter<?>) variable;
+                assertTrue(v.isUnnamed());
+			} else if (variable instanceof CtCatchVariable<?>) {
+                CtCatchVariable<?> v = (CtCatchVariable<?>) variable;
+                assertTrue(v.isUnnamed());
 			}
 			assertThat(variable).getPosition().isNotEqualTo(SourcePosition.NOPOSITION);
 			String line = lines.get(variable.getPosition().getLine() - 1);

@@ -7,10 +7,6 @@
  */
 package spoon.support.sniper.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
 import spoon.SpoonException;
 import spoon.reflect.code.CtComment;
 import spoon.reflect.cu.SourcePositionHolder;
@@ -18,9 +14,13 @@ import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtTypeReference;
 
-import static spoon.support.sniper.internal.ElementSourceFragment.findIndexOfNextFragment;
-import static spoon.support.sniper.internal.ElementSourceFragment.filter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 import static spoon.support.sniper.internal.ElementSourceFragment.checkCollectionItems;
+import static spoon.support.sniper.internal.ElementSourceFragment.filter;
+import static spoon.support.sniper.internal.ElementSourceFragment.findIndexOfNextFragment;
 import static spoon.support.sniper.internal.ElementSourceFragment.isCommentFragment;
 import static spoon.support.sniper.internal.ElementSourceFragment.isSpaceFragment;
 
@@ -93,8 +93,9 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 	 * A CtTypeReference is like the "(double)" in " ... = (double) b;"
 	 * */
 	private boolean isTypeCastFragment(SourceFragment fragment) {
-		if (fragment instanceof CollectionSourceFragment collection) {
-			// The type-cast fragment *generally* seems to be present inside a singleton CollectionSourceFragment.
+		if (fragment instanceof CollectionSourceFragment) {
+            CollectionSourceFragment collection = (CollectionSourceFragment) fragment;
+            // The type-cast fragment *generally* seems to be present inside a singleton CollectionSourceFragment.
 			// So, if there is more than one element in the collection, we are likely *not* processing a type-cast
 			// fragment
 			if (collection.getItems().size() != 1) {
@@ -102,8 +103,9 @@ abstract class AbstractSourceFragmentPrinter implements SourceFragmentPrinter {
 			}
 			ElementSourceFragment element = (ElementSourceFragment) collection.getItems().get(0);
 			return element.getElement() instanceof CtTypeReference<?>;
-		} else if (fragment instanceof ElementSourceFragment element) {
-			return element.getElement() instanceof CtTypeReference<?>;
+		} else if (fragment instanceof ElementSourceFragment) {
+            ElementSourceFragment element = (ElementSourceFragment) fragment;
+            return element.getElement() instanceof CtTypeReference<?>;
 		} else {
 			return false;
 		}

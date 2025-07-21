@@ -7,14 +7,15 @@
  */
 package spoon.reflect.visitor;
 
-import java.util.Collection;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
 import spoon.reflect.code.CtComment;
 import spoon.reflect.code.CtJavaDoc;
 import spoon.reflect.code.CtJavaDocTag;
 import spoon.support.Internal;
+
+import java.util.Collection;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 
 /**
  * Computes source code representation of the Comment literal
@@ -62,8 +63,11 @@ public class CommentHelper {
 		}
 		// content
 		switch (commentType) {
-			case INLINE -> printer.write(content);
-			case FILE, BLOCK -> {
+			case INLINE:
+				printer.write(content);
+				break;
+			case FILE:
+			case BLOCK:
 				UnaryOperator<String> op;
 				if (printer.prefixBlockComments) {
 					op = s -> s.isEmpty() ? " *" : " * " + s;
@@ -71,10 +75,10 @@ public class CommentHelper {
 					op = s -> s;
 				}
 				printCommentContent(printer, comment, op);
-			}
-			case JAVADOC ->
+				break;
+			case JAVADOC:
 				// per line suffix
-					printCommentContent(printer, comment, s -> (" * " + s).replaceAll(" *$", ""));
+				printCommentContent(printer, comment, s -> (" * " + s).replaceAll(" *$", ""));
 		}
 		// suffix
 		switch (commentType) {

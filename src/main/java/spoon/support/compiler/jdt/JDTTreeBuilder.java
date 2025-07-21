@@ -7,9 +7,6 @@
  */
 package spoon.support.compiler.jdt;
 
-import java.lang.invoke.MethodHandles;
-import java.util.Set;
-
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.ast.AND_AND_Expression;
@@ -174,6 +171,9 @@ import spoon.reflect.reference.CtUnboundVariableReference;
 import spoon.support.compiler.jdt.ContextBuilder.CastInfo;
 import spoon.support.reflect.CtExtendedModifier;
 import spoon.support.reflect.reference.CtArrayTypeReferenceImpl;
+
+import java.lang.invoke.MethodHandles;
+import java.util.Set;
 
 import static spoon.support.compiler.jdt.JDTTreeBuilderQuery.getBinaryOperatorKind;
 import static spoon.support.compiler.jdt.JDTTreeBuilderQuery.getModifiers;
@@ -1776,8 +1776,9 @@ public class JDTTreeBuilder extends ASTVisitor {
 	@Override
 	public boolean visit(SwitchStatement switchStatement, BlockScope scope) {
 		// JDT 3.40.0 removes SwitchExpression#traverse method, so let's emulate it
-		if (switchStatement instanceof SwitchExpression switchExpression) {
-			return visit(switchExpression, scope);
+		if (switchStatement instanceof SwitchExpression) {
+            SwitchExpression switchExpression = (SwitchExpression) switchStatement;
+            return visit(switchExpression, scope);
 		}
 		context.enter(factory.Core().createSwitch(), switchStatement);
 		return true;

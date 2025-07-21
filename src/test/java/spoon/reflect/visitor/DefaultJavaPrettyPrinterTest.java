@@ -1,10 +1,6 @@
 package spoon.reflect.visitor;
 
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -35,7 +31,6 @@ import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.TypeFilter;
-import spoon.support.compiler.VirtualFile;
 import spoon.support.reflect.reference.CtArrayTypeReferenceImpl;
 import spoon.test.SpoonTestHelpers;
 import spoon.testing.assertions.SpoonAssertions;
@@ -43,6 +38,10 @@ import spoon.testing.utils.GitHubIssue;
 import spoon.testing.utils.ModelTest;
 
 import java.io.FileNotFoundException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -86,11 +85,9 @@ public class DefaultJavaPrettyPrinterTest {
             "new java.lang.Object() instanceof java.lang.Integer i && (++i).toString().isEmpty()",
             "new java.lang.Object() instanceof java.lang.Integer i && (i--).toString().isEmpty()",
             "(true ? \"1\" : \"2\").contains(\"1\")",
-            """
-            (switch (0) {
-                default -> "1";
-            }).contains("1")
-            """,
+            "(switch (0) {\n" +
+            "    default -> \"1\";\n" +
+            "}).contains(\"1\")\n",
     })
     public void testParenOptimizationCorrectlyPrintsParenthesesForExpressions(String rawExpression) {
         // contract: When input expressions are minimally parenthesized, pretty-printed output

@@ -43,6 +43,8 @@ import spoon.testing.utils.GitHubIssue;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -146,29 +148,59 @@ public class LogTest {
 		assertDoesNotThrow(() -> new FluentLauncher().inputResource(codePath).processor(processor).buildModel());
 	}
 
-	public record LogCapture(ListAppender<ILoggingEvent> listAppender) {
-		public List<ILoggingEvent> loggingEvents() {
-			return Collections.unmodifiableList(listAppender.list);
-		}
+    public static final class LogCapture {
+        private final ListAppender<ILoggingEvent> listAppender;
 
-		public List<ILoggingEvent> loggingEvents(Level minLevel) {
-			return listAppender.list.stream()
-				.filter(event -> minLevel.compareTo(Level.valueOf(event.getLevel().toString())) >= 0)
-				.toList();
-		}
+        public LogCapture(ListAppender<ILoggingEvent> listAppender) {
+            this.listAppender = listAppender;
+        }
 
-		public void start() {
-			listAppender.start();
-		}
+        public List<ILoggingEvent> loggingEvents() {
+            return Collections.unmodifiableList(listAppender.list);
+        }
 
-		public void stop() {
-			listAppender.stop();
-		}
+        public List<ILoggingEvent> loggingEvents(Level minLevel) {
+            return listAppender.list.stream()
+                    .filter(event -> minLevel.compareTo(Level.valueOf(event.getLevel().toString())) >= 0)
+                    .collect(Collectors.toUnmodifiableList());
+        }
 
-		public void clear() {
-			listAppender.list.clear();
-		}
-	}
+        public void start() {
+            listAppender.start();
+        }
+
+        public void stop() {
+            listAppender.stop();
+        }
+
+        public void clear() {
+            listAppender.list.clear();
+        }
+
+        public ListAppender<ILoggingEvent> listAppender() {
+            return listAppender;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (LogCapture) obj;
+            return Objects.equals(this.listAppender, that.listAppender);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(listAppender);
+        }
+
+        @Override
+        public String toString() {
+            return "LogCapture[" +
+                   "listAppender=" + listAppender + ']';
+        }
+
+    }
 
 	public static class LogCaptureExtension implements ParameterResolver, AfterTestExecutionCallback {
 

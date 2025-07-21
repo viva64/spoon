@@ -22,7 +22,6 @@ import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.ExtendWith;
 import spoon.Launcher;
-import spoon.LauncherTest;
 import spoon.SpoonException;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.CtArrayAccess;
@@ -1333,19 +1332,17 @@ public class CommentTest {
 	@ExtendWith(LineSeparatorExtension.class)
 	public void testCommentInLambda() {
 		// contract: Comments inside lambdas should not crash or disappear.
-		CtClass<?> ctClass = Launcher.parseClass("""
-			class Foo {
-			  public void bar() {
-			    Runnable r = () -> {
-			        /* hello */ System.exit(1);
-			    };
-				Runnable b = () -> /* hello2 */ System.exit(1);
-				Runnable c = /* hello3 */ () -> System.exit(1);
-				java.util.function.IntFunction<Void> d = ( /* hello4 */ int a ) -> null;
-				int e = /* hello5 */ 5;
-			  }
-			}
-			""");
+		CtClass<?> ctClass = Launcher.parseClass("class Foo {\n" +
+                                                 "  public void bar() {\n" +
+                                                 "    Runnable r = () -> {\n" +
+                                                 "        /* hello */ System.exit(1);\n" +
+                                                 "    };\n" +
+                                                 "	Runnable b = () -> /* hello2 */ System.exit(1);\n" +
+                                                 "	Runnable c = /* hello3 */ () -> System.exit(1);\n" +
+                                                 "	java.util.function.IntFunction<Void> d = ( /* hello4 */ int a ) -> null;\n" +
+                                                 "	int e = /* hello5 */ 5;\n" +
+                                                 "  }\n" +
+                                                 "}\n");
 		assertThat(ctClass).asString().contains("/* hello */");
 		// Wrong output, there should not be a newline here. Codify it for now in the test case
 		assertThat(ctClass).asString().containsPattern("/\\* hello2 \\*/\n\\s+System");

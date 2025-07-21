@@ -114,71 +114,84 @@ public class ModelConsistencyChecker extends CtScanner {
 	}
 
 
-	/**
-	 * Represents an inconsistent element.
-	 *
-	 * @param element the element with the invalid parent
-	 * @param expectedParents the expected parents of the element
-	 */
-	@Internal
-	public record InconsistentElements(CtElement element, List<CtElement> expectedParents) {
-		/**
-		 * Creates a new inconsistent element.
-		 *
-		 * @param element the element with the invalid parent
-		 * @param expectedParents the expected parents of the element
-		 */
-		public InconsistentElements {
-			expectedParents = List.copyOf(expectedParents);
-		}
+    /**
+     * Represents an inconsistent element.
+     */
+    @Internal
+    public final class InconsistentElements {
+        private final CtElement element;
+        private final List<CtElement> expectedParents;
 
-		private String reason() {
-			CtElement expectedParent = this.expectedParents.isEmpty() ? null : this.expectedParents.get(0);
-			return "The element %s has the parent %s, but expected the parent %s".formatted(
-				formatElement(this.element),
-				this.element.isParentInitialized() ? formatElement(this.element.getParent()) : "null",
-				expectedParent != null ? formatElement(expectedParent) : "null"
-			);
-		}
+        /**
+         * Creates a new inconsistent element.
+         *
+         * @param element         the element with the invalid parent
+         * @param expectedParents the expected parents of the element
+         */
+        public InconsistentElements(CtElement element, List<CtElement> expectedParents) {
+            expectedParents = List.copyOf(expectedParents);
+            this.element = element;
+            this.expectedParents = expectedParents;
+        }
 
-		private static String formatElement(CtElement ctElement) {
-			String name = ctElement instanceof CtNamedElement ctNamedElement ? " " + ctNamedElement.getSimpleName() : "";
+        private String reason() {
+            CtElement expectedParent = this.expectedParents.isEmpty() ? null : this.expectedParents.get(0);
+            return String.format("The element %s has the parent %s, but expected the parent %s",
+                    formatElement(this.element),
+                    this.element.isParentInitialized() ? formatElement(this.element.getParent()) : "null",
+                    expectedParent != null ? formatElement(expectedParent) : "null"
+            );
+        }
 
-			return "%s%s".formatted(
-				ctElement.getClass().getSimpleName(),
-				name
-			);
-		}
+        private String formatElement(CtElement ctElement) {
+            String name = ctElement instanceof CtNamedElement ? " " + ((CtNamedElement) ctElement).getSimpleName() : "";
 
-		private String dumpExpectedParents() {
-			return this.expectedParents.stream()
-				.map(ctElement -> "    %s %s".formatted(
+			return String.format(
+					"%s%s",
 					ctElement.getClass().getSimpleName(),
-					ctElement.getPosition().isValidPosition() ? String.valueOf(ctElement.getPosition()) : "(?)"
-				))
-				.collect(Collectors.joining(System.lineSeparator()));
-		}
+					name
+			);
+        }
 
-		@Override
-		public String toString() {
-			return "%s%n%s".formatted(this.reason(), this.dumpExpectedParents());
-		}
+        private String dumpExpectedParents() {
+            return this.expectedParents.stream()
+                    .map(ctElement -> String.format("    %s %s",
+                            ctElement.getClass().getSimpleName(),
+                            ctElement.getPosition().isValidPosition() ? String.valueOf(ctElement.getPosition()) : "(?)"
+                    ))
+                    .collect(Collectors.joining(System.lineSeparator()));
+        }
 
-		@Override
-		public boolean equals(Object object) {
-			if (this == object) {
-				return true;
-			}
-			if (!(object instanceof InconsistentElements that)) {
-				return false;
-			}
+        @Override
+        public String toString() {
+			return String.format("%s%s", this.reason(), this.dumpExpectedParents());
+        }
 
-			return this.element == that.element();
-		}
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) {
+                return true;
+            }
+            if (!(object instanceof InconsistentElements)) {
+                return false;
+            }
+			InconsistentElements that = (InconsistentElements) object;
 
-		@Override
-		public int hashCode() {
-			return System.identityHashCode(this.element);
-		}
-	}
+            return this.element == that.element();
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(this.element);
+        }
+
+        public CtElement element() {
+            return element;
+        }
+
+        public List<CtElement> expectedParents() {
+            return expectedParents;
+        }
+
+    }
 }

@@ -7,16 +7,6 @@
  */
 package spoon.support.sniper;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.tuple.Pair;
 import spoon.OutputType;
 import spoon.SpoonException;
@@ -38,6 +28,7 @@ import spoon.support.modelobs.ChangeCollector;
 import spoon.support.reflect.declaration.CtCompilationUnitImpl;
 import spoon.support.sniper.internal.ChangeResolver;
 import spoon.support.sniper.internal.CollectionSourceFragment;
+import spoon.support.sniper.internal.DefaultSourceFragmentPrinter;
 import spoon.support.sniper.internal.ElementPrinterEvent;
 import spoon.support.sniper.internal.ElementSourceFragment;
 import spoon.support.sniper.internal.IndentationDetector;
@@ -45,14 +36,23 @@ import spoon.support.sniper.internal.ModificationStatus;
 import spoon.support.sniper.internal.MutableTokenWriter;
 import spoon.support.sniper.internal.PrinterEvent;
 import spoon.support.sniper.internal.SourceFragment;
-import spoon.support.sniper.internal.SourceFragmentPrinter;
 import spoon.support.sniper.internal.SourceFragmentContextList;
 import spoon.support.sniper.internal.SourceFragmentContextNormal;
-import spoon.support.sniper.internal.DefaultSourceFragmentPrinter;
+import spoon.support.sniper.internal.SourceFragmentPrinter;
 import spoon.support.sniper.internal.TokenPrinterEvent;
 import spoon.support.sniper.internal.TokenType;
 import spoon.support.sniper.internal.TokenWriterProxy;
 import spoon.support.util.ModelList;
+
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * {@link PrettyPrinter} implementation, which copies as much as possible from the origin sources
@@ -357,13 +357,15 @@ public class SniperJavaPrettyPrinter extends DefaultJavaPrettyPrinter implements
 	 * can handle such special cases.
 	 * */
 	private String getSourceCodeForSniperPrinting(SourceFragment fragment) {
-		if (fragment instanceof ElementSourceFragment elementFragment) {
-			if (elementFragment.getRoleInParent() == CtRole.CAST) {
+		if (fragment instanceof ElementSourceFragment) {
+            ElementSourceFragment elementFragment = (ElementSourceFragment) fragment;
+            if (elementFragment.getRoleInParent() == CtRole.CAST) {
 				return elementFragment.getSourceCode(elementFragment.getStart() + 1, elementFragment.getEnd() - 1);
 			}
 			return elementFragment.getSourceCode();
-		} else if (fragment instanceof CollectionSourceFragment collectionSourceFragment) {
-			StringBuilder sb = new StringBuilder();
+		} else if (fragment instanceof CollectionSourceFragment) {
+            CollectionSourceFragment collectionSourceFragment = (CollectionSourceFragment) fragment;
+            StringBuilder sb = new StringBuilder();
 			for (SourceFragment childSourceFragment : collectionSourceFragment.getItems()) {
 				sb.append(getSourceCodeForSniperPrinting(childSourceFragment));
 			}

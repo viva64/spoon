@@ -352,8 +352,9 @@ public class JDTCommentBuilder {
 
 			@Override
 			public <T> void scanCtVariable(CtVariable<T> e) {
-				if (e instanceof CtLocalVariable<T> lv && lv.getDefaultExpression() != null) {
-					CtExpression<T> defaultExpression = lv.getDefaultExpression();
+				if (e instanceof CtLocalVariable && ((CtLocalVariable<T>) e).getDefaultExpression() != null) {
+                    CtLocalVariable<T> lv = (CtLocalVariable<T>) e;
+                    CtExpression<T> defaultExpression = lv.getDefaultExpression();
 					int variableStart = e.getPosition().getSourceStart();
 					int commentStart = comment.getPosition().getSourceStart();
 					int defaultExprStart = defaultExpression.getPosition().getSourceStart();

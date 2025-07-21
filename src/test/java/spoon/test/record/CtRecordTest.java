@@ -1,21 +1,5 @@
 package spoon.test.record;
 
-import static java.lang.System.lineSeparator;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static spoon.testing.assertions.SpoonAssertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.validation.constraints.NotNull;
-
 import org.assertj.core.api.InstanceOfAssertFactory;
 import org.junit.jupiter.api.Test;
 import spoon.Launcher;
@@ -37,6 +21,22 @@ import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.testing.assertions.SpoonAssertions;
 import spoon.testing.utils.ModelTest;
+
+import javax.validation.constraints.NotNull;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.lang.System.lineSeparator;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static spoon.testing.assertions.SpoonAssertions.assertThat;
 
 public class CtRecordTest {
 
@@ -319,11 +319,9 @@ public class CtRecordTest {
 	@Test
 	void testRecordWithStaticField() {
 		// contract: Static fields in records do not cause crashes
-		CtClass<?> parsed = Launcher.parseClass("""
-			public record User(int id, String name) {
-			  private static String ADMIN_NAME = "admin";
-			}
-			""");
+		CtClass<?> parsed = Launcher.parseClass("public record User(int id, String name) {\n" +
+                                                "  private static String ADMIN_NAME = \"admin\";\n" +
+                                                "}\n");
 		assertThat(parsed).isInstanceOf(CtRecord.class);
 		assertThat(parsed).getFields().hasSize(3);
 		assertThat(parsed.getFields()).anySatisfy(it -> assertThat(it.getSimpleName()).isEqualTo("id"));

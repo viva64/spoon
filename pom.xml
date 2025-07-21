@@ -23,6 +23,7 @@
     </repositories>
 
   <properties>
+    <maven.compiler.release>11</maven.compiler.release>
     <sonar.coverage.exclusions>
         **/support/gui/*
     </sonar.coverage.exclusions>
@@ -32,13 +33,13 @@
   <dependencies>
       <dependency>
           <groupId>org.eclipse.jdt</groupId>
-          <artifactId>org.eclipse.jdt.core.compiler.batch</artifactId>
-          <version>3.37.0-PVS-STUDIO</version>
+          <artifactId>ecj</artifactId>
+          <version>3.41.0-PVS-STUDIO</version>
       </dependency>
     <dependency>
       <groupId>org.eclipse.jdt</groupId>
       <artifactId>org.eclipse.jdt.core</artifactId>
-      <version>3.41.0</version>
+      <version>3.41.0-PVS-STUDIO</version>
       <exclusions>
         <exclusion>
           <groupId>org.eclipse.platform</groupId>
@@ -176,27 +177,6 @@
   </dependencies>
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.5.0</version>
-        <executions>
-          <execution>
-            <id>enforce-no-snapshots</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireReleaseDeps>
-                  <message>No Snapshots Allowed!</message>
-                </requireReleaseDeps>
-              </rules>
-              <fail>true</fail>
-            </configuration>
-          </execution>
-        </executions>
-        </plugin>
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-assembly-plugin</artifactId>
@@ -226,29 +206,6 @@
             </executions>
         </plugin>
 
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.6.0</version>
-        <configuration>
-          <failsOnError>true</failsOnError>
-          <consoleOutput>true</consoleOutput>
-          <!-- we exclude the generated files, see CtGenerationTest -->
-          <excludes>spoon/support/visitor/clone/CloneBuilder.java</excludes>
-          <excludes>spoon/support/visitor/clone/CloneVisitor.java</excludes>
-          <excludes>spoon/reflect/visitor/CtBiScannerDefault.java</excludes>
-          <excludes>spoon/support/visitor/equals/EqualsVisitor.java</excludes>
-          <excludes>spoon/support/visitor/replace/ReplacementVisitor.java</excludes>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>checkstyle</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -286,6 +243,14 @@
               <formatJavadoc>true</formatJavadoc>
             </palantirJavaFormat>
           </java>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>15</source>
+          <target>15</target>
         </configuration>
       </plugin>
     </plugins>

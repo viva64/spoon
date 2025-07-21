@@ -12,7 +12,7 @@ public class ModelConsistencyCheckerTestHelper {
 			var invalidElements = ModelConsistencyChecker.listInconsistencies(ctModule);
 
 			if (!invalidElements.isEmpty()) {
-				throw new AssertionError("Model is inconsistent, %d elements have invalid parents:%n%s".formatted(
+				throw new AssertionError(String.format("Model is inconsistent, %d elements have invalid parents:%n%s",
 					invalidElements.size(),
 					invalidElements.stream()
 						.map(ModelConsistencyChecker.InconsistentElements::toString)
