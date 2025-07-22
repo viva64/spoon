@@ -17,13 +17,7 @@
 package spoon.test.position;
 
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.Test;
-
 import spoon.Launcher;
 import spoon.SpoonModelBuilder;
 import spoon.compiler.SpoonResourceHelper;
@@ -53,6 +47,11 @@ import spoon.test.position.testclasses.FooSourceFragments;
 import spoon.test.position.testclasses.NewArrayList;
 import spoon.test.prettyprinter.testclasses.OneLineMultipleVariableDeclaration;
 import spoon.testing.utils.ModelUtils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;

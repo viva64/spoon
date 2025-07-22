@@ -8,6 +8,7 @@
 package spoon.support.compiler.jdt;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
+import org.eclipse.jdt.internal.compiler.Compiler;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.AllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
@@ -38,7 +39,6 @@ import org.eclipse.jdt.internal.compiler.lookup.CaptureBinding;
 import org.eclipse.jdt.internal.compiler.lookup.CatchParameterBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ClassScope;
 import org.eclipse.jdt.internal.compiler.lookup.FieldBinding;
-import org.eclipse.jdt.internal.compiler.lookup.InferenceVariable;
 import org.eclipse.jdt.internal.compiler.lookup.IntersectionTypeBinding18;
 import org.eclipse.jdt.internal.compiler.lookup.LocalTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.LocalVariableBinding;
@@ -59,6 +59,7 @@ import org.eclipse.jdt.internal.compiler.lookup.RawTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ReferenceBinding;
 import org.eclipse.jdt.internal.compiler.lookup.Scope;
 import org.eclipse.jdt.internal.compiler.lookup.SourceTypeBinding;
+import org.eclipse.jdt.internal.compiler.lookup.SyntheticFactoryMethodBinding;
 import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.TypeVariableBinding;
 import org.eclipse.jdt.internal.compiler.lookup.UnresolvedReferenceBinding;
@@ -66,7 +67,6 @@ import org.eclipse.jdt.internal.compiler.lookup.VariableBinding;
 import org.eclipse.jdt.internal.compiler.lookup.VoidTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.WildcardBinding;
 import org.jspecify.annotations.Nullable;
-import spoon.JLSViolation;
 import spoon.NoClasspathWorkaround;
 import spoon.reflect.code.CtLambda;
 import spoon.reflect.declaration.CtModule;
@@ -98,6 +98,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -285,7 +286,7 @@ public class ReferenceBuilder {
 		if (enclosingType != null && Collections.disjoint(PUBLIC_PROTECTED, JDTTreeBuilderQuery.getModifiers(enclosingType.modifiers, false, ModifierTarget.NONE))) {
 			String access = "";
 			int i = 0;
-			final CompilationUnitDeclaration[] units = ((TreeBuilderCompiler) this.jdtTreeBuilder.getContextBuilder().compilationunitdeclaration.scope.environment.typeRequestor).unitsToProcess;
+			final CompilationUnitDeclaration[] units = ((Compiler) this.jdtTreeBuilder.getContextBuilder().compilationunitdeclaration.scope.environment.typeRequestor).unitsToProcess;
 			for (; i < tokens.length; i++) {
 				final char[][] qualified = Arrays.copyOfRange(tokens, 0, i + 1);
 				if (searchPackage(qualified, units) == null) {
@@ -424,7 +425,11 @@ public class ReferenceBuilder {
 		if (sourceStart >= 0 && sourceEnd >= 0) {
 			ref.setPosition(jdtTreeBuilder.getPositionBuilder().buildPosition(sourceStart, sourceEnd));
 		}
-		if (exec.isConstructor()) {
+		// JDT creates synthetic <factory> methods for inference of diamond constructors (We guess they had that
+		// lying around). If the type can not be completely resolved, e.g. due to no classpath, this factory is
+		// not replaced and appears in the AST. We need to fix its name so e.g. `CtExecutableReference#isConstructor`
+		// works.
+		if (exec.isConstructor() || exec.original() instanceof SyntheticFactoryMethodBinding) {
 			ref.setSimpleName(CtExecutableReference.CONSTRUCTOR_NAME);
 
 			// in case of constructor of an array, it's the return type that we want
@@ -526,7 +531,10 @@ public class ReferenceBuilder {
 	private boolean isIncorrectlyBoundExecutableInNoClasspath(CtExecutableReference<?> ref,
 			AllocationExpression allocationExpression) {
 		boolean noClasspath = ref.getFactory().getEnvironment().getNoClasspath();
-		return noClasspath && ref.getType().equals(ref.getFactory().Type().objectType())
+		// In no-classpath mode, ref.getType() can sometimes be null, especially with complex
+		// initializers like enums using lambdas (observed NPE). Add a null check to prevent crash.
+		// See https://github.com/INRIA/spoon/issues/5579
+		return noClasspath && ref.getType() != null && ref.getType().equals(ref.getFactory().Type().objectType())
 				&& allocationExpression.resolvedType != null;
 	}
 
@@ -785,7 +793,7 @@ public class ReferenceBuilder {
 			}
 			if (m.find()) {
 				main.setSimpleName(m.group(1));
-				final String[] split = m.group(2).split(",");
+				final String[] split = getStringTypeParameters(m.group(2)).toArray(new String[0]);
 				for (String parameter : split) {
 					main.addActualTypeArgument(getTypeParameterReference(parameter.trim()));
 				}
@@ -805,6 +813,59 @@ public class ReferenceBuilder {
 			return (CtTypeReference) this.jdtTreeBuilder.getFactory().Core().createWildcardReference();
 		}
 		return main;
+	}
+
+
+	/**
+	 * Helper method which accepts a WELL-FORMATTED type-parameter string (ie, the type parameters of a generic type
+	 * separated by commas) and returns the individual parameters in an ordered list. DOES NOT do recursion on
+	 * nested generics.
+	 * Eg: "Integer, Double" would give List.of("Integer", "Double")
+	 * Eg: "Integer, Nested<Double, String>" would give List.of("Integer", "Nested<Double, String>")
+	 * See comments in code for why "WELL-FORMATTED" is important.
+	 * */
+	private List<String> getStringTypeParameters(String typeParamString) {
+		if (!typeParamString.contains("<")) {
+			// There are no nested generic types present in the parameter string
+			return List.of(typeParamString.split(","));
+		}
+
+		List<String> typeParams = new ArrayList<>();
+		// Since there are nested generic types present, we cannot split my "," -- since
+		// nested generics can also have multiple parameters (which would also be separated
+		// by ","). So, iterate character by character, splitting on either the ",", or when the
+		// right set of "<" and ">" have been accumulated.
+
+		int bracketsEncountered = 0;
+		StringBuilder paramAccumulator = new StringBuilder();
+		for (int idx = 0; idx < typeParamString.length(); idx++) {
+			char currChar = typeParamString.charAt(idx);
+
+			if (currChar == ',' && bracketsEncountered == 0) {
+				// We have reached the end of a type-parameter, and there are no longer
+				// any lingering "<" to close. Thia assumes that the "typeParamString" is
+				// correctly formed (ie, it does not start as ",Integer,Foo<...>..." etc)
+				typeParams.add(paramAccumulator.toString());
+				paramAccumulator.setLength(0);
+			} else if (currChar == '<') {
+				bracketsEncountered += 1;
+				paramAccumulator.append('<');
+			} else if (currChar == '>') {
+				bracketsEncountered -= 1;
+				paramAccumulator.append('>');
+			} else {
+				paramAccumulator.append(currChar);
+			}
+		}
+
+		// The last type-parameter would not have been appended
+		// since it isn't suffixed by a ",". So append that as well.
+		// We again assume that the provided typeParamString is correctly
+		// formed (eg: it does not end in a form like "...String,")
+		typeParams.add(paramAccumulator.toString());
+
+
+		return typeParams;
 	}
 
 	/**
@@ -1025,25 +1086,15 @@ public class ReferenceBuilder {
 			return getTypeReferenceOfBoundingType(binding).clone();
 		} else {
 			CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeParameterReference();
+			String name = new String(binding.sourceName());
+			if (binding.declaringElement instanceof SyntheticFactoryMethodBinding) {
+				// JDT uses these factory methods for type inference of diamond constructors. In no classpath mode they
+				// might be left around. They append a variable number of primes (') to the original name, which is not
+				// valid in Java. We undo this here and hope for the best.
+				name = name.replace("'", "");
+			}
 
-            try {
-                ref.setSimpleName(new String(binding.sourceName()));
-            } catch (JLSViolation e) {
-                // После вот этой доработки в eclipse.jdt.core https://github.com/eclipse-jdt/eclipse.jdt.core/commit/6b283a369a1704a5c1c6e9d242ee3f66dadf927d
-                // Для WildCard параметра типа, может вернуться тип наподобие "E'", то есть добавляется одиночная кавычка в идентифиатор.
-                // Spoon такой ситуации не ожидают, поэтому обрезаем все одиночные кавычки вконце в случае исключения JLSViolation
-                // Обнаружена эта ситуация ("E'" как тип WildCard параметра) была при вызове наподобие classInstance.setList(new ArrayList(otherGenericCollection)), когда метод setList не существует в исходном коде, его генерирует фреймворк Lombok.
-                String sourceName = new String(binding.sourceName());
-                if (!(binding instanceof InferenceVariable)) {
-                    while (sourceName.endsWith("'")) {
-                        sourceName = sourceName.substring(0, sourceName.length() - 1);
-                    }
-                    ref.setSimpleName(sourceName);
-                } else {
-                    throw e;
-                }
-            }
-
+			ref.setSimpleName(name);
 			return ref;
 		}
 	}
@@ -1195,7 +1246,11 @@ public class ReferenceBuilder {
 
 		CtTypeReference<?> ref = this.jdtTreeBuilder.getFactory().Core().createTypeReference();
 		ref.setSimpleName(stripPackageName(readableName));
-		final CtReference declaring = this.getDeclaringReferenceFromImports(binding.sourceName());
+		CtReference declaring = this.getDeclaringReferenceFromImports(binding.sourceName());
+		Optional<String> packageName = getPackageName(readableName);
+		if (declaring == null && packageName.isPresent()) {
+			declaring = this.jdtTreeBuilder.getFactory().Package().createReference(packageName.get());
+		}
 		setPackageOrDeclaringType(ref, declaring);
 
 		return ref;
@@ -1212,6 +1267,17 @@ public class ReferenceBuilder {
 			s = idx + 1;
 		}
 		return fullyQualifiedName.substring(s);
+	}
+
+	private static Optional<String> getPackageName(String fullyQualifiedName) {
+		if (!fullyQualifiedName.contains(".")) {
+			return Optional.empty();
+		}
+		String className = stripPackageName(fullyQualifiedName);
+		if (fullyQualifiedName.equals(className)) {
+			return Optional.empty();
+		}
+		return Optional.of(fullyQualifiedName.substring(0, fullyQualifiedName.length() - className.length()));
 	}
 
 	private CtTypeReference<?> getTypeReferenceFromIntersectionTypeBinding(IntersectionTypeBinding18 binding) {

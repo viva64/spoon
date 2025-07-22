@@ -377,10 +377,30 @@ public class ControlFlowArithmetic {
 		return b;
 	}
 
+	public int multipleCaseExpressions(int a) {
+		int b = 0;
+		switch (a) {
+			case 1, 2:
+				b = 1;
+				break;
+			default:
+				break;
+		}
+		return b;
+	}
+
+	public void constructorCall() {
+		new Object();
+	}
+
 	//All lines will be tested in this method
 	public int simple(int a) {
 		a = a + a / 2;
 		return 10 * a;
+	}
+
+	public ControlFlowArithmetic() {
+		int a = 1;
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////
