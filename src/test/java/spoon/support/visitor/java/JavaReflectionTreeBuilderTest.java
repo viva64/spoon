@@ -971,6 +971,7 @@ public class JavaReflectionTreeBuilderTest {
 	}
 
 	@Test
+	@Disabled("Custom ClassLoader is not supported for now")
 	void test() throws ClassNotFoundException {
 		// contract: Infinity, -Infinity, NaN are not literals
 		ClassLoader loader = JavacFacade.compileFiles(

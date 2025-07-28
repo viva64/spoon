@@ -23,6 +23,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.commons.lang3.tuple.Pair;
 import spoon.Launcher;
 import spoon.reflect.code.BinaryOperatorKind;
 import spoon.reflect.code.CtBinaryOperator;
@@ -75,7 +76,7 @@ import spoon.support.visitor.java.reflect.RtParameter;
  */
 public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 	private final Deque<RuntimeBuilderContext> contexts;
-	private final Factory factory;
+	protected final Factory factory;
 
 	public JavaReflectionTreeBuilder(Factory factory) {
 		this.factory = factory;
@@ -349,29 +350,18 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		setModifier(ctField, field.getModifiers() & Modifier.fieldModifiers());
 
 		// we set the value of the shadow field if it is a public and static primitive value
-		try {
-			Set<ModifierKind> modifiers = RtHelper.getModifiers(field.getModifiers());
-			if (modifiers.contains(ModifierKind.STATIC)
-					&& modifiers.contains(ModifierKind.PUBLIC)
-					&& (field.getType().isPrimitive() || String.class.isAssignableFrom(field.getType()))) {
-				CtExpression<Object> defaultExpression = buildExpressionForValue(field.get(null));
+		Set<ModifierKind> modifiers = RtHelper.getModifiers(field.getModifiers());
+		if (modifiers.contains(ModifierKind.STATIC)
+				&& modifiers.contains(ModifierKind.PUBLIC)
+				&& (field.getType().isPrimitive() || String.class.isAssignableFrom(field.getType()))) {
+			var constantValue = getConstantValue(field);
+			if (constantValue.getLeft()) {
+				CtExpression<Object> defaultExpression = buildExpressionForValue(constantValue.getRight());
 				ctField.setDefaultExpression(defaultExpression);
+			} else {
+				ctField.setDefaultExpression(null);
 			}
-        } catch (NoClassDefFoundError e) {
-            // see all exceptions caught in JavaReflectionVisitorImpl
-            throw e;
-        } catch (SecurityException e) {
-            if (e.getClass().getName().equals("com.pvsstudio.security.PvsStudioSecurityException")) {
-                // ignore
-            } else {
-                throw e;
-            }
-        } catch (Throwable e) {
-            // Related to com.pvsstudio.security.PvsStudioSecurityException, which was caught in a static class initialization block (<clinit>) 
-            // and another exception type was thrown instead.
-            // Code in static class blocks may be executed when building a Spoon model.
-            Launcher.LOGGER.warn("An exception occurred while initializing primitive public fields of a shadow class: ", e);
-        }
+		}
 
 		enter(new VariableRuntimeBuilderContext(ctField));
 		super.visitField(field);
@@ -409,6 +399,35 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 
 	private CtBinaryOperator<Object> buildDivision(Object first, Object second) {
 		return factory.createBinaryOperator(factory.createLiteral(first), factory.createLiteral(second), BinaryOperatorKind.DIV);
+	}
+
+	/**
+	 *
+	 * The default implementation for getting the constant value of a field
+	 *  uses reflection and <b>causes class initialization</b> of the class containing the field
+	 * @param field of which to evaluate the constant value
+	 * @return Pair, the left value determines whether the field value was successfully retrieved
+	 *               the right value is the result, might be null (valid value)
+	 */
+	protected Pair<Boolean, Object> getConstantValue(Field field) {
+		try {
+			return Pair.of(true, field.get(null));
+		} catch (NoClassDefFoundError e) {
+			// see all exceptions caught in JavaReflectionVisitorImpl
+			throw e;
+		} catch (SecurityException e) {
+			if (e.getClass().getName().equals("com.pvsstudio.security.PvsStudioSecurityException")) {
+				// ignore
+			} else {
+				throw e;
+			}
+		} catch (Throwable e) {
+			// Related to com.pvsstudio.security.PvsStudioSecurityException, which was caught in a static class initialization block (<clinit>)
+			// and another exception type was thrown instead.
+			// Code in static class blocks may be executed when building a Spoon model.
+			Launcher.LOGGER.warn("An exception occurred while initializing primitive public fields of a shadow class: ", e);
+		}
+		return Pair.of(false, null);
 	}
 
 	@Override
