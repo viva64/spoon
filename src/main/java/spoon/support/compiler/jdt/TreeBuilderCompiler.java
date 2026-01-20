@@ -7,11 +7,6 @@
  */
 package spoon.support.compiler.jdt;
 
-import java.io.PrintWriter;
-import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.core.compiler.CompilationProgress;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
@@ -27,6 +22,11 @@ import org.eclipse.jdt.internal.compiler.util.Messages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.support.Level;
+
+import java.io.PrintWriter;
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 
 class TreeBuilderCompiler extends org.eclipse.jdt.internal.compiler.Compiler {
@@ -81,6 +81,8 @@ class TreeBuilderCompiler extends org.eclipse.jdt.internal.compiler.Compiler {
 		} else {
 			beginToCompile(sourceUnits);
 		}
+
+		processAnnotations();
 
 		CompilationUnitDeclaration unit;
 		int i = 0;

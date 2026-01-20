@@ -15,6 +15,7 @@ import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ICompilerRequestor;
 import org.eclipse.jdt.internal.compiler.IErrorHandlingPolicy;
 import org.eclipse.jdt.internal.compiler.IProblemFactory;
+import org.eclipse.jdt.internal.compiler.apt.dispatch.BatchAnnotationProcessorManager;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
@@ -44,6 +45,8 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 
 	protected final JDTBasedSpoonCompiler jdtCompiler;
 	protected CompilationUnit[] compilationUnits;
+
+	protected String[] args;
 
 	public JDTBatchCompiler(JDTBasedSpoonCompiler jdtCompiler) {
 		// by default we don't want anything from JDT
@@ -171,6 +174,11 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 		filesToBeIgnored.add(filePath);
 	}
 
+	@Override
+	public void configure(String[] argv) {
+		super.configure(argv);
+		this.args = argv;
+	}
 
 	/** Calls JDT to retrieve the list of compilation unit declarations.
 	 * Depends on the actual implementation of {@link #getCompilationUnits()}
@@ -267,6 +275,7 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 				jdtCompiler.getEnvironment().getSpoonProgress().step(SpoonProgress.Process.COMPILE, currentElement, totalTask - remaining, totalTask);
 			}
 		});
+		batchCompiler = treeBuilderCompiler;
 		if (jdtCompiler.getEnvironment().getNoClasspath()) {
 			treeBuilderCompiler.lookupEnvironment.problemReporter = new ProblemReporter(errorHandlingPolicy, compilerOptions, problemFactory) {
 				@Override
@@ -278,6 +287,10 @@ public class JDTBatchCompiler extends org.eclipse.jdt.internal.compiler.batch.Ma
 			treeBuilderCompiler.lookupEnvironment.mayTolerateMissingType = true;
 		}
 			jdtCompiler.getEnvironment().getSpoonProgress().start(SpoonProgress.Process.COMPILE);
+
+		treeBuilderCompiler.annotationProcessorManager = new BatchAnnotationProcessorManager();
+		treeBuilderCompiler.annotationProcessorManager.configure(this, args);
+
 		// they have to be done all at once
 		final CompilationUnitDeclaration[] result = treeBuilderCompiler.buildUnits(getCompilationUnits());
 		jdtCompiler.getEnvironment().getSpoonProgress().end(SpoonProgress.Process.COMPILE);

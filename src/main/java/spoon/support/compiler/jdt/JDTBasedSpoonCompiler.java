@@ -22,7 +22,6 @@ import spoon.compiler.SpoonFolder;
 import spoon.compiler.SpoonResource;
 import spoon.compiler.SpoonResourceHelper;
 import spoon.compiler.builder.AdvancedOptions;
-import spoon.compiler.builder.AnnotationProcessingOptions;
 import spoon.compiler.builder.ClasspathOptions;
 import spoon.compiler.builder.ComplianceOptions;
 import spoon.compiler.builder.JDTBuilder;
@@ -154,13 +153,11 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		if (factory.getEnvironment().isPreviewFeaturesEnabled()) {
 			complianceOptions.enablePreview();
 		}
-		AnnotationProcessingOptions annotationProcessingOptions = new AnnotationProcessingOptions().compileProcessors();
 		AdvancedOptions advancedOptions = new AdvancedOptions().preserveUnusedVars().continueExecution().enableJavadoc();
 		SourceOptions sourceOptions = new SourceOptions().sources(this.sources.getAllJavaFiles());
 		final String[] args = new JDTBuilderImpl()
 				.classpathOptions(classpathOptions)
 				.complianceOptions(complianceOptions)
-				.annotationProcessingOptions(annotationProcessingOptions)
 				.advancedOptions(advancedOptions)
 				.sources(sourceOptions) // no sources, handled by the JDTBatchCompiler
 				.build();
@@ -418,8 +415,18 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		if (jdtBuilder == null) {
 			ClasspathOptions<?> classpathOptions = new ClasspathOptions<>()
 							.encoding(this.getEnvironment().getEncoding().displayName())
-							.classpath(classpath)
-							.modulePath(modulePath);
+							.classpath(classpath);
+
+			if (classpath.length != 0) {
+				if (!modulePath.isEmpty()) {
+					throw new IllegalStateException("modulepath must be empty with non-empty classpath");
+				}
+
+				classpathOptions.classpath(classpath);
+			} else if (!modulePath.isEmpty()) {
+				classpathOptions.modulePath(modulePath);
+			}
+
 			ComplianceOptions complianceOptions = new ComplianceOptions().compliance(javaCompliance);
 			if (factory.getEnvironment().isPreviewFeaturesEnabled()) {
 				complianceOptions.enablePreview();
