@@ -22,6 +22,7 @@ import spoon.compiler.SpoonFolder;
 import spoon.compiler.SpoonResource;
 import spoon.compiler.SpoonResourceHelper;
 import spoon.compiler.builder.AdvancedOptions;
+import spoon.compiler.builder.AnnotationProcessingOptions;
 import spoon.compiler.builder.ClasspathOptions;
 import spoon.compiler.builder.ComplianceOptions;
 import spoon.compiler.builder.JDTBuilder;
@@ -153,11 +154,13 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		if (factory.getEnvironment().isPreviewFeaturesEnabled()) {
 			complianceOptions.enablePreview();
 		}
+		AnnotationProcessingOptions annotationOptions = new AnnotationProcessingOptions().generatedFilesOutput(getEnvironment().getSourceOutputDirectory());
 		AdvancedOptions advancedOptions = new AdvancedOptions().preserveUnusedVars().continueExecution().enableJavadoc();
 		SourceOptions sourceOptions = new SourceOptions().sources(this.sources.getAllJavaFiles());
 		final String[] args = new JDTBuilderImpl()
 				.classpathOptions(classpathOptions)
 				.complianceOptions(complianceOptions)
+				.annotationProcessingOptions(annotationOptions)
 				.advancedOptions(advancedOptions)
 				.sources(sourceOptions) // no sources, handled by the JDTBatchCompiler
 				.build();
@@ -426,6 +429,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 				classpathOptions.modulePath(modulePath);
 			}
 
+			AnnotationProcessingOptions annotationOptions = new AnnotationProcessingOptions().generatedFilesOutput(getEnvironment().getSourceOutputDirectory());
 			ComplianceOptions complianceOptions = new ComplianceOptions().compliance(javaCompliance);
 			if (factory.getEnvironment().isPreviewFeaturesEnabled()) {
 				complianceOptions.enablePreview();
@@ -435,6 +439,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 			args = new JDTBuilderImpl()
 					.classpathOptions(classpathOptions)
 					.complianceOptions(complianceOptions)
+					.annotationProcessingOptions(annotationOptions)
 					.advancedOptions(advancedOptions)
 					.sources(sourceOptions) // no sources, handled by the JDTBatchCompiler
 					.build();
