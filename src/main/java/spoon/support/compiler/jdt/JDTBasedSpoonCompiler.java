@@ -414,8 +414,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 		String[] args;
 		if (jdtBuilder == null) {
 			ClasspathOptions<?> classpathOptions = new ClasspathOptions<>()
-							.encoding(this.getEnvironment().getEncoding().displayName())
-							.classpath(classpath);
+							.encoding(this.getEnvironment().getEncoding().displayName());
 
 			if (classpath != null && classpath.length != 0) {
 				if (!modulePath.isEmpty()) {
