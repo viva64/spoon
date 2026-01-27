@@ -82,7 +82,11 @@ class TreeBuilderCompiler extends org.eclipse.jdt.internal.compiler.Compiler {
 			beginToCompile(sourceUnits);
 		}
 
-		processAnnotations();
+		try {
+			processAnnotations();
+		} catch (Throwable thr) {
+			LOGGER.warn("An error occurred while running annotation processors", thr);
+		}
 
 		CompilationUnitDeclaration unit;
 		int i = 0;
