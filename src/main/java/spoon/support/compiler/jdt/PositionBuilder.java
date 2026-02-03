@@ -69,6 +69,10 @@ public class PositionBuilder {
 	}
 
 	SourcePosition buildPosition(int sourceStart, int sourceEnd) {
+		if (sourceStart < 0 || sourceEnd < 0 || sourceStart > sourceEnd) {
+			return SourcePosition.NOPOSITION;
+		}
+
 		CompilationUnit cu = this.jdtTreeBuilder.getContextBuilder().compilationUnitSpoon;
 		final int[] lineSeparatorPositions = this.jdtTreeBuilder.getContextBuilder().getCompilationUnitLineSeparatorPositions();
 		return this.jdtTreeBuilder.getFactory().Core().createSourcePosition(cu, sourceStart, sourceEnd, lineSeparatorPositions);
@@ -503,7 +507,12 @@ public class PositionBuilder {
 		CtTry tryElement = catcher.getParent(CtTry.class);
 		//offset after last bracket before catch
 		int declarationStart = getEndOfLastTryBlock(tryElement, 1) + 1;
-		DeclarationSourcePosition paramPos = (DeclarationSourcePosition) catcher.getParameter().getPosition();
+		SourcePosition paramPosition = catcher.getParameter().getPosition();
+		if (!(paramPosition instanceof DeclarationSourcePosition)) {
+			return SourcePosition.NOPOSITION;
+		}
+		DeclarationSourcePosition paramPos = (DeclarationSourcePosition) paramPosition;
+
 		int bodyStart = catcher.getBody().getPosition().getSourceStart();
 		int bodyEnd = catcher.getBody().getPosition().getSourceEnd();
 		return catcher.getFactory().Core().createBodyHolderSourcePosition(
@@ -520,14 +529,25 @@ public class PositionBuilder {
 	SourcePosition buildPosition(CtCase<?> child) {
 		List<CtStatement> statements = child.getStatements();
 		SourcePosition oldPosition = child.getPosition();
+
+		if (oldPosition == null || !oldPosition.isValidPosition()) {
+			return SourcePosition.NOPOSITION;
+		}
+
 		if (statements.isEmpty()) {
 			//There are no statements. Keep origin position
 			return oldPosition;
 		}
 		int[] lineSeparatorPositions = this.jdtTreeBuilder.getContextBuilder().getCompilationUnitLineSeparatorPositions();
 
-		int bodyStart = child.getPosition().getSourceEnd() + 1;
-		int bodyEnd = statements.get(statements.size() - 1).getPosition().getSourceEnd();
+		SourcePosition lastStmtPos = statements.get(statements.size() - 1).getPosition();
+		if (lastStmtPos == null || !lastStmtPos.isValidPosition()) {
+			return SourcePosition.NOPOSITION;
+		}
+
+		int bodyStart = oldPosition.getSourceEnd() + 1;
+		int bodyEnd = lastStmtPos.getSourceEnd();
+
 		return child.getFactory().Core().createBodyHolderSourcePosition(
 				oldPosition.getCompilationUnit(),
 				oldPosition.getSourceStart(), oldPosition.getSourceEnd(),
