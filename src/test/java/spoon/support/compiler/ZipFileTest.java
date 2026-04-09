@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class ZipFileTest {
 
-	// Не понятно почему только этот тест в Spoon 10.3.0 не проходит на linux-build
 	@Disabled
 	@Test
 	void fetchingSourceFragmentWorks(@TempDir Path tempDir) throws IOException {

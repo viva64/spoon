@@ -1,19 +1,20 @@
 package spoon.support.compiler;
 
-import static org.junit.jupiter.api.Assertions.*;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.regex.Pattern;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import spoon.MavenLauncher;
 import spoon.support.StandardEnvironment;
 
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class SpoonPomTest {
 
-	// Почему-то не проходит этот тест из-за класса Xpp3Dom
 	@Disabled
 	@Test
 	public void getSourceVersion() throws IOException, XmlPullParserException {

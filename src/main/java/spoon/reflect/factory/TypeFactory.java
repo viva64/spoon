@@ -704,12 +704,6 @@ public class TypeFactory extends SubFactory {
                 newShadowClass.setSimpleName(cl.getSimpleName());
                 getShadowFactory().Package().getOrCreate(cl.getPackage().getName()).addType(newShadowClass);
             } catch (NoClassDefFoundError noClassDefFoundError) {
-                // В Selftester для Java в проекте Hibernate при анализе с использованием ранее созданной модели проекта
-                // при попытке загрузить некоторые тестовые классы
-                // (hibernate/hibernate-envers/src/test/java/org/hibernate/envers/test/integration/manytomany/IndexColumnListTest,
-                // hibernate/hibernate-envers/src/test/java/org/hibernate/envers/test/integration/manytomany/OrderColumnListTest),
-                // происходит исключение непонятно с чем связанное при загрузке базового абстрактного класса org.hibernate.envers.test.BaseEnversJPAFunctionalTestCase,
-                // которое на самом деле связано с тем, что в try блоке org.hibernate.envers.test.BaseEnversJPAFunctionalTestCase не смог загрузить Spoon
                 strangeSituation = true;
                 Launcher.LOGGER.warn("Spoon Strange Situation for class: {}", cl.getName(), noClassDefFoundError);
             }

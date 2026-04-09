@@ -140,7 +140,6 @@ public class MavenLauncherTest {
 		assertEquals(0, launcher.getEnvironment().getSourceClasspath().length);
 	}
 
-	// Почему-то не проходит этот тест из-за класса Xpp3Dom
 	@Disabled
 	@Test
 	public void multiModulesProjectTest() throws IOException {

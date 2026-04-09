@@ -324,8 +324,8 @@ public class TestCompilationUnit {
 				.findFirst()
 				.get();
 
-		assertEquals("\"Привет мир\"", utf8Type.getField("s1").getAssignment().toString());
-		assertEquals("\"Привет мир\"", cp1251Type.getField("s1").getAssignment().toString());
+		assertEquals("\"Hello world\"", utf8Type.getField("s1").getAssignment().toString());
+		assertEquals("\"Hello world\"", cp1251Type.getField("s1").getAssignment().toString());
 		assertEquals(utf8Type.getField("s1"), cp1251Type.getField("s1"));
 		assertNotEquals(utf8Type.getField("s2"), cp1251Type.getField("s2"));
 	}

@@ -1,4 +1,4 @@
 public class Utf8 {
-    String s1 = "Привет мир";
-    String s2 = "ГДЕ"
+    String s1 = "Hello world";
+    String s2 = "WHERE"
 }
