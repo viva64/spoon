@@ -50,6 +50,9 @@ public class CommentHelper {
 		case INLINE:
 			printer.write(DefaultJavaPrettyPrinter.INLINE_COMMENT_START);
 			break;
+		case MARKDOWN:
+			// no block prefix; each line gets "/// " from the content handler
+			break;
 		case BLOCK:
 			String commentStart = DefaultJavaPrettyPrinter.BLOCK_COMMENT_START;
 			if (printer.prefixBlockComments) {
@@ -66,6 +69,19 @@ public class CommentHelper {
 			case INLINE:
 				printer.write(content);
 				break;
+			case MARKDOWN: {
+				// Each line of a markdown comment gets a "/// " prefix.
+				// Lines are separated by writeln() so the output is one "///" line per logical line.
+				// Empty lines use "///" without a trailing space to stay idiomatic.
+				String[] mdLines = content.lines().toArray(String[]::new);
+				for (int i = 0; i < mdLines.length; i++) {
+					if (i > 0) {
+						printer.writeln();
+					}
+					printer.write((DefaultJavaPrettyPrinter.MARKDOWN_COMMENT_START + mdLines[i]).stripTrailing());
+				}
+				break;
+			}
 			case FILE:
 			case BLOCK:
 				UnaryOperator<String> op;
@@ -91,6 +107,7 @@ public class CommentHelper {
 			case JAVADOC:
 				printer.write(DefaultJavaPrettyPrinter.BLOCK_COMMENT_END);
 				break;
+			// INLINE and MARKDOWN have no suffix
 		}
 	}
 

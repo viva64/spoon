@@ -18,6 +18,8 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 import spoon.JLSViolation;
 import spoon.reflect.annotations.MetamodelPropertyField;
 import spoon.reflect.declaration.CtAnnotation;
@@ -32,10 +34,13 @@ import spoon.reflect.declaration.CtRecord;
 import spoon.reflect.declaration.CtRecordComponent;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeMember;
+import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.visitor.CtVisitor;
+import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.DerivedProperty;
 import spoon.support.UnsettableProperty;
 import spoon.support.reflect.CtExtendedModifier;
@@ -68,7 +73,9 @@ public class CtRecordImpl extends CtClassImpl<Object> implements CtRecord {
 		components.add(component);
 
 		if (getField(component.getSimpleName()) == null) {
-			addField(component.toField());
+			// Implicit fields are inserted at index 0
+			// Preserve the same ordering as the one of record components
+			addField(components.size(), component.toField());
 		}
 		if (!hasMethodWithSameNameAndNoParameter(component)) {
 			addMethod(component.toMethod());
@@ -88,6 +95,67 @@ public class CtRecordImpl extends CtClassImpl<Object> implements CtRecord {
 			typeMembers.remove(component.toMethod());
 		}
 		return this;
+	}
+
+	@Override
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public CtRecord createCanonicalConstructorIfMissing() {
+		CtTypeReference<?>[] typeReferences =
+			getRecordComponents().stream()
+				.map(CtTypedElement::getType)
+				.toList().toArray(new CtTypeReference[0]);
+
+		// Nothing to do if the canonical constructor is already defined:
+		CtConstructor<?> constructor = getConstructor(typeReferences);
+		if (constructor != null) {
+			return this;
+		}
+
+		CtConstructor<?> canonical = getFactory().createConstructor();
+		canonical.setImplicit(true);
+		canonical.setBody(getFactory().createBlock());
+
+		// Set the same visibility as the one of the record
+		for (var modifier : List.of(ModifierKind.PUBLIC, ModifierKind.PROTECTED, ModifierKind.PRIVATE)) {
+			if (this.hasModifier(modifier)) {
+				canonical.setExtendedModifiers(Set.of(CtExtendedModifier.implicit(modifier)));
+				break;
+			}
+		}
+
+		// For the constructor we have:
+		// Constructor(Type1 field1, Type2 field2, ...) {
+		//     this.field1 = field1;
+		//     this.field2 = field2;
+		//     ...
+		// }
+		//
+		// For this we have to generate for each field a parameter, and an assignment to that field.
+		for (CtField<?> field : getFields()) {
+			if (!field.isImplicit()) {
+				continue;
+			}
+
+			// The factory method will automatically add the new parameter to canonical
+			var parameter = getFactory().Executable().createParameter(canonical, getClonedType(field.getType()), field.getSimpleName());
+
+			canonical.getBody().addStatement(getFactory().Code().createVariableAssignment(
+				(CtVariableReference) getFactory().Field().createReference(field),
+				false,
+				getFactory().Code().createVariableRead(parameter.getReference(), false)
+			));
+		}
+
+		// The entire constructor does not exist in the source, therefore all children are marked as implicit:
+		canonical.filterChildren(new TypeFilter<>(CtElement.class)).forEach((CtElement ctElement) -> ctElement.setImplicit(true));
+
+		addTypeMember(canonical);
+
+		return this;
+	}
+
+	private @Nullable CtTypeReference<?> getClonedType(CtTypeReference<?> type) {
+		return type != null ? type.clone() : null;
 	}
 
 	@Override

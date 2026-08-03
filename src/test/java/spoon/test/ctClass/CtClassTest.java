@@ -16,8 +16,10 @@
  */
 package spoon.test.ctClass;
 
+import static spoon.testing.assertions.SpoonAssertions.assertThat;
 
 import java.io.File;
+import java.util.List;
 import java.util.Set;
 
 import java.util.concurrent.TimeUnit;
@@ -28,11 +30,15 @@ import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
+import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtFieldAccess;
+import spoon.reflect.code.CtIf;
+import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtNewClass;
 import spoon.reflect.code.CtStatement;
@@ -43,6 +49,7 @@ import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtConstructor;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtField;
+import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
@@ -55,6 +62,9 @@ import spoon.test.SpoonTestHelpers;
 import spoon.test.ctClass.testclasses.AnonymousClass;
 import spoon.test.ctClass.testclasses.Foo;
 import spoon.test.ctClass.testclasses.Pozole;
+import spoon.testing.utils.BySimpleName;
+import spoon.testing.utils.LineSeparatorExtension;
+import spoon.testing.utils.ModelTest;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -422,5 +432,96 @@ public class CtClassTest {
 		MatcherAssert.assertThat(clazz.getFields().size(), CoreMatchers.is(1));
 		MatcherAssert.assertThat(clazz.getMethods().size(), CoreMatchers.is(1));
 		MatcherAssert.assertThat(clazz.getExtendedModifiers(), contentEquals());
+	}
+
+	@ExtendWith(LineSeparatorExtension.class)
+	@ModelTest(value = {"src/test/resources/ctClass/Main.java"}, complianceLevel = 25)
+	public void testCompactSourceFilesAndInstanceMainMethods(@BySimpleName("Main") CtClass<?> cl) {
+		// contract: Java 25 supports compact source files and instance main methods
+		assertThat(cl).getSimpleName().isEqualTo("Main");
+		assertThat(cl).getMethods().hasSize(3);
+		assertThat(cl).getFields().hasSize(2);
+		CtMethod<?> main = cl.getMethod("main");
+		assertThat(main).getBody().getStatements().hasSize(1);
+		CtStatement statement = main.getBody().getStatements().get(0);
+		assertThat(statement).isInstanceOf(CtInvocation.class);
+
+		org.assertj.core.api.Assertions.assertThat(cl.toString()).isEqualTo(
+				"""
+				static java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder().version(java.net.http.HttpClient.Version.HTTP_1_1).build();
+
+				void jdbc() throws java.sql.SQLException {
+				    try (java.sql.Connection connection = java.sql.DriverManager.getConnection("jdbc:mysql://localhost:3306/myDb", "user1", "pass")) {
+				    }
+				}
+
+				static class Person {
+				    private java.lang.String name;
+
+				    public Person(java.lang.String name) {
+				        this.name = name;
+				    }
+				}
+
+				void main() {
+				    IO.println(greeting());
+				}
+
+				java.lang.String greeting() {
+				    return message;
+				}
+
+				final java.lang.String message = "Hello, World!";
+				""");
+	}
+
+	@ModelTest(value = "src/test/resources/ctClass/DollarSignInInnerClassName.java")
+	@ExtendWith(LineSeparatorExtension.class)
+	void testDollarSignInInnerClassName(@BySimpleName("DollarSignInInnerClassName") CtClass<?> cl) {
+		// contract: the $ sign in an inner class name is supported
+		assertThat(cl).getMethods().hasSize(1);
+		CtMethod<?> m = cl.getMethod("m");
+		assertThat(m).getBody().getStatements().hasSize(2);
+		CtStatement stat0 = m.getBody().getStatements().get(0);
+		CtStatement stat1 = m.getBody().getStatements().get(1);
+		assertThat(stat0).isInstanceOf(CtClass.class);
+		assertThat(stat1).isInstanceOf(CtClass.class);
+		CtClass<?> b = (CtClass<?>) stat0;
+		CtClass<?> c = (CtClass<?>) stat1;
+		assertThat(b).getSimpleName().isEqualTo("1B$1");
+		assertThat(c).getSimpleName().isEqualTo("1C$42");
+		assertThat(c).getMethods().hasSize(1);
+		CtMethod<?> n = c.getMethod("n");
+		assertThat(n).getBody().getStatements().hasSize(1);
+		CtStatement stat2 = n.getBody().getStatements().get(0);
+		assertThat(stat2).isInstanceOf(CtClass.class);
+		CtClass<?> d = (CtClass<?>) stat2;
+		assertThat(d).getSimpleName().isEqualTo("1D$1");
+
+		org.assertj.core.api.Assertions.assertThat(cl.toString()).isEqualTo(
+			"""
+			class DollarSignInInnerClassName {
+			    void m() {
+			        class B$1 {}
+			        class C$42 {
+			            void n() {
+			                class D$1 {}
+			            }
+			        }
+			    }
+			}"""
+		);
+	}
+
+	@ModelTest(value = "src/test/resources/ctClass/ClassWith10InnerClasses.java")
+	void testClassWith10InnerClasses(@BySimpleName("ClassWith10InnerClasses")  CtClass<?> cl) {
+		// contract: inner class names in classes with 10 or more inner classes are supported
+		assertThat(cl).getMethods().hasSize(10);
+		CtMethod<?> m10 = cl.getMethod("m10");
+		assertThat(m10).getBody().getStatements().hasSize(1);
+		CtStatement stat = m10.getBody().getStatements().get(0);
+		assertThat(stat).isInstanceOf(CtClass.class);
+		CtClass<?> b = (CtClass<?>) stat;
+		assertThat(b).getSimpleName().isEqualTo("10B");
 	}
 }

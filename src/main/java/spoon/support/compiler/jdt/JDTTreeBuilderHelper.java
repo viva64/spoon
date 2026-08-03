@@ -9,6 +9,7 @@ package spoon.support.compiler.jdt;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ast.AbstractMethodDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.AbstractVariableDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.ExportsStatement;
 import org.eclipse.jdt.internal.compiler.ast.FieldReference;
@@ -21,6 +22,7 @@ import org.eclipse.jdt.internal.compiler.ast.ProvidesStatement;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedNameReference;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.Receiver;
+import org.eclipse.jdt.internal.compiler.ast.RecordComponent;
 import org.eclipse.jdt.internal.compiler.ast.ReferenceExpression;
 import org.eclipse.jdt.internal.compiler.ast.RequiresStatement;
 import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
@@ -37,6 +39,7 @@ import org.eclipse.jdt.internal.compiler.lookup.ProblemBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ProblemReferenceBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ReferenceBinding;
 import org.eclipse.jdt.internal.compiler.lookup.Scope;
+import org.eclipse.jdt.internal.compiler.lookup.SourceTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.TagBits;
 import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.VariableBinding;
@@ -95,15 +98,22 @@ public class JDTTreeBuilderHelper {
 	}
 
 	/**
-	 * Computes the anonymous simple name from its fully qualified type name.
+	 * Computes the anonymous simple name of the specified type.
 	 *
-	 * @param anonymousQualifiedName
-	 * 		Qualified name which contains the anonymous name.
+	 * @param binding the binding for the type.
 	 * @return Anonymous simple name.
 	 */
-	static String computeAnonymousName(char[] anonymousQualifiedName) {
-		final String poolName = CharOperation.charToString(anonymousQualifiedName);
-		return poolName.substring(poolName.lastIndexOf(CtType.INNERTTYPE_SEPARATOR) + 1);
+	static String computeAnonymousName(SourceTypeBinding binding) {
+		/*
+		 * Case 1: Anonymous inner class such as
+		 * class A { void m() { new Runnable() { public void run() {} } } }
+		 *
+		 * Case 2: Non-anonymous inner class such as
+		 * class A { void m() { class B$1 {} } }
+		 */
+		char[] name = binding.constantPoolName();
+		int n = binding.enclosingType().constantPoolName().length + 1;
+		return new String(name, n, name.length - n);
 	}
 
 	/**
@@ -740,16 +750,24 @@ public class JDTTreeBuilderHelper {
 	 * 		Used to get the name of the parameter, the modifiers, know if it is a var args parameter.
 	 * @return a parameter.
 	 */
-	<T> CtParameter<T> createParameter(Argument argument) {
+	<T> CtParameter<T> createParameter(AbstractVariableDeclaration argument) {
 		CtParameter<T> p = jdtTreeBuilder.getFactory().Core().createParameter();
 		p.setSimpleName(CharOperation.charToString(argument.name));
 		p.setVarArgs(argument.isVarArgs());
 		p.setExtendedModifiers(getModifiers(argument.modifiers, false, ModifierTarget.PARAMETER));
-		if (argument.binding != null && argument.binding.type != null && argument.type == null) {
-			p.setType(jdtTreeBuilder.getReferencesBuilder().<T>getTypeReference(argument.binding.type));
+		VariableBinding binding;
+		if (argument instanceof Argument arg) {
+			binding = arg.binding;
+		} else if (argument instanceof RecordComponent rec) {
+			binding = rec.binding;
+		} else {
+			throw new IllegalArgumentException("unexpected argument type: " + argument.getClass());
+		}
+		if (binding != null && binding.type != null && argument.type == null) {
+			p.setType(jdtTreeBuilder.getReferencesBuilder().<T>getTypeReference(binding.type));
 			p.getType().setImplicit(argument.type == null);
-			if (p.getType() instanceof CtArrayTypeReference) {
-				((CtArrayTypeReference) p.getType()).getComponentType().setImplicit(argument.type == null);
+			if (p.getType() instanceof CtArrayTypeReference<?> type) {
+				type.getComponentType().setImplicit(argument.type == null);
 			}
 		}
 		return p;
@@ -853,9 +871,14 @@ public class JDTTreeBuilderHelper {
 		if ((type instanceof CtClass || type instanceof CtInterface)
 				&& typeDeclaration.binding != null
 				&& (typeDeclaration.binding.isAnonymousType() || typeDeclaration.binding instanceof LocalTypeBinding && typeDeclaration.binding.enclosingMethod() != null)) {
-			type.setSimpleName(computeAnonymousName(typeDeclaration.binding.constantPoolName()));
+			type.setSimpleName(computeAnonymousName(typeDeclaration.binding));
 		} else {
 			type.setSimpleName(new String(typeDeclaration.name));
+		}
+
+		// The generated class for a compact source file is implicit
+		if (typeDeclaration.isImplicitType()) {
+			type.setImplicit(true);
 		}
 
 		return type;

@@ -186,6 +186,11 @@ public class DefaultJavaPrettyPrinter implements CtVisitor, PrettyPrinter {
 	public static final String INLINE_COMMENT_START = "// ";
 
 	/**
+	 * The beginning of a markdown documentation comment line (Java 23+, JEP 467)
+	 */
+	public static final String MARKDOWN_COMMENT_START = "/// ";
+
+	/**
 	 * The beginning of a block comment
 	 */
 	public static final String BLOCK_COMMENT_START = "/* ";
@@ -710,20 +715,24 @@ public class DefaultJavaPrettyPrinter implements CtVisitor, PrettyPrinter {
 	@Override
 	public <T> void visitCtClass(CtClass<T> ctClass) {
 		context.pushCurrentThis(ctClass);
-		if (ctClass.getSimpleName() != null && !CtType.NAME_UNKNOWN.equals(ctClass.getSimpleName()) && !ctClass.isAnonymous()) {
-			visitCtType(ctClass);
-			printer.writeKeyword("class").writeSpace()
+		if (!ctClass.isImplicit()) {
+			if (ctClass.getSimpleName() != null && !CtType.NAME_UNKNOWN.equals(ctClass.getSimpleName()) && !ctClass.isAnonymous()) {
+				visitCtType(ctClass);
+				printer.writeKeyword("class").writeSpace()
 					.writeIdentifier(stripLeadingDigits(ctClass.getSimpleName()));
 
-			elementPrinterHelper.writeFormalTypeParameters(ctClass);
-			elementPrinterHelper.writeExtendsClause(ctClass);
-			elementPrinterHelper.writeImplementsClause(ctClass);
+				elementPrinterHelper.writeFormalTypeParameters(ctClass);
+				elementPrinterHelper.writeExtendsClause(ctClass);
+				elementPrinterHelper.writeImplementsClause(ctClass);
+			}
+			elementPrinterHelper.printPermits(ctClass);
+			printer.writeSpace().writeSeparator("{").incTab();
 		}
-		elementPrinterHelper.printPermits(ctClass);
-		printer.writeSpace().writeSeparator("{").incTab();
 		elementPrinterHelper.writeElementList(ctClass.getTypeMembers());
-		getPrinterHelper().adjustEndPosition(ctClass);
-		printer.decTab().writeSeparator("}");
+		if (!ctClass.isImplicit()) {
+			getPrinterHelper().adjustEndPosition(ctClass);
+			printer.decTab().writeSeparator("}");
+		}
 		context.popCurrentThis();
 	}
 
@@ -1109,6 +1118,13 @@ public class DefaultJavaPrettyPrinter implements CtVisitor, PrettyPrinter {
 						printer.writeSpace();
 					}
 					printer.writeCodeSnippet(ctUnresolvedImport.getUnresolvedReference());
+				}
+
+				@Override
+				public void visitModuleImport(CtModuleReference moduleReference) {
+					printer.writeKeyword("module");
+					printer.writeSpace();
+					printer.writeIdentifier(moduleReference.getSimpleName());
 				}
 			});
 			printer.writeSeparator(";");

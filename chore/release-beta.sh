@@ -12,8 +12,18 @@ if [[ ! $OLD_VERSION_WITH_SNAPSHOT =~ .*-SNAPSHOT ]]; then
 fi
 
 # Compute next beta number
+# Compute next beta number
 echo "::group::Computing next beta number"
-LAST_BETA_NUMBER="$(curl -L "http://search.maven.org/solrsearch/select?q=a:spoon-core+g:fr.inria.gforge.spoon&rows=40&wt=json&core=gav" | jq -r ".response.docs | map(.v) | map((match(\"$OLD_VERSION-beta-(.*)\") | .captures[0].string) // \"0\") | .[0]")"
+LAST_BETA_NUMBER="$(
+  curl --fail --silent \
+    'https://repo1.maven.org/maven2/fr/inria/gforge/spoon/spoon-core/maven-metadata.xml' |
+    env OLD_VERSION="$OLD_VERSION" yq -p=xml -r '
+      .metadata.versioning.versions.version
+      | map(select(test("^" + strenv(OLD_VERSION) + "-beta-[0-9]+$")))
+      | map(capture("(?P<beta>[0-9]+)$").beta | tonumber)
+      | max // 0
+    ' -
+)"
 echo "LAST_BETA_NUMBER $LAST_BETA_NUMBER"
 
 NEW_BETA_NUMBER=$((LAST_BETA_NUMBER + 1))
@@ -42,15 +52,6 @@ echo "::group::Running jreleaser"
 JRELEASER_PROJECT_VERSION="$NEXT_BETA_VERSION" jreleaser-cli release
 echo "::endgroup::"
 
-echo "::group::Reverting to old SNAPSHOT version"
-git revert --no-commit HEAD
-git commit -m "release: Reverting to SNAPSHOT version $OLD_VERSION_WITH_SNAPSHOT"
-git push origin "$BRANCH_NAME"
-echo "::endgroup::"
-
-echo "::group::Merging into master (fast-forward)"
-git checkout master
-git merge --ff-only "$BRANCH_NAME"
-git push origin master
+echo "::group::Delete branch"
 git push origin --delete "$BRANCH_NAME"
 echo "::endgroup::"

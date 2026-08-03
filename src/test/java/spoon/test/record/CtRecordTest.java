@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
+import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtFieldRead;
+import spoon.reflect.code.CtFieldWrite;
 import spoon.reflect.code.CtReturn;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.declaration.CtAnonymousExecutable;
@@ -17,10 +19,12 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtRecord;
 import spoon.reflect.declaration.CtRecordComponent;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.testing.assertions.SpoonAssertions;
+import spoon.testing.utils.BySimpleName;
 import spoon.testing.utils.ModelTest;
 
 import javax.validation.constraints.NotNull;
@@ -87,6 +91,16 @@ public class CtRecordTest {
 
 		assertEquals(1, records.size());
 		assertEquals("public record MultiParameter(int first, float second) {}", head(records).toString());
+
+		// Make them explicit so we can print them (but assert they were implicit initially)
+		assertThat(head(records)).getFields().allSatisfy(CtElement::isImplicit);
+		head(records).getFields().forEach(f -> f.accept(new CtScanner() {
+			@Override
+			protected void enter(CtElement e) {
+				e.setImplicit(false);
+			}
+		}));
+		head(records).getFields().forEach(f -> f.getExtendedModifiers().forEach(em -> em.setImplicit(false)));
 
 		// test fields
 		assertEquals(
@@ -267,11 +281,11 @@ public class CtRecordTest {
 
 		// Assert
 		assertFalse(sortedConstructors[0].isImplicit());
-		assertEquals(sortedConstructors[0].getParameters().get(0).getSimpleName(), "s");
+		assertEquals("s", sortedConstructors[0].getParameters().get(0).getSimpleName());
 		assertFalse(sortedConstructors[0].isCompactConstructor());
 
 		assertTrue(sortedConstructors[1].isImplicit());
-		assertEquals(sortedConstructors[1].getParameters().get(0).getSimpleName(), "i");
+		assertEquals("i", sortedConstructors[1].getParameters().get(0).getSimpleName());
 		assertFalse(sortedConstructors[1].isCompactConstructor());
 	}
 
@@ -292,7 +306,7 @@ public class CtRecordTest {
 		// Assert
 		assertFalse(constructor.isImplicit());
 		assertFalse(constructor.isCompactConstructor());
-		assertEquals(constructor.getParameters().get(0).getSimpleName(), "x");
+		assertEquals("x", constructor.getParameters().get(0).getSimpleName());
 	}
 
 	@ModelTest(value = "./src/test/resources/records/GenericRecord.java", complianceLevel = 16)
@@ -329,6 +343,52 @@ public class CtRecordTest {
 		assertThat(parsed.getFields()).anySatisfy(it -> assertThat(it.getSimpleName()).isEqualTo("id"));
 		assertThat(parsed.getFields()).anySatisfy(it -> assertThat(it.getSimpleName()).isEqualTo("name"));
 		assertThat(parsed.getFields()).anySatisfy(it -> assertThat(it.getSimpleName()).isEqualTo("ADMIN_NAME"));
+	}
+
+	@Test
+	void testRecordComponentOrder() {
+		// contract: implicit fields generated from record components are the same order as the record components
+		Factory factory = new Launcher().getFactory();
+		CtRecord record = factory.createRecord()
+			.<CtRecord>setSimpleName("RecordComponentOrder")
+			.<CtRecord>addModifier(ModifierKind.PUBLIC)
+			.addRecordComponent(
+				factory.createRecordComponent()
+					.<CtRecordComponent>setType(factory.Type().integerPrimitiveType())
+					.setSimpleName("first")
+			)
+			.addRecordComponent(
+				factory.createRecordComponent()
+					.<CtRecordComponent>setType(factory.Type().floatPrimitiveType())
+					.setSimpleName("second")
+			);
+		assertThat(record.getFields())
+			.map(CtField::getSimpleName)
+			.containsExactly("first", "second");
+	}
+
+	@ModelTest(code = "record Point(int x, int y) {}", complianceLevel = 17)
+	void testCanonicalConstructorFieldReferenceResolves(@BySimpleName("Point") CtClass<?> ctClass) {
+		// contract: field writes in the generated constructor resolve to the record fields
+		assertThat(ctClass.getConstructors()).hasSize(1);
+
+		var constructor = ctClass.getConstructors().iterator().next();
+
+		for (var statement : constructor.getBody().getStatements()) {
+			if (!(statement instanceof CtAssignment<?,?> ctAssignment)) {
+				continue;
+			}
+
+			var fieldRef = assertThat(ctAssignment.getAssigned())
+				.isInstanceOf(CtFieldWrite.class)
+				.extracting(write -> (CtFieldWrite<?>) write)
+				.extracting(CtFieldWrite::getVariable)
+				.actual();
+
+			var actualField = assertThat(ctClass.getField(fieldRef.getSimpleName())).isNotNull().actual();
+
+			assertThat(fieldRef.getFieldDeclaration()).isSameAs(actualField);
+		}
 	}
 
 	private <T> T head(Collection<T> collection) {
