@@ -12,8 +12,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
@@ -121,7 +121,7 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 					visited = true;
 					visitEnum(clazz);
 				}
-				if (clazz.isRecord() && !visited) {
+				if (MethodHandleUtils.isRecord(clazz) && !visited) {
 					visited = true;
 					visitRecord(clazz);
 				}
@@ -676,11 +676,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 	}
 
 	@Override
-	public void visitRecordComponent(RecordComponent recordComponent) {
+	public void visitRecordComponent(AnnotatedElement recordComponent) {
 		CtRecordComponent ctRecordComponent = factory.Core().createRecordComponent();
-		ctRecordComponent.setSimpleName(recordComponent.getName());
+		ctRecordComponent.setSimpleName(MethodHandleUtils.getRecordComponentName(recordComponent));
 		enter(new RecordComponentRuntimeBuilderContext(ctRecordComponent));
-		visitTypeReference(CtRole.TYPE, recordComponent.getGenericType());
+		visitTypeReference(CtRole.TYPE, MethodHandleUtils.getRecordComponentType(recordComponent));
 
 		Arrays.stream(recordComponent.getAnnotations()).forEach(this::visitAnnotation);
 		exit();

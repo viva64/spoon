@@ -44,6 +44,7 @@ import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.support.DerivedProperty;
 import spoon.support.UnsettableProperty;
 import spoon.support.reflect.CtExtendedModifier;
+import java.util.stream.Collectors;
 
 public class CtRecordImpl extends CtClassImpl<Object> implements CtRecord {
 	private static final String ABSTRACT_MODIFIER_ERROR =
@@ -103,7 +104,7 @@ public class CtRecordImpl extends CtClassImpl<Object> implements CtRecord {
 		CtTypeReference<?>[] typeReferences =
 			getRecordComponents().stream()
 				.map(CtTypedElement::getType)
-				.toList().toArray(new CtTypeReference[0]);
+				.collect(Collectors.toUnmodifiableList()).toArray(new CtTypeReference[0]);
 
 		// Nothing to do if the canonical constructor is already defined:
 		CtConstructor<?> constructor = getConstructor(typeReferences);

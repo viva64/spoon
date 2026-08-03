@@ -431,7 +431,8 @@ public class CodeFactory extends SubFactory {
 	 */
 	public <T> CtVariableAccess<T> createVariableRead(CtVariableReference<T> variable, boolean isStatic) {
 		CtVariableAccess<T> va;
-		if (variable instanceof CtFieldReference<T> ctFieldReference) {
+		if (variable instanceof CtFieldReference) {
+			CtFieldReference<T> ctFieldReference = (CtFieldReference<T>) variable;
 			va = factory.Core().createFieldRead();
 			// creates a this target for non-static fields to avoid name conflicts...
 			if (!isStatic) {
@@ -468,7 +469,8 @@ public class CodeFactory extends SubFactory {
 	 */
 	public <T> CtVariableAccess<T> createVariableWrite(CtVariableReference<T> variable, boolean isStatic) {
 		CtVariableAccess<T> va;
-		if (variable instanceof CtFieldReference<T> ctFieldReference) {
+		if (variable instanceof CtFieldReference) {
+			CtFieldReference<T> ctFieldReference = (CtFieldReference<T>) variable;
 			va = factory.Core().createFieldWrite();
 			// creates a this target for non-static fields to avoid name conflicts...
 			if (!isStatic) {

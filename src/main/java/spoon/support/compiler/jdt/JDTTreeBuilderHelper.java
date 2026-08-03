@@ -756,18 +756,18 @@ public class JDTTreeBuilderHelper {
 		p.setVarArgs(argument.isVarArgs());
 		p.setExtendedModifiers(getModifiers(argument.modifiers, false, ModifierTarget.PARAMETER));
 		VariableBinding binding;
-		if (argument instanceof Argument arg) {
-			binding = arg.binding;
-		} else if (argument instanceof RecordComponent rec) {
-			binding = rec.binding;
+		if (argument instanceof Argument) {
+			binding = ((Argument) argument).binding;
+		} else if (argument instanceof RecordComponent) {
+			binding = ((RecordComponent) argument).binding;
 		} else {
 			throw new IllegalArgumentException("unexpected argument type: " + argument.getClass());
 		}
 		if (binding != null && binding.type != null && argument.type == null) {
 			p.setType(jdtTreeBuilder.getReferencesBuilder().<T>getTypeReference(binding.type));
 			p.getType().setImplicit(argument.type == null);
-			if (p.getType() instanceof CtArrayTypeReference<?> type) {
-				type.getComponentType().setImplicit(argument.type == null);
+			if (p.getType() instanceof CtArrayTypeReference) {
+				((CtArrayTypeReference<?>) p.getType()).getComponentType().setImplicit(argument.type == null);
 			}
 		}
 		return p;

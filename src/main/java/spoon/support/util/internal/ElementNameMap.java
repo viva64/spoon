@@ -9,7 +9,6 @@ package spoon.support.util.internal;
 
 import static spoon.support.util.internal.ModelCollectionUtils.linkToParent;
 
-import java.io.Serial;
 import java.io.Serializable;
 import java.util.AbstractMap;
 import java.util.Comparator;
@@ -62,10 +61,33 @@ public abstract class ElementNameMap<T extends CtElement> extends AbstractMap<St
 	/**
 	 * Wrapper class that allows us to return entries in the order they were inserted.
 	 */
-	private record InsertOrderWrapper<T extends Serializable>(T value, long insertionNumber) implements Serializable {
-		@Serial
+	private static final class InsertOrderWrapper<T extends Serializable> implements Serializable {
 		private static final long serialVersionUID = 1L;
 
+		private final T value;
+		private final long insertionNumber;
+
+		private InsertOrderWrapper(T value, long insertionNumber) {
+			this.value = value;
+			this.insertionNumber = insertionNumber;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (!(o instanceof InsertOrderWrapper)) {
+				return false;
+			}
+			InsertOrderWrapper<?> other = (InsertOrderWrapper<?>) o;
+			return this.insertionNumber == other.insertionNumber && Objects.equals(this.value, other.value);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(value, insertionNumber);
+		}
 	}
 
 
@@ -202,9 +224,10 @@ public abstract class ElementNameMap<T extends CtElement> extends AbstractMap<St
 		if (this == o) {
 			return true;
 		}
-		if (!(o instanceof ElementNameMap<?> that)) {
+		if (!(o instanceof ElementNameMap)) {
 			return false;
 		}
+		ElementNameMap<?> that = (ElementNameMap<?>) o;
 		// Both sets are ordered by insertion order
 		return this.entrySet().equals(that.entrySet());
 	}

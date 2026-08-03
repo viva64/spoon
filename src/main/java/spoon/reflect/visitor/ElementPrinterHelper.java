@@ -306,38 +306,43 @@ public class ElementPrinterHelper {
 		for (CtImport ctImport : imports) {
 			String importTypeStr;
 			switch (ctImport.getImportKind()) {
-				case TYPE -> {
+				case TYPE: {
 					CtTypeReference typeRef = (CtTypeReference) ctImport.getReference();
 					importTypeStr = typeRef.getQualifiedName();
 					if (!isJavaLangClasses(importTypeStr)) {
 						setImports.add(this.removeInnerTypeSeparator(importTypeStr));
 					}
+					break;
 				}
-				case ALL_TYPES -> {
+				case ALL_TYPES: {
 					CtPackageReference packageRef = (CtPackageReference) ctImport.getReference();
 					importTypeStr = packageRef.getQualifiedName() + ".*";
 					if (!isJavaLangClasses(importTypeStr)) {
 						setImports.add(this.removeInnerTypeSeparator(importTypeStr));
 					}
+					break;
 				}
-				case METHOD -> {
+				case METHOD: {
 					CtExecutableReference execRef = (CtExecutableReference) ctImport.getReference();
 					if (execRef.getDeclaringType() != null) {
 						setStaticImports.add(this.removeInnerTypeSeparator(execRef.getDeclaringType().getQualifiedName()) + "." + execRef.getSimpleName());
 					}
+					break;
 				}
-				case FIELD -> {
+				case FIELD: {
 					CtFieldReference fieldRef = (CtFieldReference) ctImport.getReference();
 					setStaticImports.add(this.removeInnerTypeSeparator(fieldRef.getDeclaringType().getQualifiedName()) + "." + fieldRef.getSimpleName());
+					break;
 				}
-				case ALL_STATIC_MEMBERS -> {
+				case ALL_STATIC_MEMBERS: {
 					CtTypeMemberWildcardImportReference typeStarRef = (CtTypeMemberWildcardImportReference) ctImport.getReference();
 					importTypeStr = typeStarRef.getTypeReference().getQualifiedName();
 					if (!isJavaLangClasses(importTypeStr)) {
 						setStaticImports.add(this.removeInnerTypeSeparator(importTypeStr) + ".*");
 					}
+					break;
 				}
-				case UNRESOLVED -> {
+				case UNRESOLVED: {
 					CtUnresolvedImport unresolvedImport = (CtUnresolvedImport) ctImport;
 					importTypeStr = unresolvedImport.getUnresolvedReference();
 					if (!isJavaLangClasses(importTypeStr)) {
@@ -347,10 +352,12 @@ public class ElementPrinterHelper {
 							setImports.add(importTypeStr);
 						}
 					}
+					break;
 				}
-				case MODULE -> {
+				case MODULE: {
 					CtModuleReference moduleRef = (CtModuleReference) ctImport.getReference();
 					moduleImports.add(moduleRef.getSimpleName());
+					break;
 				}
 			}
 		}

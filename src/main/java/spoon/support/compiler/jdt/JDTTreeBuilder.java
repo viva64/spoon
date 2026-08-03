@@ -1942,7 +1942,7 @@ public class JDTTreeBuilder extends ASTVisitor {
 		// JDT gives us a RecordComponent instead of an Argument for compact record constructors.
 		// They also aren't visited directly, so this call should come from the explicit invocation
 		// in visit(ConstructorDeclaration, ClassScope)
-		if (context.getCurrentElement() instanceof CtConstructor<?> ctor && ctor.isCompactConstructor()) {
+		if (context.getCurrentElement() instanceof CtConstructor<?> && ((CtConstructor<?>) context.getCurrentElement()).isCompactConstructor()) {
 			CtParameter<?> parameter = helper.createParameter(recordComponent);
 			context.enter(parameter, recordComponent);
 			return true;

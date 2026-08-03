@@ -80,8 +80,8 @@ public final class Refactoring {
 	public static void changeMethodName(final CtMethod<?> method, String newName) {
 		renameExecutableReferences(method, newName);
 
-		if (method instanceof CtAnnotationMethod<?> annotationMethod) {
-			renameAnnotationReferences(annotationMethod, newName);
+		if (method instanceof CtAnnotationMethod<?>) {
+			renameAnnotationReferences((CtAnnotationMethod<?>) method, newName);
 		}
 
 		method.setSimpleName(newName);
