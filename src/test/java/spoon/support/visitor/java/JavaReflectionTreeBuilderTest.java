@@ -800,7 +800,6 @@ public class JavaReflectionTreeBuilderTest {
 	}
 
 	@Test
-	@EnabledForJreRange(min = JRE.JAVA_17)
 	void testShadowSealedTypes() throws ClassNotFoundException {
 		// contract: sealed/non-sealed types are in the shadow model
 		Factory factory = createFactory();

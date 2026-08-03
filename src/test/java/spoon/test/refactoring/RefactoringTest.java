@@ -32,8 +32,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import org.junit.jupiter.api.condition.DisabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 import spoon.Launcher;
 import spoon.refactoring.Refactoring;
 import spoon.reflect.CtModel;
@@ -167,7 +165,6 @@ public class RefactoringTest {
 		assertEquals("spoon.test.refactoring.testclasses.AClassX", instanceofInvocation.getRightHandOperand().toString());
 	}
 	@Test
-	@DisabledForJreRange(max = JRE.JAVA_8)
 	public void testRemoveDeprecatedMethods() {
 		// clean dir if exists
 		try {
