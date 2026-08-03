@@ -20,6 +20,7 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import java.util.stream.Collectors;
 
 public class SubstitutionTest {
 
@@ -176,7 +177,7 @@ public class SubstitutionTest {
         assertNotNull(genEnum);
         assertSame(genEnum, factory.Type().get("generated.GenEnum"));
         assertEquals(2, genEnum.getEnumValues().size());
-        var names = genEnum.getEnumValues().stream().map(v -> v.getSimpleName()).sorted().toList();
+        var names = genEnum.getEnumValues().stream().map(v -> v.getSimpleName()).sorted().collect(Collectors.toUnmodifiableList());
         assertEquals(List.of("BETTER", "GOOD"), names);
     }
 

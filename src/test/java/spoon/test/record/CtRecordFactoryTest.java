@@ -114,14 +114,12 @@ public class CtRecordFactoryTest {
 		// test methods
 		assertEquals(
 			List.of(
-				"""
-					int first() {
-					    return this.first;
-					}""",
-				"""
-					float second() {
-					    return this.second;
-					}"""
+				("int first() {\n"
+				 + "    return this.first;\n"
+				 + "}"),
+				("float second() {\n"
+				 + "    return this.second;\n"
+				 + "}")
 			),
 			record.getMethods().stream()
 				.map(String::valueOf)
@@ -142,11 +140,10 @@ public class CtRecordFactoryTest {
 		// test canonical constructor
 		assertEquals(
 			List.of(
-			"""
-				MultiParameter(int first, float second) {
-				    this.first = first;
-				    this.second = second;
-				}"""
+			("MultiParameter(int first, float second) {\n"
+			 + "    this.first = first;\n"
+			 + "    this.second = second;\n"
+			 + "}")
 			),
 			record.getConstructors().stream()
 				.map(String::valueOf)

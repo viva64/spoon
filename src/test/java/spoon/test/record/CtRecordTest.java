@@ -375,9 +375,10 @@ public class CtRecordTest {
 		var constructor = ctClass.getConstructors().iterator().next();
 
 		for (var statement : constructor.getBody().getStatements()) {
-			if (!(statement instanceof CtAssignment<?,?> ctAssignment)) {
+			if (!(statement instanceof CtAssignment)) {
 				continue;
 			}
+			CtAssignment<?, ?> ctAssignment = (CtAssignment<?, ?>) statement;
 
 			var fieldRef = assertThat(ctAssignment.getAssigned())
 				.isInstanceOf(CtFieldWrite.class)

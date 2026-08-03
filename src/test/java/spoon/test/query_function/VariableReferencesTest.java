@@ -386,15 +386,13 @@ public class VariableReferencesTest {
 		});
 	}
 
-	@ModelTest(code = """
-		class Test {
-			void method() {
-				for (int i = 0; i < 10; i++) {
-					System.out.println(i);
-				}
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void method() {\n"
+	                   + "		for (int i = 0; i < 10; i++) {\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testForInitReference(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a reference to a variable declared in a for loop must be resolved to the correct declaration
 		List<CtLocalVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
@@ -411,28 +409,26 @@ public class VariableReferencesTest {
 		assertThat(references.get(2)).hasExactlyPotentialDeclarations(variables.get(0));
 	}
 
-	@ModelTest(code = """
-		import java.util.Scanner;
-
-		class Test {
-			Scanner scanner;
-			String e;
-
-			void method() {
-				try(
-					Scanner scanner = new Scanner(System.in);
-					Scanner e = new Scanner(System.err)
-				) {
-					System.out.println(scanner);
-					System.out.println(e);
-				} catch(IllegalArgumentException e) {
-					System.out.println(scanner + e.getMessage());
-				} finally {
-					System.out.println(scanner);
-				}
-			}
-		}
-		""")
+	@ModelTest(code = ("import java.util.Scanner;\n"
+	                   + "\n"
+	                   + "class Test {\n"
+	                   + "	Scanner scanner;\n"
+	                   + "	String e;\n"
+	                   + "\n"
+	                   + "	void method() {\n"
+	                   + "		try(\n"
+	                   + "			Scanner scanner = new Scanner(System.in);\n"
+	                   + "			Scanner e = new Scanner(System.err)\n"
+	                   + "		) {\n"
+	                   + "			System.out.println(scanner);\n"
+	                   + "			System.out.println(e);\n"
+	                   + "		} catch(IllegalArgumentException e) {\n"
+	                   + "			System.out.println(scanner + e.getMessage());\n"
+	                   + "		} finally {\n"
+	                   + "			System.out.println(scanner);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testTryWithReferenceTest(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a reference to a try-with-resource variable is only accessible in the try block
 		List<CtLocalVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
@@ -461,27 +457,25 @@ public class VariableReferencesTest {
 		assertThat(references.get(10)).hasExactlyPotentialDeclarations(scannerField);
 	}
 
-	@ModelTest(code = """
-		class Test {
-			static void assertTrue(boolean condition) {}
-
-			void nestedClassMethodWithShadowVarAndField() {
-				int var1 = 2;
-				new Runnable() {
-					//this var1 shadows above defined var1.
-					int var1 = 3;
-					@Override
-					public void run() {
-						assertTrue(var1 == 3);
-						int var1 = 4;
-						assertTrue(var1 == 4);
-						assertTrue(this.var1 == 3);
-					}
-				}.run();
-				assertTrue(var1 == 2);
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	static void assertTrue(boolean condition) {}\n"
+	                   + "\n"
+	                   + "	void nestedClassMethodWithShadowVarAndField() {\n"
+	                   + "		int var1 = 2;\n"
+	                   + "		new Runnable() {\n"
+	                   + "			//this var1 shadows above defined var1.\n"
+	                   + "			int var1 = 3;\n"
+	                   + "			@Override\n"
+	                   + "			public void run() {\n"
+	                   + "				assertTrue(var1 == 3);\n"
+	                   + "				int var1 = 4;\n"
+	                   + "				assertTrue(var1 == 4);\n"
+	                   + "				assertTrue(this.var1 == 3);\n"
+	                   + "			}\n"
+	                   + "		}.run();\n"
+	                   + "		assertTrue(var1 == 2);\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testAnonymousClassFieldResolution(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: variable references with anonymous classes resolve correctly
 		CtMethod<?> ctMethod = ctClass.getMethodsByName("nestedClassMethodWithShadowVarAndField").get(0);
@@ -505,16 +499,14 @@ public class VariableReferencesTest {
 	}
 
 
-	@ModelTest(code = """
-		class Test {
-			String string = "";
-			void method(String[] array) {
-				for (String string : array) {
-					System.out.println(string);
-				}
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String string = \"\";\n"
+	                   + "	void method(String[] array) {\n"
+	                   + "		for (String string : array) {\n"
+	                   + "			System.out.println(string);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testForEachVariableResolution(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: the variable referenced in a for-each resolves to the loop variable, then the field
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -533,19 +525,17 @@ public class VariableReferencesTest {
 		assertThat(references.get(2)).hasExactlyPotentialDeclarations(forEachVariable, fieldVariable); // println(string)
 	}
 
-	@ModelTest(code = """
-		class Test {
-			String s = "";
-
-			void method(Object in) {
-				if(in instanceof String s) {
-				} else {
-				  return;
-				}
-				System.out.println(s);
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String s = \"\";\n"
+	                   + "\n"
+	                   + "	void method(Object in) {\n"
+	                   + "		if(in instanceof String s) {\n"
+	                   + "		} else {\n"
+	                   + "		  return;\n"
+	                   + "		}\n"
+	                   + "		System.out.println(s);\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testPatternVariableOutsideThen(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a pattern variable is accessible outside the then, if the other branch returns
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -561,19 +551,17 @@ public class VariableReferencesTest {
 		assertThat(references.get(2)).hasExactlyPotentialDeclarations(patternVar, fieldVariable); // println(s)
 	}
 
-	@ModelTest(code = """
-		class Test {
-			String s = "";
-
-			void method(Object obj) {
-				if(obj instanceof String s); else {
-				  return;
-				}
-
-				System.out.println(s);
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String s = \"\";\n"
+	                   + "\n"
+	                   + "	void method(Object obj) {\n"
+	                   + "		if(obj instanceof String s); else {\n"
+	                   + "		  return;\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		System.out.println(s);\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testIfWithNullThen(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a pattern variable is accessible outside the then, if the other branch returns, even if the then is empty
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -589,16 +577,14 @@ public class VariableReferencesTest {
 		assertThat(references.get(2)).hasExactlyPotentialDeclarations(patternVar, fieldVariable); // println(s)
 	}
 
-	@ModelTest(code = """
-		class Test {
-			void method() {
-				int i = 0;
-				for (; ;) {
-					System.out.println(i);
-				}
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void method() {\n"
+	                   + "		int i = 0;\n"
+	                   + "		for (; ;) {\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testForConditionNull(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a variable declared in the initialization of a for loop is correctly resolved in the body,
 		//           even if the condition and update are null

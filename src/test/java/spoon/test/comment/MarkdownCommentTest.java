@@ -19,6 +19,7 @@ import spoon.testing.utils.ModelTest;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.util.stream.Collectors;
 
 /**
  * Tests for markdown documentation comments (JEP 467, Java 23+).
@@ -34,12 +35,10 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// Returns a hash code value for the object.
-                        public int hashCode() { return 0; }
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// Returns a hash code value for the object.\n"
+                    + "    public int hashCode() { return 0; }\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testSimpleMarkdownComment(CtModel model) {
         // contract: a single-line /// comment is parsed as CommentType.MARKDOWN
@@ -59,14 +58,12 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// First paragraph.
-                        ///
-                        /// Second paragraph.
-                        public void foo() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// First paragraph.\n"
+                    + "    ///\n"
+                    + "    /// Second paragraph.\n"
+                    + "    public void foo() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMultiParagraphMarkdownComment(CtModel model) {
         // contract: a multi-line /// comment preserves blank lines in content as empty strings
@@ -86,14 +83,12 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// # A Heading
-                        ///
-                        /// Some text.
-                        public void withHeading() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// # A Heading\n"
+                    + "    ///\n"
+                    + "    /// Some text.\n"
+                    + "    public void withHeading() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownWithHeading(CtModel model) {
         // contract: Markdown heading syntax (#) is preserved verbatim in the comment content
@@ -110,16 +105,14 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// A summary.
-                        ///
-                        /// ```java
-                        /// int x = 42;
-                        /// ```
-                        public void withCodeBlock() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// A summary.\n"
+                    + "    ///\n"
+                    + "    /// ```java\n"
+                    + "    /// int x = 42;\n"
+                    + "    /// ```\n"
+                    + "    public void withCodeBlock() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownWithCodeBlock(CtModel model) {
         // contract: fenced code blocks (``` ``` ) inside /// comments are preserved in content
@@ -136,15 +129,13 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// The method supports:
-                        ///
-                        /// - case 1
-                        /// - case 2
-                        public void withList() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// The method supports:\n"
+                    + "    ///\n"
+                    + "    /// - case 1\n"
+                    + "    /// - case 2\n"
+                    + "    public void withList() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownWithList(CtModel model) {
         // contract: Markdown list items are preserved verbatim in the comment content
@@ -161,12 +152,10 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// **Bold** and _italic_.
-                        public void withFormatting() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// **Bold** and _italic_.\n"
+                    + "    public void withFormatting() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownWithFormatting(CtModel model) {
         // contract: bold (**) and italic (_) Markdown syntax is preserved verbatim in content
@@ -183,12 +172,10 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// See [Java documentation](https://docs.oracle.com).
-                        public void withLink() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// See [Java documentation](https://docs.oracle.com).\n"
+                    + "    public void withLink() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownWithLink(CtModel model) {
         // contract: Markdown link syntax is preserved verbatim in the comment content
@@ -205,15 +192,13 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// Returns the string form.
-                        ///
-                        /// @param x the value
-                        /// @return the string representation
-                        public String withParams(int x) { return ""; }
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// Returns the string form.\n"
+                    + "    ///\n"
+                    + "    /// @param x the value\n"
+                    + "    /// @return the string representation\n"
+                    + "    public String withParams(int x) { return \"\"; }\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownWithParamAndReturn(CtModel model) {
         // contract: @param and @return tags in a markdown comment are part of the raw content
@@ -233,18 +218,16 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// Returns {@code true} if the specified number is
-                        /// a [prime number][1], and {@code false} otherwise.
-                        ///
-                        /// A prime number is defined as a positive integer greater
-                        /// than 1, having no divisors other than 1 and itself.
-                        ///
-                        /// [1]: https://en.wikipedia.org/wiki/Prime_number
-                        public boolean isPrime(long n) { return n > 1; }
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// Returns {@code true} if the specified number is\n"
+                    + "    /// a [prime number][1], and {@code false} otherwise.\n"
+                    + "    ///\n"
+                    + "    /// A prime number is defined as a positive integer greater\n"
+                    + "    /// than 1, having no divisors other than 1 and itself.\n"
+                    + "    ///\n"
+                    + "    /// [1]: https://en.wikipedia.org/wiki/Prime_number\n"
+                    + "    public boolean isPrime(long n) { return n > 1; }\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownFullJepExample(CtModel model) {
         // contract: the full JEP 467 isPrime example is correctly parsed as a MARKDOWN comment
@@ -266,12 +249,10 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// Returns a hash code value for the object.
-                        public int hashCode() { return 0; }
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// Returns a hash code value for the object.\n"
+                    + "    public int hashCode() { return 0; }\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownCommentPrettyPrintSingleLine(CtModel model) {
         // contract: the pretty-printer serialises a single-line MARKDOWN comment
@@ -285,14 +266,12 @@ public class MarkdownCommentTest {
     }
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// First paragraph.
-                        ///
-                        /// Second paragraph.
-                        public void foo() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// First paragraph.\n"
+                    + "    ///\n"
+                    + "    /// Second paragraph.\n"
+                    + "    public void foo() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownCommentPrettyPrintMultiLine(CtModel model) {
         // contract: the pretty-printer serialises a multi-line MARKDOWN comment with each
@@ -313,18 +292,16 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /** Javadoc comment. */
-                        public void javadocMethod() {}
-
-                        // Inline comment
-                        public void inlineMethod() {}
-
-                        /// Markdown doc comment.
-                        public void markdownMethod() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /** Javadoc comment. */\n"
+                    + "    public void javadocMethod() {}\n"
+                    + "\n"
+                    + "    // Inline comment\n"
+                    + "    public void inlineMethod() {}\n"
+                    + "\n"
+                    + "    /// Markdown doc comment.\n"
+                    + "    public void markdownMethod() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownCommentTypeIsDistinct(CtModel model) {
         // contract: MARKDOWN, JAVADOC, and INLINE are distinct comment types;
@@ -353,7 +330,7 @@ public class MarkdownCommentTest {
         List<CtComment> markdownComments = model.getElements(new TypeFilter<>(CtComment.class))
                 .stream()
                 .filter(c -> c.getCommentType() == CtComment.CommentType.MARKDOWN)
-                .toList();
+                .collect(Collectors.toUnmodifiableList());
 
         // There are 9 documented methods in the resource file
         assertThat(markdownComments).hasSize(9);
@@ -366,12 +343,10 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// Returns the `String` representation of `value`.
-                        public String stringify(int value) { return ""; }
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// Returns the `String` representation of `value`.\n"
+                    + "    public String stringify(int value) { return \"\"; }\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownCodeSpan(CtModel model) {
         // contract: backtick code spans (` `) inside a markdown comment are preserved verbatim
@@ -389,14 +364,12 @@ public class MarkdownCommentTest {
     // -----------------------------------------------------------------------
 
     @ModelTest(
-            code = """
-                    class C {
-                        /// See the [Java SE documentation][jdk] for details.
-                        ///
-                        /// [jdk]: https://docs.oracle.com/en/java/
-                        public void withRefLink() {}
-                    }
-                    """,
+            code = ("class C {\n"
+                    + "    /// See the [Java SE documentation][jdk] for details.\n"
+                    + "    ///\n"
+                    + "    /// [jdk]: https://docs.oracle.com/en/java/\n"
+                    + "    public void withRefLink() {}\n"
+                    + "}\n"),
             complianceLevel = 23)
     void testMarkdownReferenceStyleLink(CtModel model) {
         // contract: Markdown reference-style links are preserved verbatim in the content

@@ -75,16 +75,14 @@ public class TypePatternTest {
 		assertThrows(SpoonException.class, () -> pattern.setParent(launcher.getFactory().createBlock()));
 	}
 
-	@ModelTest(code = """
-		class X {
-			String typePattern(Object obj) {
-				if (obj instanceof String s) {
-					return s;
-				}
-				return "";
-			}
-		}
-		""", complianceLevel = 16)
+	@ModelTest(code = ("class X {\n"
+	                   + "	String typePattern(Object obj) {\n"
+	                   + "		if (obj instanceof String s) {\n"
+	                   + "			return s;\n"
+	                   + "		}\n"
+	                   + "		return \"\";\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 16)
 	void testTypePatternSourcePosition(@BySimpleName("X") CtType<?> x) {
 		// contract: the source position of the CtTypePattern is equal to its CtLocalVariableDeclaration
 		CtTypePattern typePattern = x.getElements(new TypeFilter<>(CtTypePattern.class)).get(0);

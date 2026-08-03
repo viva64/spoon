@@ -313,20 +313,18 @@ public class SwitchCaseTest {
 
 		@Test
 		@GitHubIssue(issueNumber = 4696, fixed = true)
-		@ModelTest(code = """
-				public class A {
-					public void function(int value) {
-						switch (value) {
-							case 1: { String test; } // decoy variable declaration, should not be found
-								String test;
-								test = "first";
-								break;
-							default:
-								test = "not first";
-						}
-					}
-				}
-				""")
+		@ModelTest(code = ("public class A {\n"
+		                   + "	public void function(int value) {\n"
+		                   + "		switch (value) {\n"
+		                   + "			case 1: { String test; } // decoy variable declaration, should not be found\n"
+		                   + "				String test;\n"
+		                   + "				test = \"first\";\n"
+		                   + "				break;\n"
+		                   + "			default:\n"
+		                   + "				test = \"not first\";\n"
+		                   + "		}\n"
+		                   + "	}\n"
+		                   + "}\n"))
 		void testVariableScopeInSwitch(@BySimpleName("A") CtClass<?> ctClass) {
 			// contract: different cases do not introduce different scopes in colon-switches
 			List<CtVariableAccess<?>> accesses = ctClass.getElements(new TypeFilter<>(CtVariableAccess.class));

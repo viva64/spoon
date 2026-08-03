@@ -76,10 +76,9 @@ public class ModelTestParameterResolver implements ParameterResolver {
 
 		if (annotation.value().length == 0 && annotation.code().length == 0) {
 			throw new IllegalArgumentException(
-				"""
-					@ModelTest on %s must specify either 'value' (file paths) or 'code' (inline source), or both.
-					Example: @ModelTest(code = "class Foo {}") or @ModelTest(value = "src/test/resources/...")"""
-					.formatted(method.getName())
+				String.format("@ModelTest on %s must specify either 'value' (file paths) or 'code' (inline source), or both.\n"
+				 + "Example: @ModelTest(code = \"class Foo {}\") or @ModelTest(value = \"src/test/resources/...\")",
+					method.getName())
 			);
 		}
 

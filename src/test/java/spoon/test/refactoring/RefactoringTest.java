@@ -63,6 +63,7 @@ import spoon.test.refactoring.testclasses.AnnotationMethodRenaming;
 import spoon.test.refactoring.testclasses.ExampleAnnotation;
 import spoon.test.refactoring.testclasses.InterfaceRenaming;
 import spoon.test.refactoring.testclasses.MethodRenaming;
+import java.util.stream.Collectors;
 
 public class RefactoringTest {
 	@Test
@@ -234,7 +235,7 @@ public class RefactoringTest {
 
 		assertEquals("RenamedNestedType", nestedClass.getSimpleName());
 
-		var refs = clazz.getElements(new TypeFilter<>(CtTypeReference.class)).stream().filter(t -> t.getSimpleName().equals("RenamedNestedType")).toList();
+		var refs = clazz.getElements(new TypeFilter<>(CtTypeReference.class)).stream().filter(t -> t.getSimpleName().equals("RenamedNestedType")).collect(Collectors.toUnmodifiableList());
 		assertEquals(2, refs.size());
 		for (var ref : refs) {
 			assertEquals(nestedClass, ref.getDeclaration());
@@ -267,7 +268,7 @@ public class RefactoringTest {
 		assertEquals(newName, generic.getSimpleName());
 
 		var typeRefs = clazz.getElements(new TypeFilter<>(CtTypeReference.class))
-				.stream().filter(typeRef -> typeRef.getSimpleName().equals(newName)).toList();
+				.stream().filter(typeRef -> typeRef.getSimpleName().equals(newName)).collect(Collectors.toUnmodifiableList());
 		assertEquals(expectedRefs, typeRefs.size());
 		for (var typeRef : typeRefs) {
 			assertEquals(generic.getParent(CtMethod.class), typeRef.getParent(CtMethod.class));
@@ -280,7 +281,7 @@ public class RefactoringTest {
 		assertEquals(newName, classGeneric.getSimpleName());
 
 		var typeRefs = clazz.getElements(new TypeFilter<>(CtTypeReference.class))
-				.stream().filter(typeRef -> typeRef.getSimpleName().equals(newName)).toList();
+				.stream().filter(typeRef -> typeRef.getSimpleName().equals(newName)).collect(Collectors.toUnmodifiableList());
 
 		assertEquals(expectedRefs, typeRefs.size());
 		for (var typeRef : typeRefs) {
@@ -302,7 +303,7 @@ public class RefactoringTest {
 		Refactoring.changeMethodName(methods.get(3), newNameNestedMethod);
 
 		var refs = clazz.getElements(new TypeFilter<>(CtExecutableReference.class))
-				.stream().filter(e -> !e.getSimpleName().equals("<init>")).toList();
+				.stream().filter(e -> !e.getSimpleName().equals("<init>")).collect(Collectors.toUnmodifiableList());
 
 		assertEquals(newName, methods.get(1).getSimpleName());
 		assertEquals(newNameStaticMethod, methods.get(2).getSimpleName());

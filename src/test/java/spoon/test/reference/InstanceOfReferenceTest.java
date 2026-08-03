@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static spoon.test.SpoonTestHelpers.createModelFromString;
 import static spoon.testing.assertions.SpoonAssertions.assertThat;
+import java.util.stream.Collectors;
 
 /**
  * Tests that references to pattern variables declared using the <code>instanceof</code> operator can be resolved.
@@ -38,17 +39,15 @@ import static spoon.testing.assertions.SpoonAssertions.assertThat;
 public class InstanceOfReferenceTest {
 	@Test
 	public void testVariableDeclaredInIf() {
-		String code = """
-				class X {
-				    String typePattern(Object obj) {
-				        boolean someCondition = true;
-				        if (someCondition && obj instanceof String s) {
-				            return s;
-				        }
-				        return "";
-				    }
-				}
-				""";
+		String code = ("class X {\n"
+		               + "    String typePattern(Object obj) {\n"
+		               + "        boolean someCondition = true;\n"
+		               + "        if (someCondition && obj instanceof String s) {\n"
+		               + "            return s;\n"
+		               + "        }\n"
+		               + "        return \"\";\n"
+		               + "    }\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(1);
@@ -59,17 +58,15 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testVariableDeclaredInWhileLoop() {
-		String code = """
-				class X {
-					public void processShapes(List<Object> shapes) {
-						var iter = 0;
-						while (iter < shapes.size() && shapes.get(iter) instanceof String shape) {
-							iter++;
-							System.out.println(shape);
-						}
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	public void processShapes(List<Object> shapes) {\n"
+		               + "		var iter = 0;\n"
+		               + "		while (iter < shapes.size() && shapes.get(iter) instanceof String shape) {\n"
+		               + "			iter++;\n"
+		               + "			System.out.println(shape);\n"
+		               + "		}\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(3);
@@ -80,15 +77,13 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testVariableDeclaredInForLoop() {
-		String code = """
-				class X {
-					public void processShapes(List<Object> shapes) {
-						for (var iter = 0; iter < shapes.size() && shapes.get(iter) instanceof String shape; iter++) {
-							System.out.println(shape);
-						}
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	public void processShapes(List<Object> shapes) {\n"
+		               + "		for (var iter = 0; iter < shapes.size() && shapes.get(iter) instanceof String shape; iter++) {\n"
+		               + "			System.out.println(shape);\n"
+		               + "		}\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(3);
@@ -99,15 +94,13 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testDeclaredVariableUsedInSameCondition() {
-		String code = """
-				class X {
-					public void processShapes(Object obj) {
-						if (obj instanceof String s && s.length() > 5) {
-							// NOP
-						}
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	public void processShapes(Object obj) {\n"
+		               + "		if (obj instanceof String s && s.length() > 5) {\n"
+		               + "			// NOP\n"
+		               + "		}\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(0);
@@ -118,13 +111,11 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testDeclaredVariableUsedInSameCondition2() {
-		String code = """
-				class X {
-					public void hasRightSize(Shape s) throws MyException {
-						return s instanceof Circle c && c.getRadius() > 10;
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	public void hasRightSize(Shape s) throws MyException {\n"
+		               + "		return s instanceof Circle c && c.getRadius() > 10;\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(0);
@@ -135,16 +126,14 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testFlowScope() {
-		String code = """
-				class X {
-					public void onlyForStrings(Object o) throws MyException {
-						if (!(o instanceof String s))
-							throw new MyException();
-						// s is in scope
-						System.out.println(s);
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	public void onlyForStrings(Object o) throws MyException {\n"
+		               + "		if (!(o instanceof String s))\n"
+		               + "			throw new MyException();\n"
+		               + "		// s is in scope\n"
+		               + "		System.out.println(s);\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(0);
@@ -155,19 +144,17 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testFlowScope2() {
-		String code = """
-				class X {
-					String s = "abc";
-
-					public void method2(Object o) {
-						if (!(o instanceof String s)) {
-							System.out.println("not a string");
-						} else {
-							System.out.println(s); // The local variable is in scope here!
-						}
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	String s = \"abc\";\n"
+		               + "\n"
+		               + "	public void method2(Object o) {\n"
+		               + "		if (!(o instanceof String s)) {\n"
+		               + "			System.out.println(\"not a string\");\n"
+		               + "		} else {\n"
+		               + "			System.out.println(s); // The local variable is in scope here!\n"
+		               + "		}\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(0);
@@ -178,18 +165,16 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testFlowScope3() {
-		String code = """
-				class X {
-					String typePattern(Object obj) {
-						if (obj instanceof String s) {
-							System.out.println("It's a string");
-						} else {
-							throw new RuntimeException("It's not a string");
-						}
-						return s; // We can still access s here!
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	String typePattern(Object obj) {\n"
+		               + "		if (obj instanceof String s) {\n"
+		               + "			System.out.println(\"It's a string\");\n"
+		               + "		} else {\n"
+		               + "			throw new RuntimeException(\"It's not a string\");\n"
+		               + "		}\n"
+		               + "		return s; // We can still access s here!\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariableReference<?> ref = model.getElements(new TypeFilter<>(CtLocalVariableReference.class)).get(0);
@@ -198,25 +183,23 @@ public class InstanceOfReferenceTest {
 		assertEquals(variable, decl);
 	}
 
-	@ModelTest(code = """
-		class Test {
-			void typePattern(Object o) {
-				if (o instanceof String i) {
-					System.out.println(i);
-				}
-
-				if (!(o instanceof String i)) {
-				} else {
-					System.out.println(i);
-				}
-
-				if (!(o instanceof String i)) {
-					throw new IllegalArgumentException();
-				}
-				System.out.println(i);
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void typePattern(Object o) {\n"
+	                   + "		if (o instanceof String i) {\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		if (!(o instanceof String i)) {\n"
+	                   + "		} else {\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		if (!(o instanceof String i)) {\n"
+	                   + "			throw new IllegalArgumentException();\n"
+	                   + "		}\n"
+	                   + "		System.out.println(i);\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testFlowScope4(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: references to pattern variables hiding other variables with the same name are resolved correctly
 		List<CtLocalVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
@@ -233,21 +216,19 @@ public class InstanceOfReferenceTest {
 		assertThat(references.get(2)).hasExactlyPotentialDeclarations(variables.get(2));
 	}
 
-	@ModelTest(code = """
-		class Test {
-			void typePattern(Object o) {
-				do {
-					if (!(o instanceof Integer i)) {
-						continue;
-					}
-
-					System.out.println(i);
-				} while (!(o instanceof String i));
-
-				System.out.println(i);
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void typePattern(Object o) {\n"
+	                   + "		do {\n"
+	                   + "			if (!(o instanceof Integer i)) {\n"
+	                   + "				continue;\n"
+	                   + "			}\n"
+	                   + "\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		} while (!(o instanceof String i));\n"
+	                   + "\n"
+	                   + "		System.out.println(i);\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testDoWhilePattern(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: references to pattern variables introduced in a do-while are resolved correctly
 		List<CtLocalVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
@@ -273,21 +254,19 @@ public class InstanceOfReferenceTest {
 		assertThat(references.get(1)).hasExactlyPotentialDeclarations(doWhileVariable);
 	}
 
-	@ModelTest(code = """
-		class Test {
-			void typePattern(Object o) {
-				while (!(o instanceof String i)) {
-					if (!(o instanceof Integer i)) {
-						continue;
-					}
-
-					System.out.println(i);
-				}
-
-				System.out.println(i);
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void typePattern(Object o) {\n"
+	                   + "		while (!(o instanceof String i)) {\n"
+	                   + "			if (!(o instanceof Integer i)) {\n"
+	                   + "				continue;\n"
+	                   + "			}\n"
+	                   + "\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		System.out.println(i);\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testNegatedWhilePattern(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a pattern variable is introduced by while (e) S iff it is introduced by e when false
 		List<CtLocalVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
@@ -314,22 +293,20 @@ public class InstanceOfReferenceTest {
 	}
 
 
-	@ModelTest(code = """
-		class Test {
-			String i = "";
-			void typePattern(Object o) {
-				label: while (!(o instanceof String i)) {
-					if (!(o instanceof Integer i)) {
-						break label;
-					}
-
-					System.out.println(i);
-				}
-
-				System.out.println(i);
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String i = \"\";\n"
+	                   + "	void typePattern(Object o) {\n"
+	                   + "		label: while (!(o instanceof String i)) {\n"
+	                   + "			if (!(o instanceof Integer i)) {\n"
+	                   + "				break label;\n"
+	                   + "			}\n"
+	                   + "\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		System.out.println(i);\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testNegatedWhilePatternWithBreakLabel(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a pattern variable is introduced by while (e) S iff it is introduced by e when false
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -360,19 +337,17 @@ public class InstanceOfReferenceTest {
 		assertThat(references.get(5)).hasExactlyPotentialDeclarations(fieldVariable);
 	}
 
-	@ModelTest(code = """
-		class Test {
-			String i = "";
-
-			void typePattern(Object o) {
-				while (o instanceof String i) {
-					System.out.println(i);
-				}
-
-				System.out.println(i);
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String i = \"\";\n"
+	                   + "\n"
+	                   + "	void typePattern(Object o) {\n"
+	                   + "		while (o instanceof String i) {\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		System.out.println(i);\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testMatchingWhilePattern(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a pattern variable introduced by condition c in `while (c) S` when true is definitely matched at S.
 		//           In simpler words: The variable `i` introduced by the instanceof pattern `o instanceof String i`, must
@@ -393,32 +368,30 @@ public class InstanceOfReferenceTest {
 		assertThat(references.get(0)).hasExactlyPotentialDeclarations(whileVariable, ctClass.getField("i"));
 	}
 
-	@ModelTest(code = """
-		class Test {
-			String s1 = "";
-			String s2 = "";
-
-			void typePattern(Object a, Object b) {
-				if (a instanceof String s1 && b instanceof String s2) {
-					System.out.println("s1" + s1 + "s2" + s2);
-				}
-
-				if (!(a instanceof String s1) && b instanceof String s2) {
-					System.out.println("s1" + s1 + "s2" + s2);
-				}
-
-				if (a instanceof String s1 && !(b instanceof String s2)) {
-					System.out.println("s1" + s1 + "s2" + s2);
-				}
-
-				if (!(a instanceof String s1) && !(b instanceof String s2)) {
-					System.out.println("s1" + s1 + "s2" + s2);
-				}
-
-				System.out.println(s1 + s2);
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String s1 = \"\";\n"
+	                   + "	String s2 = \"\";\n"
+	                   + "\n"
+	                   + "	void typePattern(Object a, Object b) {\n"
+	                   + "		if (a instanceof String s1 && b instanceof String s2) {\n"
+	                   + "			System.out.println(\"s1\" + s1 + \"s2\" + s2);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		if (!(a instanceof String s1) && b instanceof String s2) {\n"
+	                   + "			System.out.println(\"s1\" + s1 + \"s2\" + s2);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		if (a instanceof String s1 && !(b instanceof String s2)) {\n"
+	                   + "			System.out.println(\"s1\" + s1 + \"s2\" + s2);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		if (!(a instanceof String s1) && !(b instanceof String s2)) {\n"
+	                   + "			System.out.println(\"s1\" + s1 + \"s2\" + s2);\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		System.out.println(s1 + s2);\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testBinaryOperatorAnd(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: references to pattern variables introduced by a && b are resolved correctly
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -494,33 +467,31 @@ public class InstanceOfReferenceTest {
 		//
 		// If a pattern is defined, this will shadow the field where it is true.
 		// The test then checks that the references resolve to either the pattern variable or the local variable.
-		String code = """
-				class Test {
-					String s = "abc";
-					String s1 = "def";
-					String s2 = "ghi";
-
-					void test(Object o, Object obj, int number) {
-						if (%s) {
-							System.out.printf("", s, s1, s2);
-							throw new IllegalArgumentException();
-						}
-
-						System.out.printf("", s, s1, s2);
-					}
-				}
-				""".formatted(condition);
+		String code = String.format("class Test {\n"
+		               + "	String s = \"abc\";\n"
+		               + "	String s1 = \"def\";\n"
+		               + "	String s2 = \"ghi\";\n"
+		               + "\n"
+		               + "	void test(Object o, Object obj, int number) {\n"
+		               + "		if (%s) {\n"
+		               + "			System.out.printf(\"\", s, s1, s2);\n"
+		               + "			throw new IllegalArgumentException();\n"
+		               + "		}\n"
+		               + "\n"
+		               + "		System.out.printf(\"\", s, s1, s2);\n"
+		               + "	}\n"
+		               + "}\n", condition);
 
 		CtModel model = createModelFromString(code, 21);
 
 		List<? extends CtLocalVariable<?>> patternVariables = model.getElements(new TypeFilter<>(CtTypePattern.class))
 			.stream()
 			.map(CtTypePattern::getVariable)
-			.toList();
+			.collect(Collectors.toUnmodifiableList());
 
 		var invocations = model.getElements(new TypeFilter<>(CtInvocation.class)).stream().filter(
 			ctInvocation -> ctInvocation.getExecutable().getSimpleName().equals("printf")
-		).toList();
+		).collect(Collectors.toUnmodifiableList());
 		CtInvocation<?> thenPrint = invocations.get(0);
 		CtInvocation<?> elsePrint = invocations.get(1);
 
@@ -561,16 +532,14 @@ public class InstanceOfReferenceTest {
 	}
 
 
-	@ModelTest(code = """
-		class Test {
-			String s = "";
-
-			void method(Object obj) {
-				System.out.println(obj instanceof String s ? s : s);
-				System.out.println(!(obj instanceof String s) ? s : s);
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String s = \"\";\n"
+	                   + "\n"
+	                   + "	void method(Object obj) {\n"
+	                   + "		System.out.println(obj instanceof String s ? s : s);\n"
+	                   + "		System.out.println(!(obj instanceof String s) ? s : s);\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testConditionalPatternScope(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: references to pattern variables introduced in a conditional are resolved correctly
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -589,21 +558,19 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testCorrectScoping() {
-		String code = """
-			class Example2 {
-				Point p;
-
-				void test2(Object o) {
-					if (o instanceof Point p) {
-						// p refers to the pattern variable
-						System.out.println(p);
-					} else {
-						// p refers to the field
-						System.out.println(p);
-					}
-				}
-			}
-		""";
+		String code = ("	class Example2 {\n"
+		               + "		Point p;\n"
+		               + "\n"
+		               + "		void test2(Object o) {\n"
+		               + "			if (o instanceof Point p) {\n"
+		               + "				// p refers to the pattern variable\n"
+		               + "				System.out.println(p);\n"
+		               + "			} else {\n"
+		               + "				// p refers to the field\n"
+		               + "				System.out.println(p);\n"
+		               + "			}\n"
+		               + "		}\n"
+		               + "	}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		var refs = model.getElements(new TypeFilter<>(CtLocalVariableReference.class));
@@ -615,19 +582,17 @@ public class InstanceOfReferenceTest {
 
 	@Test
 	public void testRecordPatterns() {
-		String code = """
-			record Point(int x, int y) {}
-			record Circle(Point center, int radius) {}
-
-			public class Y {
-				public void test() {
-					Object obj = new Circle(new Point(10, 20), 5);
-					if (obj instanceof Circle(Point (int x, int y), int r)) {
-							System.out.println("Object is a Circle at center (" + x + ", " + y + ") with radius " + r);
-					}
-				}
-			}
-		""";
+		String code = ("	record Point(int x, int y) {}\n"
+		               + "	record Circle(Point center, int radius) {}\n"
+		               + "\n"
+		               + "	public class Y {\n"
+		               + "		public void test() {\n"
+		               + "			Object obj = new Circle(new Point(10, 20), 5);\n"
+		               + "			if (obj instanceof Circle(Point (int x, int y), int r)) {\n"
+		               + "					System.out.println(\"Object is a Circle at center (\" + x + \", \" + y + \") with radius \" + r);\n"
+		               + "			}\n"
+		               + "		}\n"
+		               + "	}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> varX = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(0).getVariable();
 		CtLocalVariable<?> varY = model.getElements(new TypeFilter<>(CtTypePattern.class)).get(1).getVariable();
@@ -646,16 +611,14 @@ public class InstanceOfReferenceTest {
 	@GitHubIssue(issueNumber = 6591, fixed = true)
 	void testVarUsageInIf() {
 		// contract: Variable reference finding should look into if bodies
-		String code = """
-				class X {
-					public void foo() {
-						String buffer = "hello";
-						if (true) {
-						  buffer += " world";
-						}
-					}
-				}
-				""";
+		String code = ("class X {\n"
+		               + "	public void foo() {\n"
+		               + "		String buffer = \"hello\";\n"
+		               + "		if (true) {\n"
+		               + "		  buffer += \" world\";\n"
+		               + "		}\n"
+		               + "	}\n"
+		               + "}\n");
 		CtModel model = createModelFromString(code, 21);
 		CtLocalVariable<?> variable = model.getElements(new TypeFilter<>(CtLocalVariable.class)).get(0);
 

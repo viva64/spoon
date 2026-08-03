@@ -176,12 +176,11 @@ public class SpoonTestHelpers {
 
 	/** wraps code into a method in a class */
 	public static String wrapLocal(String localDeclarationSnippet) {
-		return """
-			class X {
-			  public void myMethod() {
-			  %s
-			  }
-			}""".formatted(localDeclarationSnippet);
+		return String.format("class X {\n"
+		        + "  public void myMethod() {\n"
+		        + "  %s\n"
+		        + "  }\n"
+		        + "}", localDeclarationSnippet);
 	}
 
 	/** @see RegexFindMatcher */

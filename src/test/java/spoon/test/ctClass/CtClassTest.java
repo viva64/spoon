@@ -447,32 +447,30 @@ public class CtClassTest {
 		assertThat(statement).isInstanceOf(CtInvocation.class);
 
 		org.assertj.core.api.Assertions.assertThat(cl.toString()).isEqualTo(
-				"""
-				static java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder().version(java.net.http.HttpClient.Version.HTTP_1_1).build();
-
-				void jdbc() throws java.sql.SQLException {
-				    try (java.sql.Connection connection = java.sql.DriverManager.getConnection("jdbc:mysql://localhost:3306/myDb", "user1", "pass")) {
-				    }
-				}
-
-				static class Person {
-				    private java.lang.String name;
-
-				    public Person(java.lang.String name) {
-				        this.name = name;
-				    }
-				}
-
-				void main() {
-				    IO.println(greeting());
-				}
-
-				java.lang.String greeting() {
-				    return message;
-				}
-
-				final java.lang.String message = "Hello, World!";
-				""");
+				("static java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder().version(java.net.http.HttpClient.Version.HTTP_1_1).build();\n"
+				 + "\n"
+				 + "void jdbc() throws java.sql.SQLException {\n"
+				 + "    try (java.sql.Connection connection = java.sql.DriverManager.getConnection(\"jdbc:mysql://localhost:3306/myDb\", \"user1\", \"pass\")) {\n"
+				 + "    }\n"
+				 + "}\n"
+				 + "\n"
+				 + "static class Person {\n"
+				 + "    private java.lang.String name;\n"
+				 + "\n"
+				 + "    public Person(java.lang.String name) {\n"
+				 + "        this.name = name;\n"
+				 + "    }\n"
+				 + "}\n"
+				 + "\n"
+				 + "void main() {\n"
+				 + "    IO.println(greeting());\n"
+				 + "}\n"
+				 + "\n"
+				 + "java.lang.String greeting() {\n"
+				 + "    return message;\n"
+				 + "}\n"
+				 + "\n"
+				 + "final java.lang.String message = \"Hello, World!\";\n"));
 	}
 
 	@ModelTest(value = "src/test/resources/ctClass/DollarSignInInnerClassName.java")
@@ -499,17 +497,16 @@ public class CtClassTest {
 		assertThat(d).getSimpleName().isEqualTo("1D$1");
 
 		org.assertj.core.api.Assertions.assertThat(cl.toString()).isEqualTo(
-			"""
-			class DollarSignInInnerClassName {
-			    void m() {
-			        class B$1 {}
-			        class C$42 {
-			            void n() {
-			                class D$1 {}
-			            }
-			        }
-			    }
-			}"""
+			("class DollarSignInInnerClassName {\n"
+			 + "    void m() {\n"
+			 + "        class B$1 {}\n"
+			 + "        class C$42 {\n"
+			 + "            void n() {\n"
+			 + "                class D$1 {}\n"
+			 + "            }\n"
+			 + "        }\n"
+			 + "    }\n"
+			 + "}")
 		);
 	}
 

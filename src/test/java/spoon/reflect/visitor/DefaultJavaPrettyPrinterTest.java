@@ -134,14 +134,13 @@ public class DefaultJavaPrettyPrinterTest {
 		// This was obtained from the output produced by the pretty printer at the time, but notice importantly
 		// that the parenthesis presented in the original issue (https://github.com/INRIA/spoon/issues/5001) around "from..."
 		// and before "binaryIpStart" are not present, which is essentially what the original issue seems to be about.
-		private String expectedStringLiteral = """
-			"Select distinct t.NETWORK_IP, t.NETWORK_IP1, t.NETWORK_IP2, \
-			t.NETWORK_IP3, t.NETWORK_IP4 " + "from (SELECT DISTINCT t1.ipv4digit1 || '.' || t1.ipv4digit2 \
-			|| '.' || t1.ipv4digit3 " + " || '.0' network_ip, " + " TO_NUMBER (t1.ipv4digit1) network_ip1, " + " TO_NUMBER \
-			(t1.ipv4digit2) network_ip2, " + " TO_NUMBER (t1.ipv4digit3) network_ip3, " + " TO_NUMBER ('0') \
-			network_ip4, t1.t2_team_id, " + " t1.system_owner_id, t1.system_owner_team_id " + " FROM ip_info t1 " + " where \
-			t1.binary_ip >= '" + binaryIpStart + "' " + " and t1.binary_ip <= '" + binaryIpEnd + "' " + " \
-			ORDER BY network_ip1, network_ip2, network_ip3  " + " ) t order by t.NETWORK_IP1,t.NETWORK_IP2,t.NETWORK_IP3,t.NETWORK_IP4 \"""";
+		private String expectedStringLiteral = ("\"Select distinct t.NETWORK_IP, t.NETWORK_IP1, t.NETWORK_IP2, "
+		                                        + "t.NETWORK_IP3, t.NETWORK_IP4 \" + \"from (SELECT DISTINCT t1.ipv4digit1 || '.' || t1.ipv4digit2 "
+		                                        + "|| '.' || t1.ipv4digit3 \" + \" || '.0' network_ip, \" + \" TO_NUMBER (t1.ipv4digit1) network_ip1, \" + \" TO_NUMBER "
+		                                        + "(t1.ipv4digit2) network_ip2, \" + \" TO_NUMBER (t1.ipv4digit3) network_ip3, \" + \" TO_NUMBER ('0') "
+		                                        + "network_ip4, t1.t2_team_id, \" + \" t1.system_owner_id, t1.system_owner_team_id \" + \" FROM ip_info t1 \" + \" where "
+		                                        + "t1.binary_ip >= '\" + binaryIpStart + \"' \" + \" and t1.binary_ip <= '\" + binaryIpEnd + \"' \" + \" "
+		                                        + "ORDER BY network_ip1, network_ip2, network_ip3  \" + \" ) t order by t.NETWORK_IP1,t.NETWORK_IP2,t.NETWORK_IP3,t.NETWORK_IP4 \"");
 
 		@Test
 		@GitHubIssue(issueNumber = 5001, fixed = true)

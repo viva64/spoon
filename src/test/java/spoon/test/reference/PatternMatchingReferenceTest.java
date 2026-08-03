@@ -13,20 +13,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static spoon.testing.assertions.SpoonAssertions.assertThat;
 
 public class PatternMatchingReferenceTest {
-	@ModelTest(code = """
-		interface Shape {}
-
-		record Circle(double radius) implements Shape {}
-
-		class X {
-			public void processShape(Shape shape) {
-				switch (shape) {
-					case Circle c -> System.out.println("This is a circle with radius: " + c.getRadius());
-					default -> {}
-				}
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("interface Shape {}\n"
+	                   + "\n"
+	                   + "record Circle(double radius) implements Shape {}\n"
+	                   + "\n"
+	                   + "class X {\n"
+	                   + "	public void processShape(Shape shape) {\n"
+	                   + "		switch (shape) {\n"
+	                   + "			case Circle c -> System.out.println(\"This is a circle with radius: \" + c.getRadius());\n"
+	                   + "			default -> {}\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testCasePatternReferenceArrow(@BySimpleName("X") CtClass<?> ctClass) {
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
 		List<CtVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtVariableReference.class));
@@ -39,23 +37,21 @@ public class PatternMatchingReferenceTest {
 		assertThat(references.get(2)).hasExactlyPotentialDeclarations(variables.get(1));
 	}
 
-	@ModelTest(code = """
-		interface Shape {}
-
-		record Circle(double radius) implements Shape {}
-
-		class X {
-			public void processShape(Shape shape) {
-				switch (shape) {
-					case Circle c:
-						System.out.println("This is a circle with radius: " + c.getRadius());
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("interface Shape {}\n"
+	                   + "\n"
+	                   + "record Circle(double radius) implements Shape {}\n"
+	                   + "\n"
+	                   + "class X {\n"
+	                   + "	public void processShape(Shape shape) {\n"
+	                   + "		switch (shape) {\n"
+	                   + "			case Circle c:\n"
+	                   + "				System.out.println(\"This is a circle with radius: \" + c.getRadius());\n"
+	                   + "				break;\n"
+	                   + "			default:\n"
+	                   + "				break;\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testCasePatternReferenceColon(@BySimpleName("X") CtClass<?> ctClass) {
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
 		List<CtVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtVariableReference.class));
@@ -68,24 +64,22 @@ public class PatternMatchingReferenceTest {
 		assertThat(references.get(2)).hasExactlyPotentialDeclarations(variables.get(1));
 	}
 
-	@ModelTest(code = """
-		class Test {
-			String i = "";
-			void method(int integer) {
-				switch (integer) {
-					case 0:
-						System.out.println(i);
-						break;
-					case 1:
-						int i = 4;
-						break;
-					case 2:
-						i = 2;
-						break;
-				}
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String i = \"\";\n"
+	                   + "	void method(int integer) {\n"
+	                   + "		switch (integer) {\n"
+	                   + "			case 0:\n"
+	                   + "				System.out.println(i);\n"
+	                   + "				break;\n"
+	                   + "			case 1:\n"
+	                   + "				int i = 4;\n"
+	                   + "				break;\n"
+	                   + "			case 2:\n"
+	                   + "				i = 2;\n"
+	                   + "				break;\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testVariableInOtherCase(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a variable declared in one case of a switch statement is accessible in all the following cases,
 		//           but not in the previous cases.
@@ -106,25 +100,23 @@ public class PatternMatchingReferenceTest {
 	}
 
 
-	@ModelTest(code = """
-		class Test {
-			String i = "";
-			void method(int integer) {
-				switch (integer) {
-					case 0:
-						System.out.println(i);
-						break;
-					case 1: {
-						int i = 4;
-						break;
-					}
-					case 2:
-						i = 2;
-						break;
-				}
-			}
-		}
-		""")
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String i = \"\";\n"
+	                   + "	void method(int integer) {\n"
+	                   + "		switch (integer) {\n"
+	                   + "			case 0:\n"
+	                   + "				System.out.println(i);\n"
+	                   + "				break;\n"
+	                   + "			case 1: {\n"
+	                   + "				int i = 4;\n"
+	                   + "				break;\n"
+	                   + "			}\n"
+	                   + "			case 2:\n"
+	                   + "				i = 2;\n"
+	                   + "				break;\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
 	public void testVariableInOtherCaseWithBlock(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a variable declared in one case of a switch statement does not escape the block surrounding its declaration.
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -143,20 +135,18 @@ public class PatternMatchingReferenceTest {
 		assertThat(references.get(3)).hasExactlyPotentialDeclarations(field);
 	}
 
-	@ModelTest(code = """
-		class Test {
-			String i = "";
-			void method(int integer) {
-				switch (integer) {
-					case 0 -> System.out.println(i);
-					case 1 -> {
-						int i = 4;
-					}
-					case 2 -> i = 2;
-				}
-			}
-		}
-		""", complianceLevel = 17)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String i = \"\";\n"
+	                   + "	void method(int integer) {\n"
+	                   + "		switch (integer) {\n"
+	                   + "			case 0 -> System.out.println(i);\n"
+	                   + "			case 1 -> {\n"
+	                   + "				int i = 4;\n"
+	                   + "			}\n"
+	                   + "			case 2 -> i = 2;\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 17)
 	public void testVariableInOtherCaseSwitchExpr(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: a variable declared in a switch expression case is inaccessible in other cases, even the following ones.
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -176,16 +166,14 @@ public class PatternMatchingReferenceTest {
 	}
 
 
-	@ModelTest(code = """
-		class Test {
-			void method(Object obj) {
-				switch (obj) {
-					case String string when string.length() > 4 -> System.out.println(string);
-					default -> {}
-				}
-			}
-		}
-		""", complianceLevel = 21)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void method(Object obj) {\n"
+	                   + "		switch (obj) {\n"
+	                   + "			case String string when string.length() > 4 -> System.out.println(string);\n"
+	                   + "			default -> {}\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 21)
 	public void testSwitchGuard(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: the variable reference in the guard of a switch resolves to the variable declared in the case pattern.
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
@@ -202,26 +190,24 @@ public class PatternMatchingReferenceTest {
 		assertThat(references.get(3)).hasExactlyPotentialDeclarations(variables.get(1));
 	}
 
-	@ModelTest(code = """
-		class Test {
-			String string = "";
-			void method(int integer, Object obj) {
-				switch (integer) {
-					case 0:
-						if (!(obj instanceof String string)) {
-							throw new IllegalStateException();
-						}
-						System.out.println(string);
-						break;
-					case 1:
-						System.out.println(string);
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		""", complianceLevel = 17)
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String string = \"\";\n"
+	                   + "	void method(int integer, Object obj) {\n"
+	                   + "		switch (integer) {\n"
+	                   + "			case 0:\n"
+	                   + "				if (!(obj instanceof String string)) {\n"
+	                   + "					throw new IllegalStateException();\n"
+	                   + "				}\n"
+	                   + "				System.out.println(string);\n"
+	                   + "				break;\n"
+	                   + "			case 1:\n"
+	                   + "				System.out.println(string);\n"
+	                   + "				break;\n"
+	                   + "			default:\n"
+	                   + "				break;\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"), complianceLevel = 17)
 	public void testPatternScopeOnlyInCase(@BySimpleName("Test") CtClass<?> ctClass) {
 		// contract: A pattern variable introduced in a statement in a case is not accessible in the following cases.
 		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));

@@ -30,9 +30,9 @@ public interface CtReferenceAssertInterface<A extends AbstractObjectAssert<A, W>
 	 */
 	default CtReferenceAssertInterface<? extends A, ? extends W> hasExactlyPotentialDeclarations(CtVariable<?>... potentialDeclarations) {
 		List<CtVariable<?>> declarations;
-		if (actual() instanceof CtFieldReference<?> ctFieldReference) {
+		if (actual() instanceof CtFieldReference) {
 			// If necessary, this can be extended to resolve hidden variables from super types as well
-			declarations = List.of(ctFieldReference.getFieldDeclaration());
+			declarations = List.of(((CtFieldReference<?>) actual()).getFieldDeclaration());
 		} else {
 			declarations = actual().map(new PotentialVariableDeclarationFunction(actual().getSimpleName())).list();
 		}

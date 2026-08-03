@@ -272,11 +272,10 @@ public class ConstructorTest {
 		assertThat(((CtInvocation<?>) statements0.get(1)).getExecutable().isConstructor()).isTrue();
 		assertThat(statements0.get(2)).isInstanceOf(CtAssignment.class);
 
-		assertThat(statements0.stream().map(String::valueOf).toList()).containsExactly(
-			"""
-				if ((age < 18) || (age > 65)) {
-				    throw new java.lang.IllegalArgumentException();
-				}""",
+		assertThat(statements0.stream().map(String::valueOf).collect(Collectors.toUnmodifiableList())).containsExactly(
+			("if ((age < 18) || (age > 65)) {\n"
+			 + "    throw new java.lang.IllegalArgumentException();\n"
+			 + "}"),
 			"super(name, age)",
 			"this.officeID = officeID"
 		);
@@ -291,11 +290,10 @@ public class ConstructorTest {
 		assertThat(statements1.get(1)).isInstanceOf(CtInvocation.class);
 		assertThat(((CtInvocation<?>) statements1.get(1)).getExecutable().isConstructor()).isTrue();
 
-		assertThat(statements1.stream().map(String::valueOf).toList()).containsExactly(
-			"""
-				if ((age < 18) || (age > 65)) {
-				    throw new java.lang.IllegalArgumentException();
-				}""",
+		assertThat(statements1.stream().map(String::valueOf).collect(Collectors.toUnmodifiableList())).containsExactly(
+			("if ((age < 18) || (age > 65)) {\n"
+			 + "    throw new java.lang.IllegalArgumentException();\n"
+			 + "}"),
 			"this(\"Bob\", age, officeID)"
 		);
 	}}
