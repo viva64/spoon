@@ -34,6 +34,7 @@ import spoon.reflect.code.CtLambda;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtStatement;
+import spoon.reflect.code.CtTryWithResource;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtEnum;
@@ -455,6 +456,111 @@ public class VariableReferencesTest {
 		assertThat(references.get(7)).hasExactlyPotentialDeclarations(scannerField);
 		assertThat(references.get(8)).hasExactlyPotentialDeclarations(catchVariable, eField);
 		assertThat(references.get(10)).hasExactlyPotentialDeclarations(scannerField);
+	}
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	static class Res implements AutoCloseable {\n"
+	                   + "		Res(Object... args) {}\n"
+	                   + "		public void close() {}\n"
+	                   + "	}\n"
+	                   + "\n"
+	                   + "	static void use(Object value) {}\n"
+	                   + "\n"
+	                   + "	Res first;\n"
+	                   + "	Res later;\n"
+	                   + "\n"
+	                   + "	void method() {\n"
+	                   + "		try(\n"
+	                   + "			Res first = new Res(later);\n"
+	                   + "			Res second = new Res(first);\n"
+	                   + "			Res later = new Res(first, second)\n"
+	                   + "		) {\n"
+	                   + "			use(first);\n"
+	                   + "			use(second);\n"
+	                   + "			use(later);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testTryWithResourceReferencesEarlierResource(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: a try-with-resource resource is in scope over the remainder of the resource specification, so the
+		// initializer of a resource can reference the resources declared before it, but not those declared after it
+		CtTryWithResource tryWithResource = assertThat(ctClass.getElements(new TypeFilter<CtTryWithResource>(CtTryWithResource.class)))
+			.singleElement()
+			.actual();
+
+		List<CtLocalVariable<?>> resources = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
+		assertThat(resources).hasSize(3);
+		CtVariable<?> firstResource = resources.get(0);
+		CtVariable<?> secondResource = resources.get(1);
+		CtVariable<?> laterResource = resources.get(2);
+		assertThat(firstResource).getSimpleName().isEqualTo("first");
+		assertThat(secondResource).getSimpleName().isEqualTo("second");
+		assertThat(laterResource).getSimpleName().isEqualTo("later");
+
+		CtField<?> firstField = ctClass.getField("first");
+		assertNotNull(firstField);
+		CtField<?> laterField = ctClass.getField("later");
+		assertNotNull(laterField);
+
+		CtVariableReference<?> laterReference = assertThat(firstResource.getElements(new TypeFilter<CtVariableReference<?>>(CtVariableReference.class)))
+			.singleElement()
+			.actual();
+		assertThat(laterReference.map(new PotentialVariableDeclarationFunction("later")).list(CtVariable.class))
+			.singleElement()
+			.isSameAs(laterField);
+
+		CtVariableReference<?> firstReference = assertThat(secondResource.getElements(new TypeFilter<CtVariableReference<?>>(CtVariableReference.class)))
+			.singleElement()
+			.actual();
+		assertThat(firstReference)
+			.hasExactlyPotentialDeclarations(firstResource, firstField)
+			.getDeclaration()
+			.isSameAs(firstResource);
+
+		assertThat(laterResource.getElements(new TypeFilter<CtVariableReference<?>>(CtVariableReference.class))).satisfiesExactly(
+			reference -> assertThat(reference)
+				.hasExactlyPotentialDeclarations(firstResource, firstField)
+				.getDeclaration()
+				.isSameAs(firstResource),
+			reference -> assertThat(reference)
+				.hasExactlyPotentialDeclarations(secondResource)
+				.getDeclaration()
+				.isSameAs(secondResource));
+
+		assertThat(tryWithResource.getBody().getElements(new TypeFilter<CtVariableReference<?>>(CtVariableReference.class))).satisfiesExactly(
+			reference -> assertThat(reference).hasExactlyPotentialDeclarations(firstResource, firstField),
+			reference -> assertThat(reference).hasExactlyPotentialDeclarations(secondResource),
+			reference -> assertThat(reference).hasExactlyPotentialDeclarations(laterResource, laterField));
+	}
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	static class Res implements AutoCloseable {\n"
+	                   + "		Res(Object... args) {}\n"
+	                   + "		public void close() {}\n"
+	                   + "	}\n"
+	                   + "\n"
+	                   + "	void method(Res given) {\n"
+	                   + "		try(given; Res second = new Res(given)) {\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testTryWithResourceExistingVariableResource(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: a resource that is an existing variable rather than a declaration (Java 9) introduces no new
+		// variable, so references in the remainder of the specification still resolve to the original declaration
+		CtParameter<?> parameter = ctClass.getMethodsByName("method").get(0).getParameters().get(0);
+		assertThat(parameter).getSimpleName().isEqualTo("given");
+
+		CtLocalVariable<?> secondResource = assertThat(ctClass.getElements(new TypeFilter<CtLocalVariable<?>>(CtLocalVariable.class)))
+			.singleElement()
+			.actual();
+		assertThat(secondResource).getSimpleName().isEqualTo("second");
+
+		assertThat(ctClass.getElements(new TypeFilter<CtVariableReference<?>>(CtVariableReference.class))).satisfiesExactly(
+			reference -> assertThat(reference).hasExactlyPotentialDeclarations(parameter),
+			reference -> assertThat(reference)
+				.hasExactlyPotentialDeclarations(parameter)
+				.getDeclaration()
+				.isSameAs(parameter));
 	}
 
 	@ModelTest(code = ("class Test {\n"

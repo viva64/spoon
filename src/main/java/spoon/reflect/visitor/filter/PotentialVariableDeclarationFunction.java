@@ -47,6 +47,7 @@ import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtVariable;
 import spoon.reflect.declaration.ModifierKind;
+import spoon.reflect.path.CtRole;
 import spoon.reflect.visitor.chain.CtConsumableFunction;
 import spoon.reflect.visitor.chain.CtConsumer;
 import spoon.reflect.visitor.chain.CtQuery;
@@ -480,14 +481,10 @@ public class PotentialVariableDeclarationFunction implements CtConsumableFunctio
 		}
 
 		if (parent instanceof CtTryWithResource) {
-			CtTryWithResource ctTryWith = (CtTryWithResource) parent;
-			for (var resource : ctTryWith.getResources()) {
-				for (var scope : resource == child ? filteredChildScopes : exploreBranchForNewScopes(resource)) {
-					result.add(new VariableScope(scope.variable(), ctTryWith.getBody()));
-				}
+			CtRole roleInTry = child.getRoleInParent();
+			if (roleInTry != CtRole.TRY_RESOURCE && roleInTry != CtRole.BODY) {
+				return result;
 			}
-
-			return result;
 		}
 
 		// For these elements the SiblingsFunction works fine to discover the variable declarations introduced by them like
