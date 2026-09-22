@@ -8,7 +8,6 @@
 package spoon.support.visitor.java;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
@@ -16,6 +15,7 @@ import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -596,9 +596,6 @@ class JavaReflectionVisitorImpl implements JavaReflectionVisitor {
 		for (AnnotatedElement element : MethodHandleUtils.getRecordComponents(clazz)) {
 			visitRecordComponent(element);
 		}
-
-
-
 	}
 
 	private static boolean isTopLevelType(Class<?> clazz) {

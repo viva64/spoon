@@ -34,10 +34,9 @@ import spoon.reflect.code.CtLambda;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtLocalVariable;
 import spoon.reflect.code.CtStatement;
-import spoon.reflect.cu.SourcePosition;
-import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtEnum;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtMethod;
@@ -61,10 +60,15 @@ import spoon.reflect.visitor.filter.PotentialVariableDeclarationFunction;
 import spoon.reflect.visitor.filter.TypeFilter;
 import spoon.reflect.visitor.filter.VariableReferenceFunction;
 import spoon.reflect.visitor.filter.VariableScopeFunction;
+import spoon.test.query_function.testclasses.EnumValueReferences;
 import spoon.test.query_function.testclasses.VariableReferencesFromStaticMethod;
 import spoon.test.query_function.testclasses.VariableReferencesModelTest;
+import spoon.testing.utils.BySimpleName;
+import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
+import static spoon.testing.assertions.SpoonAssertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -126,7 +130,7 @@ public class VariableReferencesTest {
 		//The test detects whether found references are correct by these two checks:
 		//1) the each found reference is on the left side of binary operator and on the right side there is unique reference identification number. Like: (field == 7)
 		//2) the model is searched for all variable references which has same identification number and counts them
-		//Then it checks that counted number of references and found number of references is same 
+		//Then it checks that counted number of references and found number of references is same
 		modelClass.filterChildren((CtCatchVariable<?> var)->{
 			if(isTestFieldName(var.getSimpleName())) {
 				int value = getLiteralValue(var);
@@ -142,7 +146,7 @@ public class VariableReferencesTest {
 		//The test detects whether found references are correct by these two checks:
 		//1) the each found reference is on the left side of binary operator and on the right side there is unique reference identification number. Like: (field == 7)
 		//2) the model is searched for all variable references which has same identification number and counts them
-		//Then it checks that counted number of references and found number of references is same 
+		//Then it checks that counted number of references and found number of references is same
 		modelClass.filterChildren((CtLocalVariable<?> var)->{
 			if(isTestFieldName(var.getSimpleName())) {
 				int value = getLiteralValue(var);
@@ -158,7 +162,7 @@ public class VariableReferencesTest {
 		//The test detects whether found references are correct by these two checks:
 		//1) the each found reference is on the left side of binary operator and on the right side there is unique reference identification number. Like: (field == 7)
 		//2) the model is searched for all variable references which has same identification number and counts them
-		//Then it checks that counted number of references and found number of references is same 
+		//Then it checks that counted number of references and found number of references is same
 		modelClass.filterChildren((CtParameter<?> var)->{
 			if(isTestFieldName(var.getSimpleName())) {
 				int value = getLiteralValue(var);
@@ -166,7 +170,7 @@ public class VariableReferencesTest {
 			}
 			return false;
 		}).list();
-	}	
+	}
 
 	@Test
 	public void testVariableReferenceFunction() {
@@ -174,7 +178,7 @@ public class VariableReferencesTest {
 		//The test detects whether found references are correct by these two checks:
 		//1) the each found reference is on the left side of binary operator and on the right side there is unique reference identification number. Like: (field == 7)
 		//2) the model is searched for all variable references which has same identification number and counts them
-		//Then it checks that counted number of references and found number of references is same 
+		//Then it checks that counted number of references and found number of references is same
 		modelClass.filterChildren((CtVariable<?> var)->{
 			if(isTestFieldName(var.getSimpleName())) {
 				int value = getLiteralValue(var);
@@ -266,7 +270,7 @@ public class VariableReferencesTest {
 			});
 			//check that both scans found same number of references
 			assertEquals(context.expectedCount, context.realCount, "Number of references to field=" + value + " does not match");
-			
+
 		} catch (Throwable e) {
 			e.printStackTrace();
 			throw new AssertionError("Test failed on " + getParentMethodName(var), e);
@@ -300,7 +304,7 @@ public class VariableReferencesTest {
 			try {
 				return getLiteralValue(exp);
 			} catch (ClassCastException e) {
-				
+
 			}
 		}
 		if (var instanceof CtParameter) {
@@ -352,18 +356,6 @@ public class VariableReferencesTest {
 		return ((CtLiteral<Integer>) exp).getValue();
 	}
 
-	private SourcePosition getPosition(CtElement e) {
-		SourcePosition sp = e.getPosition();
-		while(sp instanceof NoSourcePosition) {
-			e = e.getParent();
-			if(e==null) {
-				break;
-			}
-			sp = e.getPosition();
-		}
-		return sp;
-	}
-
 	@Test
 	public void testPotentialVariableAccessFromStaticMethod() throws Exception {
 		Factory factory = ModelUtils.build(VariableReferencesFromStaticMethod.class);
@@ -374,5 +366,233 @@ public class VariableReferencesTest {
 		CtLocalVariableReference varRef = stmt.filterChildren(new TypeFilter<>(CtLocalVariableReference.class)).first();
 		List<CtVariable> vars = varRef.map(new PotentialVariableDeclarationFunction()).list();
 		assertEquals(1, vars.size(), "Found unexpected variable declaration.");
+	}
+
+	/**
+	 * Check support for enum values in {@link VariableReferenceFunction}.
+	 * Each enum value should have a single reference linking back to itself.
+	 */
+	@Test
+	public void testVariableReferenceFunctionWithEnum() throws Exception {
+		Factory factory = ModelUtils.build(EnumValueReferences.class);
+		CtClass<?> clazz = factory.Class().get(EnumValueReferences.class);
+		CtEnum<?> testEnum = clazz.getNestedType("TestEnum");
+		var values = testEnum.getEnumValues();
+		assertEquals(2, values.size());
+		values.forEach(ev -> {
+			List<CtVariableReference<?>> refs = ev.map(new VariableReferenceFunction()).list();
+			assertEquals(1, refs.size());
+			assertEquals(ev.getReference(), refs.get(0));
+		});
+	}
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void method() {\n"
+	                   + "		for (int i = 0; i < 10; i++) {\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testForInitReference(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: a reference to a variable declared in a for loop must be resolved to the correct declaration
+		List<CtLocalVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
+		List<CtLocalVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtLocalVariableReference.class));
+
+		assertThat(variables).hasSize(1);
+		assertThat(variables.get(0)).getSimpleName().isEqualTo("i");
+
+		assertThat(references).hasSize(3);
+		assertThat(references).extracting(CtLocalVariableReference::getSimpleName).allMatch("i"::equals);
+
+		assertThat(references.get(0)).hasExactlyPotentialDeclarations(variables.get(0));
+		assertThat(references.get(1)).hasExactlyPotentialDeclarations(variables.get(0));
+		assertThat(references.get(2)).hasExactlyPotentialDeclarations(variables.get(0));
+	}
+
+	@ModelTest(code = ("import java.util.Scanner;\n"
+	                   + "\n"
+	                   + "class Test {\n"
+	                   + "	Scanner scanner;\n"
+	                   + "	String e;\n"
+	                   + "\n"
+	                   + "	void method() {\n"
+	                   + "		try(\n"
+	                   + "			Scanner scanner = new Scanner(System.in);\n"
+	                   + "			Scanner e = new Scanner(System.err)\n"
+	                   + "		) {\n"
+	                   + "			System.out.println(scanner);\n"
+	                   + "			System.out.println(e);\n"
+	                   + "		} catch(IllegalArgumentException e) {\n"
+	                   + "			System.out.println(scanner + e.getMessage());\n"
+	                   + "		} finally {\n"
+	                   + "			System.out.println(scanner);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testTryWithReferenceTest(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: a reference to a try-with-resource variable is only accessible in the try block
+		List<CtLocalVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtLocalVariable.class));
+		List<CtVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtVariableReference.class));
+
+		assertThat(variables).hasSize(2);
+		CtVariable<?> tryWithVariable = variables.get(0);
+		CtVariable<?> errTryWithVariable = variables.get(1);
+		assertThat(tryWithVariable).getSimpleName().isEqualTo("scanner");
+		assertThat(errTryWithVariable).getSimpleName().isEqualTo("e");
+		CtVariable<?> catchVariable = ctClass.getElements(new TypeFilter<>(CtCatchVariable.class)).get(0);
+		assertThat(catchVariable).getSimpleName().isEqualTo("e");
+
+		CtField<?> scannerField = ctClass.getField("scanner");
+		assertNotNull(scannerField);
+		CtField<?> eField = ctClass.getField("e");
+		assertNotNull(eField);
+
+
+		assertThat(references).hasSize(11);
+
+		assertThat(references.get(3)).hasExactlyPotentialDeclarations(tryWithVariable, scannerField);
+		assertThat(references.get(5)).hasExactlyPotentialDeclarations(errTryWithVariable, eField);
+		assertThat(references.get(7)).hasExactlyPotentialDeclarations(scannerField);
+		assertThat(references.get(8)).hasExactlyPotentialDeclarations(catchVariable, eField);
+		assertThat(references.get(10)).hasExactlyPotentialDeclarations(scannerField);
+	}
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	static void assertTrue(boolean condition) {}\n"
+	                   + "\n"
+	                   + "	void nestedClassMethodWithShadowVarAndField() {\n"
+	                   + "		int var1 = 2;\n"
+	                   + "		new Runnable() {\n"
+	                   + "			//this var1 shadows above defined var1.\n"
+	                   + "			int var1 = 3;\n"
+	                   + "			@Override\n"
+	                   + "			public void run() {\n"
+	                   + "				assertTrue(var1 == 3);\n"
+	                   + "				int var1 = 4;\n"
+	                   + "				assertTrue(var1 == 4);\n"
+	                   + "				assertTrue(this.var1 == 3);\n"
+	                   + "			}\n"
+	                   + "		}.run();\n"
+	                   + "		assertTrue(var1 == 2);\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testAnonymousClassFieldResolution(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: variable references with anonymous classes resolve correctly
+		CtMethod<?> ctMethod = ctClass.getMethodsByName("nestedClassMethodWithShadowVarAndField").get(0);
+
+		List<CtVariable<?>> variables = ctMethod.getElements(new TypeFilter<>(CtVariable.class));
+		List<CtVariableReference<?>> references = ctMethod.getElements(new TypeFilter<>(CtVariableReference.class));
+		assertThat(references).hasSize(4);
+		assertThat(variables).hasSize(3);
+
+		var outerLocalVar1 = variables.get(0);
+		assertThat(outerLocalVar1).isInstanceOf(CtLocalVariable.class).getSimpleName().isEqualTo("var1");
+		var runnableFieldVar1 = variables.get(1);
+		assertThat(runnableFieldVar1).isInstanceOf(CtField.class).getSimpleName().isEqualTo("var1");
+		var innerLocalVar1 = variables.get(2);
+		assertThat(innerLocalVar1).isInstanceOf(CtLocalVariable.class).getSimpleName().isEqualTo("var1");
+
+		assertThat(references.get(0)).hasExactlyPotentialDeclarations(runnableFieldVar1); // assertTrue(var1 == 3);
+		assertThat(references.get(1)).hasExactlyPotentialDeclarations(innerLocalVar1, runnableFieldVar1, outerLocalVar1); // assertTrue(var1 == 4);
+		assertThat(references.get(2)).hasExactlyPotentialDeclarations(runnableFieldVar1); // assertTrue(this.var1 == 3);
+		assertThat(references.get(3)).hasExactlyPotentialDeclarations(outerLocalVar1); // assertTrue(var1 == 2);
+	}
+
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String string = \"\";\n"
+	                   + "	void method(String[] array) {\n"
+	                   + "		for (String string : array) {\n"
+	                   + "			System.out.println(string);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testForEachVariableResolution(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: the variable referenced in a for-each resolves to the loop variable, then the field
+		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
+		List<CtVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtVariableReference.class));
+
+		assertThat(variables).hasSize(3);
+		CtVariable<?> fieldVariable = variables.get(0);
+		CtVariable<?> arrayParam = variables.get(1);
+		CtVariable<?> forEachVariable = variables.get(2);
+		assertThat(fieldVariable).isSameAs(ctClass.getField("string"));
+
+		assertThat(references).hasSize(3);
+
+		assertThat(references.get(0)).hasExactlyPotentialDeclarations(arrayParam); // for (String string : array)
+		// System.out
+		assertThat(references.get(2)).hasExactlyPotentialDeclarations(forEachVariable, fieldVariable); // println(string)
+	}
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String s = \"\";\n"
+	                   + "\n"
+	                   + "	void method(Object in) {\n"
+	                   + "		if(in instanceof String s) {\n"
+	                   + "		} else {\n"
+	                   + "		  return;\n"
+	                   + "		}\n"
+	                   + "		System.out.println(s);\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testPatternVariableOutsideThen(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: a pattern variable is accessible outside the then, if the other branch returns
+		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
+		List<CtVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtVariableReference.class));
+
+		assertThat(variables).hasSize(3);
+		CtVariable<?> fieldVariable = variables.get(0);
+		CtVariable<?> paramVar = variables.get(1);
+		CtVariable<?> patternVar = variables.get(2);
+
+		assertThat(references.get(0)).hasExactlyPotentialDeclarations(paramVar); // if(in instanceof String s)
+		// System.out
+		assertThat(references.get(2)).hasExactlyPotentialDeclarations(patternVar, fieldVariable); // println(s)
+	}
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	String s = \"\";\n"
+	                   + "\n"
+	                   + "	void method(Object obj) {\n"
+	                   + "		if(obj instanceof String s); else {\n"
+	                   + "		  return;\n"
+	                   + "		}\n"
+	                   + "\n"
+	                   + "		System.out.println(s);\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testIfWithNullThen(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: a pattern variable is accessible outside the then, if the other branch returns, even if the then is empty
+		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
+		List<CtVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtVariableReference.class));
+
+		assertThat(variables).hasSize(3);
+		CtVariable<?> fieldVariable = variables.get(0);
+		CtVariable<?> paramVar = variables.get(1);
+		CtVariable<?> patternVar = variables.get(2);
+
+		assertThat(references.get(0)).hasExactlyPotentialDeclarations(paramVar); // if (obj instanceof String s)
+		// System.out
+		assertThat(references.get(2)).hasExactlyPotentialDeclarations(patternVar, fieldVariable); // println(s)
+	}
+
+	@ModelTest(code = ("class Test {\n"
+	                   + "	void method() {\n"
+	                   + "		int i = 0;\n"
+	                   + "		for (; ;) {\n"
+	                   + "			System.out.println(i);\n"
+	                   + "		}\n"
+	                   + "	}\n"
+	                   + "}\n"))
+	public void testForConditionNull(@BySimpleName("Test") CtClass<?> ctClass) {
+		// contract: a variable declared in the initialization of a for loop is correctly resolved in the body,
+		//           even if the condition and update are null
+		List<CtVariable<?>> variables = ctClass.getElements(new TypeFilter<>(CtVariable.class));
+		List<CtVariableReference<?>> references = ctClass.getElements(new TypeFilter<>(CtVariableReference.class));
+
+		assertThat(variables).hasSize(1);
+
+		assertThat(references.get(1)).hasExactlyPotentialDeclarations(variables.get(0));
 	}
 }

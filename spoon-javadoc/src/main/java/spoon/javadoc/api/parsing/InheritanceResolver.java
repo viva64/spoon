@@ -139,9 +139,10 @@ public class InheritanceResolver {
 	 * @return the new and completed javadoc
 	 */
 	public List<JavadocElement> completeJavadocWithInheritedTags(CtElement element, JavadocCommentView view) {
-		if (!(element instanceof CtMethod<?> method)) {
+		if (!(element instanceof CtMethod)) {
 			return view.getElements();
 		}
+		CtMethod<?> method = (CtMethod<?>) element;
 		Set<String> paramsToFind = method.getParameters()
 			.stream()
 			.map(CtNamedElement::getSimpleName)
@@ -202,9 +203,10 @@ public class InheritanceResolver {
 		if (view.getBody().isEmpty()) {
 			return true;
 		}
-		if (!(view.getBody().get(0) instanceof JavadocInlineTag start)) {
+		if (!(view.getBody().get(0) instanceof JavadocInlineTag)) {
 			return true;
 		}
+		JavadocInlineTag start = (JavadocInlineTag) view.getBody().get(0);
 		return start.getTagType() != StandardJavadocTagType.RETURN;
 	}
 

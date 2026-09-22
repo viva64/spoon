@@ -21,8 +21,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 import spoon.Launcher;
 import spoon.SpoonException;
 import spoon.SpoonModelBuilder;
@@ -322,7 +320,6 @@ public class TestModule {
 	}
 
 	@Test
-	@DisabledForJreRange(max = JRE.JAVA_8)
 	public void testSimpleModuleCanBeBuilt() {
 		// contract: Spoon is able to build a simple model with a module in full classpath
 		final Launcher launcher = new Launcher();

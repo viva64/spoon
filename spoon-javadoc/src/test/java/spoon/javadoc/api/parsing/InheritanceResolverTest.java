@@ -28,40 +28,36 @@ class InheritanceResolverTest {
 	@Test
 	void testInheritDocBody() {
 		// contract: An inheritDoc tag is inherited (as is the rest implicitly)
-		var view = inheritTestFromSuper("""
-			/**
-			  * {@inheritDoc}
-			  */""");
+		var view = inheritTestFromSuper(("/**\n"
+		                                 + "  * {@inheritDoc}\n"
+		                                 + "  */"));
 		assertEquals(view.actual().getElements(), view.ref().getElements());
 	}
 
 	@Test
 	void testInheritDocParam() {
 		// contract: An inheritDoc tag is inherited (as is the rest implicitly)
-		var view = inheritTestFromSuper("""
-			/**
-			  * @param a {@inheritDoc}
-			  */""");
+		var view = inheritTestFromSuper(("/**\n"
+		                                 + "  * @param a {@inheritDoc}\n"
+		                                 + "  */"));
 		assertEquals(view.actual().getElements(), view.ref().getElements());
 	}
 
 	@Test
 	void testInheritDocThrows() {
 		// contract: An inheritDoc tag is inherited (as is the rest implicitly)
-		var view = inheritTestFromSuper("""
-			/**
-			  * @throws IOException {@inheritDoc}
-			  */""");
+		var view = inheritTestFromSuper(("/**\n"
+		                                 + "  * @throws IOException {@inheritDoc}\n"
+		                                 + "  */"));
 		assertEquals(view.actual().getElements(), view.ref().getElements());
 	}
 
 	@Test
 	void testInheritDocException() {
 		// contract: An inheritDoc tag is inherited for throws/exception (as is the rest implicitly)
-		var view = inheritTestFromSuper("""
-			/**
-			  * @exception IOException {@inheritDoc}
-			  */""");
+		var view = inheritTestFromSuper(("/**\n"
+		                                 + "  * @exception IOException {@inheritDoc}\n"
+		                                 + "  */"));
 		assertEquals(view.actual().getElements(), view.ref().getElements());
 	}
 
@@ -145,16 +141,14 @@ class InheritanceResolverTest {
 		String subclassName = InheritanceResolverTest.class.getPackageName() + ".Sub";
 		String packageName = InheritanceResolverTest.class.getPackageName();
 		launcher.addInputResource(new VirtualFile(
-			"""
-				package %s;
-				import java.io.IOException;
-				import %s;
-				public static class Sub extends Super {
-				%s
-				@Override
-				public <T> int test(int a) throws IOException { return a; }
-				}
-				""".formatted(packageName, InheritanceResolverTest.class.getName() + ".Super", javadoc),
+			String.format("package %s;\n"
+			 + "import java.io.IOException;\n"
+			 + "import %s;\n"
+			 + "public static class Sub extends Super {\n"
+			 + "%s\n"
+			 + "@Override\n"
+			 + "public <T> int test(int a) throws IOException { return a; }\n"
+			 + "}\n", packageName, InheritanceResolverTest.class.getName() + ".Super", javadoc),
 			subclassName.replace(".", "/")
 		));
 
@@ -237,7 +231,21 @@ class InheritanceResolverTest {
 		}
 	}
 
-	private record CompletedDoc(JavadocCommentView actual, JavadocCommentView ref) {
+	private static final class CompletedDoc {
+		private final JavadocCommentView actual;
+		private final JavadocCommentView ref;
 
+		private CompletedDoc(JavadocCommentView actual, JavadocCommentView ref) {
+			this.actual = actual;
+			this.ref = ref;
+		}
+
+		public JavadocCommentView actual() {
+			return this.actual;
+		}
+
+		public JavadocCommentView ref() {
+			return this.ref;
+		}
 	}
 }

@@ -19,8 +19,6 @@ package spoon.test.variable;
 import com.google.common.io.Files;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.io.TempDir;
 import spoon.Launcher;
 import spoon.processing.AbstractProcessor;
@@ -123,7 +121,6 @@ public class VariableTest {
     }
 
         @Test
-        @DisabledForJreRange(max = JRE.JAVA_9)
     public void testInferredVariableAreMarked() {
         // contract: if a variable is declared with 'var' keyword, it must be marked as inferred in the model
         Launcher launcher = new Launcher();
@@ -162,7 +159,6 @@ public class VariableTest {
     }
 
     @Test
-    @DisabledForJreRange(max = JRE.JAVA_9)
     public void testInferredVariableArePrintedWithVar(@TempDir File outputDir) throws IOException {
         // contract: if a variable is marked as inferred in the model, it must be pretty-printed with a 'var' keyword
         Launcher launcher = new Launcher();
@@ -185,7 +181,6 @@ public class VariableTest {
     }
 
     @Test
-    @DisabledForJreRange(max = JRE.JAVA_10)
     public void testVarInLambda() {
         // contract: we should handle local variable syntax for lambda parameters properly (since Java 11)
         // example: (var x, var y) -> x + y;

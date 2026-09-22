@@ -17,6 +17,15 @@
 package spoon.test.position;
 
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -104,12 +113,6 @@ import spoon.test.query_function.testclasses.VariableReferencesModelTest;
 import spoon.testing.utils.ModelTest;
 import spoon.testing.utils.ModelUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -807,6 +810,8 @@ public class PositionTest {
 			AnnonymousClassNewIface.class);
 		String originSources = foo.getPosition().getCompilationUnit().getOriginalSourceCode();
 		List<CtImport> imports = foo.getPosition().getCompilationUnit().getImports();
+		// Sorting using position of import element so that they are sorted in the order they are imported
+		imports.sort(Comparator.comparing(importElement -> importElement.getPosition().getSourceStart()));
 		assertEquals(2, imports.size());
 		Iterator<CtImport> iter = imports.iterator();
 		{
