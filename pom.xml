@@ -34,12 +34,12 @@
       <dependency>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>ecj</artifactId>
-          <version>3.46.0-PVS-STUDIO</version>
+          <version>3.46.0-PVS-STUDIO-33adf1f566</version>
       </dependency>
     <dependency>
       <groupId>org.eclipse.jdt</groupId>
       <artifactId>org.eclipse.jdt.core</artifactId>
-      <version>3.46.0-PVS-STUDIO</version>
+      <version>3.46.0-PVS-STUDIO-33adf1f566</version>
       <exclusions>
         <exclusion>
           <groupId>org.eclipse.platform</groupId>
@@ -62,12 +62,12 @@
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm</artifactId>
-      <version>9.6</version>
+      <version>9.10.1</version>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm-util</artifactId>
-      <version>9.6</version>
+      <version>9.10.1</version>
     </dependency>
     <dependency>
       <groupId>com.martiansoftware</groupId>
