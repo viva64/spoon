@@ -108,27 +108,31 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				if (contexts.isEmpty()) {
 					enter(new PackageRuntimeBuilderContext(ctPackage));
 				}
-				boolean visited = false;
-				if (clazz.isAnnotation()) {
-					visited = true;
-					visitAnnotationClass((Class<Annotation>) clazz);
+				try {
+					boolean visited = false;
+					if (clazz.isAnnotation()) {
+						visited = true;
+						visitAnnotationClass((Class<Annotation>) clazz);
+					}
+					if (clazz.isInterface() && !visited) {
+						visited = true;
+						visitInterface(clazz);
+					}
+					if (clazz.isEnum() && !visited) {
+						visited = true;
+						visitEnum(clazz);
+					}
+					if (MethodHandleUtils.isRecord(clazz) && !visited) {
+						visited = true;
+						visitRecord(clazz);
+					}
+					if (!visited) {
+						visitClass(clazz);
+					}
+				} finally {
+					exit();
 				}
-				if (clazz.isInterface() && !visited) {
-					visited = true;
-					visitInterface(clazz);
-				}
-				if (clazz.isEnum() && !visited) {
-					visited = true;
-					visitEnum(clazz);
-				}
-				if (MethodHandleUtils.isRecord(clazz) && !visited) {
-					visited = true;
-					visitRecord(clazz);
-				}
-				if (!visited) {
-					visitClass(clazz);
-				}
-				exit();
+
 				final R type = ctPackage.getType(clazz.getSimpleName());
 				if (clazz.isPrimitive() && type.getParent() instanceof CtPackage) {
 					type.setParent(null); // primitive type isn't in a package.
@@ -167,8 +171,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		if (ctPackage == null || shouldVisitPackage(ctPackage)) {
 			ctPackage = factory.Package().getOrCreate(aPackage.getName());
 			enter(new PackageRuntimeBuilderContext(ctPackage));
-			super.visitPackage(aPackage);
-			exit();
+			try {
+				super.visitPackage(aPackage);
+			} finally {
+				exit();
+			}
 		}
 
 		contexts.peek().addPackage(ctPackage);
@@ -212,8 +219,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				super.addTypeReference(role, typeReference);
 			}
 		});
-		super.visitClass(clazz);
-		exit();
+		try {
+			super.visitClass(clazz);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addType(ctClass);
 	}
@@ -225,8 +235,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		setModifier(ctInterface, clazz.getModifiers() & Modifier.classModifiers());
 
 		enter(new TypeRuntimeBuilderContext(clazz, ctInterface));
-		super.visitInterface(clazz);
-		exit();
+		try {
+			super.visitInterface(clazz);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addType(ctInterface);
 	}
@@ -248,8 +261,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				ctEnum.addEnumValue(ctEnumValue);
 			}
 		});
-		super.visitEnum(clazz);
-		exit();
+		try {
+			super.visitEnum(clazz);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addType(ctEnum);
 	}
@@ -271,8 +287,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				ctAnnotationType.addMethod(field);
 			}
 		});
-		super.visitAnnotationClass(clazz);
-		exit();
+		try {
+			super.visitAnnotationClass(clazz);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addType(ctAnnotationType);
 	}
@@ -304,8 +323,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				}
 			}
 		});
-		super.visitAnnotation(annotation);
-		exit();
+		try {
+			super.visitAnnotation(annotation);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addAnnotation(ctAnnotation);
 	}
@@ -317,8 +339,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		setModifier(ctConstructor, constructor.getModifiers() & Modifier.constructorModifiers());
 
 		enter(new ExecutableRuntimeBuilderContext(constructor, ctConstructor));
-		super.visitConstructor(constructor);
-		exit();
+		try {
+			super.visitConstructor(constructor);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addConstructor(ctConstructor);
 	}
@@ -337,8 +362,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		ctMethod.setDefaultMethod(method.isDefault());
 
 		enter(new ExecutableRuntimeBuilderContext(method.getMethod(), ctMethod));
-		super.visitMethod(method, parent);
-		exit();
+		try {
+			super.visitMethod(method, parent);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addMethod(ctMethod);
 	}
@@ -364,8 +392,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		}
 
 		enter(new VariableRuntimeBuilderContext(ctField));
-		super.visitField(field);
-		exit();
+		try {
+			super.visitField(field);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addField(ctField);
 	}
@@ -437,8 +468,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		setModifier(ctEnumValue, field.getModifiers() & Modifier.fieldModifiers());
 
 		enter(new VariableRuntimeBuilderContext(ctEnumValue));
-		super.visitEnumValue(field);
-		exit();
+		try {
+			super.visitEnumValue(field);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addEnumValue(ctEnumValue);
 	}
@@ -450,8 +484,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		ctParameter.setVarArgs(parameter.isVarArgs());
 		// it is not possible to detect whether parameter is final in runtime
 		enter(new VariableRuntimeBuilderContext(ctParameter));
-		super.visitParameter(parameter);
-		exit();
+		try {
+			super.visitParameter(parameter);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addParameter(ctParameter);
 	}
@@ -486,8 +523,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				super.addTypeReference(role, typeReference);
 			}
 		});
-		super.visitTypeParameter(parameter);
-		exit();
+		try {
+			super.visitTypeParameter(parameter);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addFormalType(typeParameter);
 	}
@@ -508,8 +548,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		}
 
 		enter(runtimeBuilderContext);
-		super.visitTypeParameterReference(role, parameter);
-		exit();
+		try {
+			super.visitTypeParameterReference(role, parameter);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addTypeReference(role, typeParameterReference);
 	}
@@ -534,8 +577,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		};
 
 		enter(context);
-		super.visitTypeReference(role, type);
-		exit();
+		try {
+			super.visitTypeReference(role, type);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addTypeReference(role, ctTypeReference);
 	}
@@ -557,8 +603,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		}
 
 		enter(new TypeReferenceRuntimeBuilderContext(type, wildcard));
-		super.visitTypeReference(role, type);
-		exit();
+		try {
+			super.visitTypeReference(role, type);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addTypeReference(role, wildcard);
 	}
@@ -594,8 +643,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				arrayTypeReference.setComponentType(typeReference);
 			}
 		});
-		super.visitArrayReference(role, typeArray);
-		exit();
+		try {
+			super.visitArrayReference(role, typeArray);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addTypeReference(role, arrayTypeReference);
 	}
@@ -607,8 +659,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		typeReference.setSimpleName(clazz.getSimpleName());
 
 		enter(new TypeReferenceRuntimeBuilderContext(clazz, typeReference));
-		super.visitTypeReference(role, clazz);
-		exit();
+		try {
+			super.visitTypeReference(role, clazz);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addTypeReference(role, typeReference);
 	}
@@ -669,8 +724,11 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 				ctRecord.addRecordComponent(ctRecordComponent);
 			}
 		});
-		super.visitRecord(clazz);
-		exit();
+		try {
+			super.visitRecord(clazz);
+		} finally {
+			exit();
+		}
 
 		contexts.peek().addType(ctRecord);
 	}
@@ -680,11 +738,15 @@ public class JavaReflectionTreeBuilder extends JavaReflectionVisitorImpl {
 		CtRecordComponent ctRecordComponent = factory.Core().createRecordComponent();
 		ctRecordComponent.setSimpleName(MethodHandleUtils.getRecordComponentName(recordComponent));
 		enter(new RecordComponentRuntimeBuilderContext(ctRecordComponent));
-		visitTypeReference(CtRole.TYPE, MethodHandleUtils.getRecordComponentType(recordComponent));
+		try {
+			visitTypeReference(CtRole.TYPE, MethodHandleUtils.getRecordComponentType(recordComponent));
+			Arrays.stream(recordComponent.getAnnotations()).forEach(this::visitAnnotation);
+		} finally {
+			exit();
+		}
 
-		Arrays.stream(recordComponent.getAnnotations()).forEach(this::visitAnnotation);
-		exit();
 		contexts.peek().addRecordComponent(ctRecordComponent);
 	}
 
 }
+
