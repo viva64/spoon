@@ -213,10 +213,21 @@ class JDTTreeBuilderQuery {
 	 * @return true if the qualified name reference is a valid problem field binding.
 	 */
 	static boolean isValidProblemBindingField(QualifiedNameReference qualifiedNameReference) {
-		return qualifiedNameReference.binding instanceof ProblemFieldBinding && !((FieldBinding) qualifiedNameReference.binding).declaringClass.isAnonymousType()
-				&& qualifiedNameReference.tokens.length - 1 == ((FieldBinding) qualifiedNameReference.binding).declaringClass.compoundName.length && CharOperation
-				.equals(CharOperation.subarray(qualifiedNameReference.tokens, 0, qualifiedNameReference.tokens.length - 1),
-						((FieldBinding) qualifiedNameReference.binding).declaringClass.compoundName);
+		if (!(qualifiedNameReference.binding instanceof ProblemFieldBinding)) {
+			return false;
+		}
+
+		FieldBinding binding = (FieldBinding) qualifiedNameReference.binding;
+		if(binding.declaringClass == null ||
+				binding.declaringClass.compoundName == null) {
+			return false;
+		}
+
+		return !binding.declaringClass.isAnonymousType() &&
+				qualifiedNameReference.tokens.length - 1 == binding.declaringClass.compoundName.length &&
+				CharOperation
+						.equals(CharOperation.subarray(qualifiedNameReference.tokens, 0, qualifiedNameReference.tokens.length - 1),
+								binding.declaringClass.compoundName);
 	}
 
 	/**
