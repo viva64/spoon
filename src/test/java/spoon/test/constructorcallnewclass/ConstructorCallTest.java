@@ -16,6 +16,7 @@
  */
 package spoon.test.constructorcallnewclass;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -132,7 +133,7 @@ public class ConstructorCallTest {
 	}
 
 	private void assertConstructorCallWithType(Class<?> typeExpected, CtConstructorCall<?> constructorCall) {
-		assertSame(typeExpected, constructorCall.getType().getActualClass(), "Constructor call is typed by the class of the constructor");
+		assertSame(typeExpected, RuntimeAccess.actualClass(constructorCall.getType()), "Constructor call is typed by the class of the constructor");
 	}
 
 	@Test

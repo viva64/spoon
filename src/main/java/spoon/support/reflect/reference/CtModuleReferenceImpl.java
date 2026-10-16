@@ -11,7 +11,6 @@ import spoon.reflect.declaration.CtModule;
 import spoon.reflect.reference.CtModuleReference;
 import spoon.reflect.visitor.CtVisitor;
 
-import java.lang.reflect.AnnotatedElement;
 
 public class CtModuleReferenceImpl extends CtReferenceImpl implements CtModuleReference {
 
@@ -21,11 +20,6 @@ public class CtModuleReferenceImpl extends CtReferenceImpl implements CtModuleRe
 	@Override
 	public CtModule getDeclaration() {
 		return this.getFactory().Module().getOrCreate(this.getSimpleName());
-	}
-
-	@Override
-	protected AnnotatedElement getActualAnnotatedElement() {
-		return null;
 	}
 
 	@Override

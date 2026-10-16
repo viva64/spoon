@@ -30,9 +30,6 @@ import spoon.support.reflect.eval.VisitorPartialEvaluator;
 import spoon.support.util.SignatureBasedSortedSet;
 
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -251,35 +248,6 @@ public class CtClassImpl<T> extends CtTypeImpl<T> implements CtClass<T> {
 	@Override
 	public CtClass<T> clone() {
 		return (CtClass<T>) super.clone();
-	}
-
-	@Override
-	public T newInstance() {
-		try {
-			JDTBasedSpoonCompiler spooner = new JDTBasedSpoonCompiler(getFactory());
-			spooner.compile(InputType.CTTYPES); // compiling the types of the factory
-			try (NewInstanceClassloader classloader = new NewInstanceClassloader(spooner.getBinaryOutputDirectory())) {
-				Class<?> klass = classloader.loadClass(getQualifiedName());
-				return (T) klass.newInstance();
-			}
-		} catch (Exception e) {
-			throw new SpoonException(e);
-		}
-	}
-
-	private static class NewInstanceClassloader extends URLClassLoader {
-		NewInstanceClassloader(File binaryOutputDirectory) throws MalformedURLException {
-			super(new URL[] { binaryOutputDirectory.toURI().toURL()});
-		}
-
-		@Override
-		public Class<?> loadClass(String s) throws ClassNotFoundException {
-			try {
-				return findClass(s);
-			} catch (Exception e) {
-				return super.loadClass(s);
-			}
-		}
 	}
 
 	/** adding the constructors and static executables */

@@ -14,8 +14,11 @@ import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtNewArray;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtEnumValue;
 import spoon.reflect.declaration.CtField;
+import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtFieldReference;
+import spoon.reflect.reference.CtTypeReference;
 
 import java.lang.reflect.Array;
 import java.util.List;
@@ -47,22 +50,20 @@ public class EvalHelper {
 		if (value instanceof CtNewArray) {
 			return toArray((CtNewArray) value);
 		} else if (value instanceof CtAnnotation) {
-			// Get proxy
-			return ((CtAnnotation<?>) value).getActualAnnotation();
+			throw new SpoonException("annotations are not converted to runtime objects: " + value);
 		} else if (value instanceof CtLiteral) {
 			// Replace literal by his value
 			return ((CtLiteral<?>) value).getValue();
 		} else if (value instanceof CtFieldRead) {
 			// replace enum value by actual enum value
 			CtFieldReference<?> fieldRef = ((CtFieldRead<?>) value).getVariable();
-			Class<?> c = fieldRef.getDeclaringType().getActualClass();
 			CtField<?> field = fieldRef.getFieldDeclaration();
-			if (Enum.class.isAssignableFrom(c)) {
-				// Value references a Enum field
-				return Enum.valueOf((Class<? extends Enum>) c, fieldRef.getSimpleName());
+			if (field instanceof CtEnumValue) {
+				// enum values cannot be represented at runtime without loading the class
+				throw new SpoonException("not possible to convert the enum value \"" + value + "\" to a runtime object");
 			}
 			// handling primitive types
-			if (field.getDefaultExpression() instanceof CtLiteral) {
+			if (field != null && field.getDefaultExpression() instanceof CtLiteral) {
 				return ((CtLiteral) field.getDefaultExpression()).getValue();
 			}
 		}
@@ -70,14 +71,43 @@ public class EvalHelper {
 		throw new SpoonException("not possible to transform to expression \"" + value + "\" (" + value.getClass().getName() + ")");
 	}
 
+	/** the runtime component type of a new array: primitive types, String or Object */
+	private static Class<?> componentClassOf(CtNewArray<?> arrayExpression) {
+		CtTypeReference<?> type = arrayExpression.getType();
+		if (type instanceof CtArrayTypeReference) {
+			switch (((CtArrayTypeReference<?>) type).getArrayType().getQualifiedName()) {
+				case "boolean":
+					return boolean.class;
+				case "byte":
+					return byte.class;
+				case "char":
+					return char.class;
+				case "short":
+					return short.class;
+				case "int":
+					return int.class;
+				case "long":
+					return long.class;
+				case "float":
+					return float.class;
+				case "double":
+					return double.class;
+				case "java.lang.String":
+					return String.class;
+				default:
+					break;
+			}
+		}
+		return Object.class;
+	}
+
 	/** creating a real low level Java array from a CtNewArray */
 	private static Object toArray(CtNewArray value) {
 		CtNewArray<?> arrayExpression = (CtNewArray<?>) value;
 
-		Class<?> componentType = arrayExpression.getType().getActualClass().getComponentType();
 		List<CtExpression<?>> elements = arrayExpression.getElements();
 
-		Object array = Array.newInstance(componentType, elements.size());
+		Object array = Array.newInstance(componentClassOf(arrayExpression), elements.size());
 		for (int i = 0; i < elements.size(); i++) {
 			Array.set(array, i, convertElementToRuntimeObject(elements.get(i)));
 		}

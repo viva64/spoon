@@ -13,7 +13,6 @@ import spoon.reflect.declaration.CtField;
 import spoon.reflect.path.CtRole;
 import spoon.support.DerivedProperty;
 
-import java.lang.reflect.Member;
 
 
 /**
@@ -21,13 +20,6 @@ import java.lang.reflect.Member;
  * {@link spoon.reflect.declaration.CtField}.
  */
 public interface CtFieldReference<T> extends CtVariableReference<T> {
-	/**
-	 * Gets the runtime member that corresponds to a field reference if any.
-	 *
-	 * @return the member (null if not found)
-	 */
-	Member getActualField();
-
 	@Override
 	@DerivedProperty
 	CtField<T> getDeclaration();

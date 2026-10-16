@@ -38,9 +38,8 @@ import spoon.support.StandardEnvironment;
 import spoon.support.visitor.ClassTypingContext;
 import spoon.support.visitor.GenericTypeAdapter;
 import spoon.support.visitor.MethodTypingContext;
-import spoon.support.visitor.java.JavaReflectionTreeBuilder;
+import spoon.support.visitor.bytecode.BytecodeShadows;
 
-import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -210,7 +209,6 @@ public class TypeFactory extends SubFactory {
 
 	// This map MUST provide a useful computeIfAbsent method in the face of concurrency.
 	// Therefore, we declare it as a ConcurrentHashMap directly.
-	private final ConcurrentHashMap<Class<?>, CtType<?>> shadowCache = new ConcurrentHashMap<>();
 
 	/**
 	 * Returns a reference on the null type (type of null).
@@ -429,31 +427,19 @@ public class TypeFactory extends SubFactory {
 		return array;
 	}
 
-	public <T> CtTypeReference<T> createReference(Class<T> type) {
-		return createReference(type, false);
-	}
-
 	/**
-	 * Creates a reference to a simple type
+	 * Creates a reference to a simple type. Only the name of the class is used, nothing else is read from it.
 	 */
-	public <T> CtTypeReference<T> createReference(Class<T> type, boolean includingFormalTypeParameter) {
+	public <T> CtTypeReference<T> createReference(Class<T> type) {
 		if (type == null) {
 			return null;
 		}
 		if (type.isArray()) {
 			CtArrayTypeReference<T> array = factory.Core().createArrayTypeReference();
-			array.setComponentType(createReference(type.getComponentType(), includingFormalTypeParameter));
+			array.setComponentType(createReference(type.getComponentType()));
 			return array;
 		}
-		CtTypeReference typeReference = createReference(type.getName());
-
-		if (includingFormalTypeParameter) {
-			for (TypeVariable<Class<T>> generic : type.getTypeParameters()) {
-				typeReference.addActualTypeArgument(createTypeParameterReference(generic.getName()));
-			}
-		}
-
-		return typeReference;
+		return createReference(type.getName());
 	}
 
 	/**
@@ -663,56 +649,55 @@ public class TypeFactory extends SubFactory {
 	}
 
 	/**
-	 * Gets a type from its runtime Java class. If the class isn't in the spoon path,
-	 * the class will be built from the Java reflection and will be marked as
-	 * shadow (see {@link spoon.reflect.declaration.CtShadowable}).
+	 * Gets a type by its qualified name. If there is no such type in the model, but the class is on the
+	 * source class path (or in the JDK), a shadow type is built from the bytes of its class file
+	 * (see {@link spoon.reflect.declaration.CtShadowable}). Classes are never loaded.
 	 *
 	 * @param <T>
 	 * 		actual type of the class
-	 * @param cl
-	 * 		the java class: note that this class should be Class&lt;T&gt; but it
-	 * 		then poses problem when T is a generic type itself
+	 * @param qualifiedName
+	 * 		the qualified name of the type, nested types are separated by a dollar sign
+	 * @return the type, a shadow type or null if the type is unknown
 	 */
 	@SuppressWarnings("unchecked")
+	public <T> CtType<T> getOrShadow(String qualifiedName) {
+		CtType<T> type = get(qualifiedName);
+		if (type != null) {
+			return type;
+		}
+		return (CtType<T>) getBytecodeShadows().find(qualifiedName);
+	}
+
+	/**
+	 * Gets a type by the name of a class. Neither the class itself, nor its members are inspected: if the type is not
+	 * in the model, it is built as a shadow type from its class file, see {@link #getOrShadow(String)}.
+	 *
+	 * @param cl
+	 * 		the java class, used only for its name
+	 * @param <T>
+	 * 		actual type of the class
+	 */
 	public <T> CtType<T> get(Class<?> cl) {
-		final CtType<T> aType = get(cl.getName());
-		if (aType == null) {
-			return (CtType<T>) this.shadowCache.computeIfAbsent(cl, this::buildNewShadowClass);
-		}
-		return aType;
+		return getOrShadow(cl.getTypeName());
 	}
 
-	private CtType<?> buildNewShadowClass(Class<?> cl) {
-		CtType<?> newShadowClass;
-		try {
-			newShadowClass = new JavaReflectionTreeBuilder(getShadowFactory()).scan(cl);
-		} catch (Throwable e) {
-			Launcher.LOGGER.warn("cannot create shadow class: {}", cl.getName(), e);
+	private transient volatile BytecodeShadows bytecodeShadows;
+	private transient volatile String[] shadowsClasspath;
 
-			newShadowClass = getShadowFactory().Core().createClass();
-			newShadowClass.setSimpleName(cl.getSimpleName());
-			newShadowClass.setShadow(true);
-			getShadowFactory().Package().getOrCreate(cl.getPackage().getName()).addType(newShadowClass);
-		}
-		newShadowClass.setFactory(factory);
-		newShadowClass.accept(new CtScanner() {
-			@Override
-			public void scan(CtElement element) {
-				if (element != null) {
-					element.setFactory(factory);
+	private BytecodeShadows getBytecodeShadows() {
+		// the array is replaced when the class path is set, so a reference check is enough
+		String[] classpath = factory.getEnvironment().getSourceClasspath();
+		BytecodeShadows shadows = bytecodeShadows;
+		if (shadows == null || shadowsClasspath != classpath) {
+			synchronized (this) {
+				if (bytecodeShadows == null || shadowsClasspath != classpath) {
+					bytecodeShadows = new BytecodeShadows(factory);
+					shadowsClasspath = classpath;
 				}
+				shadows = bytecodeShadows;
 			}
-		});
-		return newShadowClass;
-	}
-
-	private transient Factory shadowFactory;
-	private Factory getShadowFactory() {
-		if (shadowFactory == null) {
-			//use existing environment to use correct class loader
-			shadowFactory = new FactoryImpl(new DefaultCoreFactory(), factory.getEnvironment());
 		}
-		return shadowFactory;
+		return shadows;
 	}
 
 	/**

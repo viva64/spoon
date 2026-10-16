@@ -17,7 +17,6 @@ import spoon.reflect.reference.CtReference;
 import spoon.support.UnsettableProperty;
 import spoon.support.reflect.declaration.CtElementImpl;
 
-import java.lang.reflect.AnnotatedElement;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -43,8 +42,6 @@ public abstract class CtReferenceImpl extends CtElementImpl implements CtReferen
 
 	public CtReferenceImpl() {
 	}
-
-	protected abstract AnnotatedElement getActualAnnotatedElement();
 
 	@Override
 	public String getSimpleName() {

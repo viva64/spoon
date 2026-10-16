@@ -5,7 +5,6 @@ import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.reference.CtTypeReference;
-import spoon.support.visitor.java.JavaReflectionTreeBuilder;
 import spoon.testing.utils.ModelUtils;
 
 import java.io.File;
@@ -24,8 +23,7 @@ public class QualifiedNameBasedSortedSetTest {
         // contract: elements without source position should appear before any element with source position,
         // and be ordered between themselves by qualified name. Elements with source position should be ordered
         // between themselves by source position.
-        final CtType<?> linkedListType = new JavaReflectionTreeBuilder(ModelUtils.createFactory())
-                .scan(LinkedList.class);
+        final CtType<?> linkedListType = ModelUtils.createFactory().Type().get(LinkedList.class);
 
         final MockSourcePosition smallerSourcePos = new MockSourcePosition(10, 12);
         final MockSourcePosition largerSourcePos = new MockSourcePosition(14, 15);

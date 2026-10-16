@@ -1,5 +1,6 @@
 package spoon.reflect.reference;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +44,6 @@ public class CtTypeReferenceTest {
         Mockito.lenient().when(factory.Type()).thenReturn(typeFactory);
         Mockito.lenient().when(factory.getEnvironment()).thenReturn(environment);
         Mockito.lenient().when(environment.getModelChangeListener()).thenReturn(listener);
-        Mockito.lenient().when(environment.getInputClassLoader()).thenReturn(classLoader);
     }
 
     /**
@@ -122,7 +122,7 @@ public class CtTypeReferenceTest {
         );
         assertEquals(
             expected,
-            reference.getActualClass().getSimpleName()
+            RuntimeAccess.actualClass(reference).getSimpleName()
         );
     }
 

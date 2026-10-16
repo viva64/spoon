@@ -131,23 +131,11 @@ public abstract class CtElementImpl implements CtElement {
 		return ret;
 	}
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public <A extends Annotation> A getAnnotation(Class<A> annotationType) {
-		CtType annot = getFactory().Annotation().get(annotationType);
-		for (CtAnnotation<? extends Annotation> a : getAnnotations()) {
-			if (a.getAnnotationType().getQualifiedName().equals(annot.getQualifiedName())) {
-				return ((CtAnnotation<A>) a).getActualAnnotation(); // warning, here we do heavy and costly work with proxy
-			}
-		}
-		return null;
-	}
-
 	@Override
 	public <A extends Annotation> boolean hasAnnotation(Class<A> annotationType) {
-		CtType annot = getFactory().Annotation().get(annotationType);
+		String annotationName = annotationType.getName();
 		for (CtAnnotation<? extends Annotation> a : getAnnotations()) {
-			if (a.getAnnotationType().getQualifiedName().equals(annot.getQualifiedName())) {
+			if (a.getAnnotationType().getQualifiedName().equals(annotationName)) {
 				return true;
 			}
 		}

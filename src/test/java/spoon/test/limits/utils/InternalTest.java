@@ -16,6 +16,7 @@
  */
 package spoon.test.limits.utils;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.Test;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtNamedElement;
@@ -43,14 +44,14 @@ public class InternalTest {
 				"spoon.test.limits.utils.testclasses.ContainInternalClass$InternalClass",
 				c1.getQualifiedName());
 		assertEquals("spoon.test.limits.utils.testclasses", c1.getPackage().getQualifiedName());
-		assertSame(ContainInternalClass.InternalClass.class, c1.getActualClass());
+		assertSame(ContainInternalClass.InternalClass.class, RuntimeAccess.actualClass(c1));
 
 		CtClass<?> c2 = classes.get(2);
 		assertEquals("InsideInternalClass", c2.getSimpleName());
 		assertEquals(
 				"spoon.test.limits.utils.testclasses.ContainInternalClass$InternalClass$InsideInternalClass",
 				c2.getQualifiedName());
-		assertSame(ContainInternalClass.InternalClass.InsideInternalClass.class, c2.getActualClass());
+		assertSame(ContainInternalClass.InternalClass.InsideInternalClass.class, RuntimeAccess.actualClass(c2));
 	}
 
 	@Test

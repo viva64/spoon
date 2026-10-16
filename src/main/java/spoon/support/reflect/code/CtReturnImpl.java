@@ -47,11 +47,6 @@ public class CtReturnImpl<R> extends CtStatementImpl implements CtReturn<R> {
 		return (CtReturn<R>) super.clone();
 	}
 
-	@Override
-	public Void S() {
-		return null;
-	}
-
 	public CtCodeElement getSubstitution(CtType<?> targetType) {
 		return clone();
 	}

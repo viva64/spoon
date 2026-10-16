@@ -324,11 +324,6 @@ public abstract class CtTypeImpl<T> extends CtNamedElementImpl implements CtType
 	}
 
 	@Override
-	public Class<T> getActualClass() {
-		return getFactory().Type().createReference(this).getActualClass();
-	}
-
-	@Override
 	public CtType<?> getDeclaringType() {
 		return getParent(CtType.class);
 	}

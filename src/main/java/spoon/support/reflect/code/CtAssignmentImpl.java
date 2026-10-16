@@ -127,11 +127,6 @@ public class CtAssignmentImpl<T, A extends T> extends CtStatementImpl implements
 	}
 
 	@Override
-	public T S() {
-		return null;
-	}
-
-	@Override
 	public CtAssignment<T, A> clone() {
 		return (CtAssignment<T, A>) super.clone();
 	}

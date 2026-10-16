@@ -187,11 +187,12 @@ public class TypeAdaptor {
 			}
 			// Peel off one layer at a time. Slow, but easy to maintain. Can be optimized to directly peel of
 			// min(a.dim, b.dim) when necessary.
-			Class<?> actualClass = base.getActualClass();
-			return isSubtype(
-				base.getFactory().Type().get(actualClass.getComponentType()),
-				((CtArrayTypeReference<?>) superRef).getComponentType()
-			);
+			String name = base.getQualifiedName();
+			CtType<?> component = base.getFactory().Type().getOrShadow(name.substring(0, name.length() - 2));
+			if (component == null) {
+				return false;
+			}
+			return isSubtype(component, ((CtArrayTypeReference<?>) superRef).getComponentType());
 		}
 		// Note that we have handle T[] < Object/Serializable/Cloneable by using a shadow type as `base`, which will
 		// implement the correct interfaces as read by reflection.

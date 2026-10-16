@@ -19,7 +19,6 @@ import spoon.reflect.reference.CtTypeReference;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
-import java.lang.reflect.Method;
 
 /**
  * The {@link CtAnnotationType} sub-factory.
@@ -103,20 +102,15 @@ public class AnnotationFactory extends TypeFactory {
 		final CtAnnotation<A> annotation = annotate(element, annotationType);
 		boolean isArray;
 		// try with CT reflection
-		CtAnnotationType<A> ctAnnotationType = ((CtAnnotationType<A>) annotation.getAnnotationType().getDeclaration());
+		CtAnnotationType<A> ctAnnotationType = ((CtAnnotationType<A>) annotation.getAnnotationType().getTypeDeclaration());
 		boolean hasAlreadyValue = annotation.getValues().containsKey(annotationElementName);
 		if (ctAnnotationType != null) {
 			CtMethod<?> e = ctAnnotationType.getMethod(annotationElementName);
 			isArray = (e.getType() instanceof CtArrayTypeReference);
 		} else {
-			Method m;
-			try {
-				m = annotation.getAnnotationType().getActualClass().getMethod(annotationElementName);
-			} catch (Exception ex) {
-				annotation.addValue(annotationElementName, value);
-				return annotation;
-			}
-			isArray = m.getReturnType().isArray();
+			// the annotation type is not available (not even as a shadow type)
+			annotation.addValue(annotationElementName, value);
+			return annotation;
 		}
 		if (isArray || !hasAlreadyValue) {
 			annotation.addValue(annotationElementName, value);

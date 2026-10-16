@@ -16,6 +16,7 @@
  */
 package spoon.test.parent;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -348,7 +349,7 @@ public class ParentTest {
 
 			@Override
 			public void process(CtMethod<?> element) {
-				if (element.getAnnotation(UnsettableProperty.class) != null) {
+				if (RuntimeAccess.annotation(element, UnsettableProperty.class) != null) {
 					// we don't check the contracts for unsettable setters
 					return;
 				}

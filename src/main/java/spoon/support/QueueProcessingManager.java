@@ -50,29 +50,9 @@ public class QueueProcessingManager implements ProcessingManager {
 	}
 
 	@Override
-	public void addProcessor(Class<? extends Processor<?>> type) {
-		try {
-			Processor<?> p = type.newInstance();
-			addProcessor(p);
-		} catch (Exception e) {
-			throw new SpoonException("Unable to instantiate processor \"" + type.getName() + "\" - Your processor should have a constructor with no arguments", e);
-		}
-	}
-
-	@Override
 	public boolean addProcessor(Processor<?> p) {
 		p.setFactory(getFactory());
 		return getProcessors().add(p);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public void addProcessor(String qualifiedName) {
-		try {
-			addProcessor((Class<? extends Processor<?>>) getFactory().getEnvironment().getInputClassLoader().loadClass(qualifiedName));
-		} catch (ClassNotFoundException e) {
-			throw new SpoonException("Unable to load processor \"" + qualifiedName + "\" - Check your classpath.", e);
-		}
 	}
 
 	public Processor<?> getCurrentProcessor() {

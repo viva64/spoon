@@ -63,23 +63,4 @@ public class StaticAccessTest {
     }
 
 
-    @Test
-    public void testProcessAndCompile() throws Exception{
-        compiler.instantiateAndProcess(Arrays.asList(InsertBlockProcessor.class.getName()));
-
-        // generate files
-        File tmpdir = new File("target/spooned/staticFieldAccess");
-        tmpdir.mkdirs();
-        //    tmpdir.deleteOnExit();
-        factory.getEnvironment().setSourceOutputDirectory(tmpdir);
-        compiler.generateProcessedSourceFiles(OutputType.COMPILATION_UNITS);
-
-        // try to reload generated datas
-        spoon = new Launcher();
-        compiler = spoon.createCompiler(
-                SpoonResourceHelper
-                        .resources(tmpdir.getAbsolutePath()));
-        assertTrue(compiler.build());
-    }
-
 }

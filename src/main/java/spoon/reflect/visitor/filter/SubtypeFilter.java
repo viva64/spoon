@@ -21,7 +21,9 @@ public class SubtypeFilter extends AbstractFilter<CtType<?>> {
 	private CtTypeReference<?> superType;
 	private String superTypeQualifiedName;
 
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public SubtypeFilter(CtTypeReference<?> superType) {
+		super((Class) CtType.class);
 		this.superType = superType;
 	}
 

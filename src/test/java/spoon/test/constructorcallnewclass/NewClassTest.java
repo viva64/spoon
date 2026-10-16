@@ -16,6 +16,7 @@
  */
 package spoon.test.constructorcallnewclass;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.util.List;
 
@@ -108,7 +109,7 @@ public class NewClassTest {
 		assertIsAnonymous(newClass.getAnonymousClass());
 		assertSuperInterface(Foo.Tacos.class, newClass.getAnonymousClass());
 		CtTypeReference[] ctTypeReferences = newClass.getAnonymousClass().getSuperInterfaces().toArray(new CtTypeReference[0]);
-		assertSame(String.class, ctTypeReferences[0].getActualTypeArguments().get(0).getActualClass(), "Super interface is typed by the class of the constructor");
+		assertSame(String.class, RuntimeAccess.actualClass(ctTypeReferences[0].getActualTypeArguments().get(0)), "Super interface is typed by the class of the constructor");
 	}
 
 	@Test
@@ -140,12 +141,12 @@ public class NewClassTest {
 
 	private void assertSuperClass(Class<?> expected, CtClass<?> anonymousClass) {
 		assertEquals(0, anonymousClass.getSuperInterfaces().size(), "There isn't a super interface if there is a super class");
-		assertSame(expected, anonymousClass.getSuperclass().getActualClass(), "There is a super class if there isn't a super interface");
+		assertSame(expected, RuntimeAccess.actualClass(anonymousClass.getSuperclass()), "There is a super class if there isn't a super interface");
 	}
 
 	private void assertSuperInterface(Class<?> expected, CtClass<?> anonymousClass) {
 		assertNull(anonymousClass.getSuperclass(), "There isn't super class if there is a super interface");
-		assertSame(expected, anonymousClass.getSuperInterfaces().toArray(new CtTypeReference[0])[0].getActualClass(), "There is a super interface if there isn't super class");
+		assertSame(expected, RuntimeAccess.actualClass(anonymousClass.getSuperInterfaces().toArray(new CtTypeReference[0])[0]), "There is a super interface if there isn't super class");
 	}
 
 	private void assertIsAnonymous(CtClass<?> anonymousClass) {
@@ -165,7 +166,7 @@ public class NewClassTest {
 	}
 
 	private void assertType(Class<?> typeExpected, CtNewClass<?> newClass) {
-		assertSame(typeExpected, newClass.getType().getActualClass(), "New class is typed by the class of the constructor");
+		assertSame(typeExpected, RuntimeAccess.actualClass(newClass.getType()), "New class is typed by the class of the constructor");
 	}
 
 	@Test

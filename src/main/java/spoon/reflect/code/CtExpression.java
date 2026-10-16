@@ -11,7 +11,6 @@ import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.annotations.PropertyGetter;
 import spoon.reflect.annotations.PropertySetter;
-import spoon.template.TemplateParameter;
 
 import java.util.List;
 
@@ -23,7 +22,7 @@ import static spoon.reflect.path.CtRole.CAST;
  * @param <T>
  * 		the "return type" of this expression
  */
-public interface CtExpression<T> extends CtCodeElement, CtTypedElement<T>, TemplateParameter<T> {
+public interface CtExpression<T> extends CtCodeElement, CtTypedElement<T> {
 
 	/**
 	 * Returns the type casts if any.

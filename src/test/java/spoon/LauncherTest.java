@@ -156,8 +156,9 @@ public class LauncherTest {
 		};
 		launcher.getEnvironment().setNoClasspath(false);
 		launcher.getEnvironment().setShouldCompile(true);
-		ClassLoader classLoader = new URLClassLoader(classpath);
-		launcher.getEnvironment().setInputClassLoader(classLoader);
+		launcher.getEnvironment().setSourceClasspath(new String[] {
+				Paths.get("./src/test/resources/path with spaces +and+ plusses/lib/bar.jar").toAbsolutePath().toString()
+		});
 		launcher.addInputResource(Paths.get("./src/test/resources/path with spaces +and+ plusses/Foo.java").toAbsolutePath().toString());
 		CtModel model = launcher.buildModel();
 

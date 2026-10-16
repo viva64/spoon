@@ -16,6 +16,7 @@
  */
 package spoon.test.intercession;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -237,7 +238,7 @@ public class IntercessionTest {
 			for (CtTypeParameter typeParameter : setter.getFormalCtTypeParameters()) {
 				if (setter.getType().getSimpleName().equals(typeParameter.getSimpleName())) {
 
-					if (setter.getAnnotation(Override.class) != null) {
+					if (RuntimeAccess.annotation(setter, Override.class) != null) {
 						// Override annotation means that the current method come from a super
 						// interface. So the return type can't be the declaring interface.
 						continue;
@@ -288,7 +289,7 @@ public class IntercessionTest {
 
 			@Override
 			protected void process(CtMethod<?> element) {
-				if (element.getAnnotation(UnsettableProperty.class) != null) {
+				if (RuntimeAccess.annotation(element, UnsettableProperty.class) != null) {
 					// we don't check the contracts for unsettable setters
 					return;
 				}

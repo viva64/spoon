@@ -16,6 +16,7 @@
  */
 package spoon.reflect.ast;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.File;
 import java.util.Collections;
@@ -84,7 +85,7 @@ public class CloneTest {
 				}
 				final CtMethod<Object> clone = ctClass.getMethod("clone");
 				assertNotNull(clone, ctClass.getQualifiedName() + " hasn't clone method.");
-				assertTrue(clone.getAnnotations().stream().map( ctAnnotation -> ctAnnotation.getActualAnnotation().annotationType()).collect(Collectors.toList()).contains(Override.class), ctClass.getQualifiedName() + " hasn't Override annotation on clone method.");
+				assertTrue(clone.getAnnotations().stream().map( ctAnnotation -> RuntimeAccess.actualAnnotation(ctAnnotation).annotationType()).collect(Collectors.toList()).contains(Override.class), ctClass.getQualifiedName() + " hasn't Override annotation on clone method.");
 			}
 
 			@Override
@@ -96,7 +97,7 @@ public class CloneTest {
 				if (hasConcreteImpl(intrface)) {
 					assertNotNull(clone, intrface.getQualifiedName() + " hasn't clone method.");
 					if (!isRootDeclaration(intrface)) {
-						assertTrue(clone.getAnnotations().stream().map( ctAnnotation -> ctAnnotation.getActualAnnotation().annotationType()).collect(Collectors.toList()).contains(Override.class), intrface.getQualifiedName() + " hasn't Override annotation on clone method.");
+						assertTrue(clone.getAnnotations().stream().map( ctAnnotation -> RuntimeAccess.actualAnnotation(ctAnnotation).annotationType()).collect(Collectors.toList()).contains(Override.class), intrface.getQualifiedName() + " hasn't Override annotation on clone method.");
 					}
 				}
 			}

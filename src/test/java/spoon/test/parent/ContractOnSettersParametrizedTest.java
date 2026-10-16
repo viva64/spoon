@@ -16,6 +16,7 @@
  */
 package spoon.test.parent;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import spoon.SpoonException;
@@ -66,7 +67,7 @@ public class ContractOnSettersParametrizedTest {
 	public  Collection<DynamicTest> data() {
 		List<DynamicTest> values = new ArrayList<>();
 		for (CtType<?> t : allInstantiableMetamodelInterfaces) {
-			if (!(CtReference.class.isAssignableFrom(t.getActualClass()))) {
+			if (!(CtReference.class.isAssignableFrom(RuntimeAccess.actualClass(t)))) {
 				values.add(DynamicTest.dynamicTest(t.getQualifiedName(), () -> testContract(t)));
 			}
 		}
@@ -76,7 +77,7 @@ public class ContractOnSettersParametrizedTest {
 	public static Collection<Object[]> createReceiverList() {
 		List<Object[]> values = new ArrayList<>();
 		for (CtType<?> t : allInstantiableMetamodelInterfaces) {
-			if (!(CtReference.class.isAssignableFrom(t.getActualClass()))) {
+			if (!(CtReference.class.isAssignableFrom(RuntimeAccess.actualClass(t)))) {
 				values.add(new Object[] { t });
 			}
 		}
@@ -96,7 +97,7 @@ public class ContractOnSettersParametrizedTest {
 
 
 	public static Object createCompatibleObject(CtTypeReference<?> parameterType) {
-		Class<?> c = parameterType.getActualClass();
+		Class<?> c = RuntimeAccess.actualClass(parameterType);
 		Factory f = parameterType.getFactory();
 
 		// all Class objects
@@ -120,8 +121,8 @@ public class ContractOnSettersParametrizedTest {
 			return fooBar;   // createNewClass implictly needs a CtClass
 		}
 		for (CtType<?> t : allInstantiableMetamodelInterfaces) {
-			if (c.isAssignableFrom(t.getActualClass())) {
-				CtElement argument = factory.Core().create((Class<? extends CtElement>) t.getActualClass());
+			if (c.isAssignableFrom(RuntimeAccess.actualClass(t))) {
+				CtElement argument = factory.Core().create((Class<? extends CtElement>) RuntimeAccess.actualClass(t));
 				// an empty package is merged with the existing one
 				// we have to give it a name
 				if (argument instanceof CtPackage) {
@@ -204,7 +205,7 @@ public class ContractOnSettersParametrizedTest {
 		int nAssertsOnParent = 0;
 		int nAssertsOnParentInList = 0;
 		// contract: all setters/adders must set the parent (not necessarily the direct parent, can be upper in the parent tree, for instance when injecting blocks
-		CtElement o = factory.Core().create((Class<? extends CtElement>) toTest.getActualClass());
+		CtElement o = factory.Core().create((Class<? extends CtElement>) RuntimeAccess.actualClass(toTest));
 
 		for (CtMethod<?> setter : SpoonTestHelpers.getAllSetters(toTest)) {
 
@@ -215,7 +216,7 @@ public class ContractOnSettersParametrizedTest {
 				CtElement receiver = o.clone();
 
 				// we invoke the setter
-				Method actualMethod = setter.getReference().getActualMethod();
+				Method actualMethod = RuntimeAccess.actualMethod(setter.getReference());
 
 				int nBefore = changeListener.nbCallsToOnAction;
 				changeListener.changedElements = new ArrayList<>();
@@ -234,16 +235,16 @@ public class ContractOnSettersParametrizedTest {
 
 				// directly the element
 				if (argument instanceof CtElement
-					&& setter.getAnnotation(UnsettableProperty.class) == null
-					&& setter.getAnnotation(DerivedProperty.class) == null) {
+					&& RuntimeAccess.annotation(setter, UnsettableProperty.class) == null
+					&& RuntimeAccess.annotation(setter, DerivedProperty.class) == null) {
 					nAssertsOnParent++;
 					assertTrue(((CtElement) (argument)).hasParent(receiver), setter.getDeclaringType().getQualifiedName() + "#" + setter.getSignature() + " doesn't initializes parent");
 				}
 
 				// the element is in a list
 				if (argument instanceof Collection
-						&& setter.getAnnotation(UnsettableProperty.class) == null
-						&& setter.getAnnotation(DerivedProperty.class) == null) {
+						&& RuntimeAccess.annotation(setter, UnsettableProperty.class) == null
+						&& RuntimeAccess.annotation(setter, DerivedProperty.class) == null) {
 					nAssertsOnParentInList++;
 					assertTrue(((CtElement) (((Collection<?>) (argument)).iterator().next())).hasParent(receiver), setter.getDeclaringType().getQualifiedName() + "#" + setter.getSignature() + " doesn't initializes parent");
 				}

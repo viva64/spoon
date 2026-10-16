@@ -16,6 +16,7 @@
  */
 package spoon.test.visibility;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.File;
 import java.util.List;
@@ -79,12 +80,12 @@ public class VisibilityTest {
 		// Class must be imported.
 		final CtClass<?> aDouble = (CtClass<?>) factory.Type().get(spoon.test.visibility.testclasses.internal.Double.class);
 		assertNotNull(aDouble);
-		assertSame(spoon.test.visibility.testclasses.internal.Double.class, aDouble.getActualClass());
+		assertSame(spoon.test.visibility.testclasses.internal.Double.class, RuntimeAccess.actualClass(aDouble));
 
 		// Class mustn't be imported.
 		final CtClass<?> aFloat = (CtClass<?>) factory.Type().get(spoon.test.visibility.testclasses.Float.class);
 		assertNotNull(aFloat);
-		assertSame(spoon.test.visibility.testclasses.Float.class, aFloat.getActualClass());
+		assertSame(spoon.test.visibility.testclasses.Float.class, RuntimeAccess.actualClass(aFloat));
 
 		canBeBuilt(new File("./target/spooned/spoon/test/visibility_package/testclasses/"), StandardEnvironment.DEFAULT_CODE_COMPLIANCE_LEVEL);
 	}

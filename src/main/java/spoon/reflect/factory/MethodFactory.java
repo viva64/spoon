@@ -15,7 +15,8 @@ import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
-import spoon.template.Substitution;
+import spoon.reflect.visitor.Query;
+import spoon.reflect.visitor.filter.ReferenceTypeFilter;
 
 import java.lang.reflect.Method;
 import java.util.Collection;
@@ -85,7 +86,14 @@ public class MethodFactory extends ExecutableFactory {
 	public <T> CtMethod<T> create(CtType<?> target, CtMethod<T> source, boolean redirectReferences) {
 		CtMethod<T> newMethod = source.clone();
 		if (redirectReferences && (source.getDeclaringType() != null)) {
-			Substitution.redirectTypeReferences(newMethod, source.getDeclaringType().getReference(), target.getReference());
+			String sourceName = source.getDeclaringType().getQualifiedName();
+			CtTypeReference<?> targetReference = target.getReference();
+			for (CtTypeReference<?> ref : Query.getReferences(newMethod, new ReferenceTypeFilter<>(CtTypeReference.class))) {
+				if (ref.getQualifiedName().equals(sourceName)) {
+					ref.setSimpleName(targetReference.getSimpleName());
+					ref.setPackage(targetReference.getPackage());
+				}
+			}
 		}
 		target.addMethod(newMethod);
 		return newMethod;

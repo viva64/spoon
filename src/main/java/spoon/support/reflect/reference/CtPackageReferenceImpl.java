@@ -11,7 +11,6 @@ import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.reference.CtPackageReference;
 import spoon.reflect.visitor.CtVisitor;
 
-import java.lang.reflect.AnnotatedElement;
 
 public class CtPackageReferenceImpl extends CtReferenceImpl implements CtPackageReference {
 	private static final long serialVersionUID = 1L;
@@ -32,11 +31,6 @@ public class CtPackageReferenceImpl extends CtReferenceImpl implements CtPackage
 	@Override
 	public Package getActualPackage() {
 		return Package.getPackage(getSimpleName());
-	}
-
-	@Override
-	protected AnnotatedElement getActualAnnotatedElement() {
-		return getActualPackage();
 	}
 
 	@Override

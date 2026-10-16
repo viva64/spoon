@@ -16,6 +16,7 @@
  */
 package spoon.reflect.visitor.processors;
 
+import spoon.test.util.RuntimeAccess;
 import spoon.processing.AbstractProcessor;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
@@ -80,7 +81,7 @@ public class CheckVisitorTestProcessor<T extends CtVisitor> extends AbstractProc
 		int nbScanner = isAbstract ? 1 : 0;
 		final List<CtMethod<?>> scanners = visitorType.getMethodsByName("scan" + element.getSimpleName());
 		if (scanners.size() != nbScanner) {
-			if (!(!scanners.isEmpty() && scanners.get(0).getAnnotation(Deprecated.class) != null)) {
+			if (!(!scanners.isEmpty() && RuntimeAccess.annotation(scanners.get(0), Deprecated.class) != null)) {
 				throw new AssertionError("You should have " + nbScanner + " scanner methods for the element " + element.getSimpleName() + " in the CtInheritanceScanner.");
 			}
 		}
@@ -90,7 +91,7 @@ public class CheckVisitorTestProcessor<T extends CtVisitor> extends AbstractProc
 		int nbVisit = isAbstract ? 0 : 1;
 		final List<CtMethod<?>> visits = visitorType.getMethodsByName("visit" + element.getSimpleName());
 		if (visits.size() != nbVisit) {
-			if (!(!visits.isEmpty() && visits.get(0).getAnnotation(Deprecated.class) != null)) {
+			if (!(!visits.isEmpty() && RuntimeAccess.annotation(visits.get(0), Deprecated.class) != null)) {
 				throw new AssertionError("You should have " + nbVisit + " visit methods for the element " + element.getSimpleName() + " in the CtInheritanceScanner.");
 			}
 		}

@@ -21,10 +21,7 @@ import spoon.reflect.reference.CtFieldReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtVisitor;
 import spoon.support.SpoonClassNotFoundException;
-import spoon.support.util.RtHelper;
 
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Member;
 import java.util.Collections;
 import java.util.Set;
 
@@ -50,34 +47,6 @@ public class CtFieldReferenceImpl<T> extends CtVariableReferenceImpl<T> implemen
 	@Override
 	public void accept(CtVisitor visitor) {
 		visitor.visitCtFieldReference(this);
-	}
-
-	@Override
-	public Member getActualField() {
-		CtTypeReference<?> typeRef = getDeclaringType();
-		if (typeRef == null) {
-			throw new SpoonException("Declaring type of field " + getSimpleName() + " isn't defined");
-		}
-		Class<?> clazz;
-		try {
-			clazz = typeRef.getActualClass();
-		} catch (SpoonClassNotFoundException e) {
-			if (getFactory().getEnvironment().getNoClasspath()) {
-				Launcher.LOGGER.info("The class " + typeRef.getQualifiedName() + " of field " + getSimpleName() + " is not on class path. Problem ignored in noclasspath mode");
-				return null;
-			}
-			throw e;
-		}
-		try {
-			return clazz.getDeclaredField(getSimpleName());
-		} catch (NoSuchFieldException e) {
-			throw new SpoonException("The field " + getQualifiedName() + " was not found", e);
-		}
-	}
-
-	@Override
-	protected AnnotatedElement getActualAnnotatedElement() {
-		return (AnnotatedElement) getActualField();
 	}
 
 	@Override
@@ -184,9 +153,12 @@ public class CtFieldReferenceImpl<T> extends CtVariableReferenceImpl<T> implemen
 				&& ((CtFieldAccess) this.getParent()).getTarget() instanceof CtTypeAccess) {
 			return emptySet();
 		}
-		Member m = getActualField();
-		if (m != null) {
-			return RtHelper.getModifiers(m.getModifiers());
+		if (declaringType != null) {
+			CtType<?> declaringTypeDeclaration = declaringType.getTypeDeclaration();
+			CtField<?> shadowField = declaringTypeDeclaration == null ? null : declaringTypeDeclaration.getField(getSimpleName());
+			if (shadowField != null) {
+				return shadowField.getModifiers();
+			}
 		}
 		return Collections.emptySet();
 	}

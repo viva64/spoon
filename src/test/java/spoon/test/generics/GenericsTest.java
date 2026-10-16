@@ -16,6 +16,7 @@
  */
 package spoon.test.generics;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -215,7 +216,7 @@ public class GenericsTest {
 		assertTrue(tr3 instanceof CtTypeParameterReference);
 
 		assertEquals("File", trExtends.getSimpleName());
-		assertSame(java.io.File.class, trExtends.getActualClass());
+		assertSame(java.io.File.class, RuntimeAccess.actualClass(trExtends));
 		assertEquals("T", tr2.getSimpleName());
 		assertEquals("T", tr3.getSimpleName());
 	}
@@ -304,8 +305,7 @@ public class GenericsTest {
 			// toString uses DefaultJavaPrettyPrinter with forced fully qualified names
 			assertEquals("java.util.Map.Entry", ref.toString());
 
-			assertSame(java.util.Map.class, ref.getDeclaringType()
-					.getActualClass());
+			assertEquals("java.util.Map", ref.getDeclaringType().getQualifiedName());
 
 			CtField<?> y = type.getElements(new NamedElementFilter<>(CtField.class,"y"))
 					.get(0);

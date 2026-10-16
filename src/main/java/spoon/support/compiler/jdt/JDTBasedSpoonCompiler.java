@@ -174,18 +174,6 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 	}
 
 	@Override
-	public void instantiateAndProcess(List<String> processors) {
-		// processing (consume all the processors)
-		ProcessingManager processing = new QueueProcessingManager(factory);
-		for (String processorName : processors) {
-			processing.addProcessor(processorName);
-			factory.getEnvironment().debugMessage("Loaded processor " + processorName + ".");
-		}
-
-		processing.process(factory.Package().getRootPackage());
-	}
-
-	@Override
 	public void process(Collection<Processor<? extends CtElement>> processors) {
 		// processing (consume all the processors)
 		ProcessingManager processing = new QueueProcessingManager(factory);

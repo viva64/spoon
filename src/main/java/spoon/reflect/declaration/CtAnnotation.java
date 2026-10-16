@@ -40,17 +40,6 @@ import static spoon.reflect.path.CtRole.VALUE;
 public interface CtAnnotation<A extends Annotation> extends CtExpression<A>, CtShadowable {
 
 	/**
-	 * Returns the actual annotation (a dynamic proxy for this element).
-	 *
-	 * <p>
-	 * NOTE: before using an annotation proxy, you have to make sure that all
-	 * the types referenced by the annotation have been compiled and are in the
-	 * classpath so that accessed values can be converted into the actual types.
-	 */
-	@DerivedProperty
-	A getActualAnnotation();
-
-	/**
 	 * Returns the annotation type of this annotation.
 	 *
 	 * @return a reference to the type of this annotation

@@ -36,9 +36,6 @@ import spoon.support.reflect.eval.EvalHelper;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -201,18 +198,12 @@ public class CtAnnotationImpl<A extends Annotation> extends CtExpressionImpl<A> 
 		return addValueExpression(elementName, value);
 	}
 
-	private Class<?> getElementType(String name) {
-		// Try by CT reflection
-		CtType<?> t = getAnnotationType().getDeclaration();
+	private CtTypeReference<?> getElementType(String name) {
+		CtType<?> t = getAnnotationType().getTypeDeclaration();
 		if (t != null) {
 			CtMethod<?> method = t.getMethod(name);
-			return method.getType().getActualClass();
-		}
-		// Try with RT reflection
-		Class<?> c = getAnnotationType().getActualClass();
-		for (Method m : c.getMethods()) {
-			if (m.getName().equals(name)) {
-				return m.getReturnType();
+			if (method != null) {
+				return method.getType();
 			}
 		}
 		return null;
@@ -225,10 +216,12 @@ public class CtAnnotationImpl<A extends Annotation> extends CtExpressionImpl<A> 
 
 	private CtExpression getDefaultExpression(String fieldName) {
 		CtExpression ret = null;
-		CtAnnotationType<?> at = (CtAnnotationType<?>) getAnnotationType().getDeclaration();
-		if (at != null) {
-			CtAnnotationMethod<?> f = (CtAnnotationMethod) at.getMethod(fieldName);
-			ret = f.getDefaultExpression();
+		CtType<?> at = getAnnotationType().getTypeDeclaration();
+		if (at instanceof CtAnnotationType) {
+			CtMethod<?> f = at.getMethod(fieldName);
+			if (f instanceof CtAnnotationMethod) {
+				ret = ((CtAnnotationMethod<?>) f).getDefaultExpression();
+			}
 		}
 		return ret;
 	}
@@ -263,31 +256,33 @@ public class CtAnnotationImpl<A extends Annotation> extends CtExpressionImpl<A> 
 		}
 
 		Object ret = EvalHelper.convertElementToRuntimeObject(expr);
-		Class<?> type = getElementType(key);
-		return forceObjectToType(ret, type);
+		return forceObjectToType(ret, getElementType(key));
 	}
 
-	private Object forceObjectToType(Object ret, Class<?> type) {
-		if (type.isPrimitive()) {
-			if ((type == boolean.class) && (ret.getClass() != Boolean.class)) {
-				return Boolean.parseBoolean(ret.toString());
-			} else if ((type == byte.class) && (ret.getClass() != Byte.class)) {
-				return Byte.parseByte(ret.toString());
-			} else if ((type == char.class) && (ret.getClass() != Character.class)) {
-				return ret.toString().charAt(0);
-			} else if ((type == double.class) && (ret.getClass() != Double.class)) {
-				return Double.parseDouble(ret.toString());
-			} else if ((type == float.class) && (ret.getClass() != Float.class)) {
-				return Float.parseFloat(ret.toString());
-			} else if ((type == int.class) && (ret.getClass() != Integer.class)) {
-				return Integer.parseInt(ret.toString());
-			} else if ((type == long.class) && (ret.getClass() != Long.class)) {
-				return Long.parseLong(ret.toString());
-			} else if (type == short.class && ret.getClass() != Short.class) {
-				return Short.parseShort(ret.toString());
-			}
+	private Object forceObjectToType(Object ret, CtTypeReference<?> type) {
+		if (ret == null || type == null || !type.isPrimitive()) {
+			return ret;
 		}
-		return ret;
+		switch (type.getSimpleName()) {
+			case "boolean":
+				return ret.getClass() != Boolean.class ? Boolean.parseBoolean(ret.toString()) : ret;
+			case "byte":
+				return ret.getClass() != Byte.class ? Byte.parseByte(ret.toString()) : ret;
+			case "char":
+				return ret.getClass() != Character.class ? ret.toString().charAt(0) : ret;
+			case "double":
+				return ret.getClass() != Double.class ? Double.parseDouble(ret.toString()) : ret;
+			case "float":
+				return ret.getClass() != Float.class ? Float.parseFloat(ret.toString()) : ret;
+			case "int":
+				return ret.getClass() != Integer.class ? Integer.parseInt(ret.toString()) : ret;
+			case "long":
+				return ret.getClass() != Long.class ? Long.parseLong(ret.toString()) : ret;
+			case "short":
+				return ret.getClass() != Short.class ? Short.parseShort(ret.toString()) : ret;
+			default:
+				return ret;
+		}
 	}
 
 
@@ -303,12 +298,6 @@ public class CtAnnotationImpl<A extends Annotation> extends CtExpressionImpl<A> 
 		ret = getDefaultExpression(key);
 		if (ret != null) {
 			return ret;
-		}
-
-		// get default value in annotation declaration in classpath
-		Object value = getReflectValue(key);
-		if (value != null) {
-			return convertValueToExpression(value);
 		}
 
 		return null;
@@ -362,16 +351,6 @@ public class CtAnnotationImpl<A extends Annotation> extends CtExpressionImpl<A> 
 		return Collections.unmodifiableMap(values);
 	}
 
-	private Object getReflectValue(String fieldname) {
-		try {
-			Class<?> c = getAnnotationType().getActualClass();
-			Method m = c.getMethod(fieldname);
-			return m.getDefaultValue();
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T extends CtAnnotation<A>> T setAnnotationType(CtTypeReference<? extends Annotation> annotationType) {
@@ -413,30 +392,6 @@ public class CtAnnotationImpl<A extends Annotation> extends CtExpressionImpl<A> 
 		CtElement annotatedElement = this.getAnnotatedElement();
 
 		return CtAnnotation.getAnnotatedElementTypeForCtElement(annotatedElement);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public A getActualAnnotation() {
-		class AnnotationInvocationHandler implements InvocationHandler {
-			CtAnnotation<? extends Annotation> annotation;
-
-			AnnotationInvocationHandler(CtAnnotation<? extends Annotation> annotation) {
-				this.annotation = annotation;
-			}
-
-			@Override
-			public Object invoke(Object proxy, Method method, Object[] args) {
-				String fieldname = method.getName();
-				if ("toString".equals(fieldname)) {
-					return CtAnnotationImpl.this.toString();
-				} else if ("annotationType".equals(fieldname)) {
-					return annotation.getAnnotationType().getActualClass();
-				}
-				return getValueAsObject(fieldname);
-			}
-		}
-		return (A) Proxy.newProxyInstance(annotationType.getActualClass().getClassLoader(), new Class[] { annotationType.getActualClass() }, new AnnotationInvocationHandler(this));
 	}
 
 	@MetamodelPropertyField(role = CtRole.IS_SHADOW)

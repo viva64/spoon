@@ -10,7 +10,6 @@ package spoon.processing;
 import spoon.compiler.Environment;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.factory.Factory;
-import spoon.testing.utils.ProcessorUtils;
 
 import java.util.Set;
 
@@ -100,7 +99,7 @@ public abstract class AbstractManualProcessor implements Processor<CtElement> {
 
 	@Override
 	public final void initProperties(ProcessorProperties properties) {
-		ProcessorUtils.initProperties(this, properties);
+		// properties are not mapped to fields (that required reflection); override to read them
 	}
 
 	@Override

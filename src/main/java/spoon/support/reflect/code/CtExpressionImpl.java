@@ -81,11 +81,6 @@ public abstract class CtExpressionImpl<T> extends CtCodeElementImpl implements C
 	}
 
 	@Override
-	public T S() {
-		return null;
-	}
-
-	@Override
 	public CtExpression<T> clone() {
 		return (CtExpression<T>) super.clone();
 	}

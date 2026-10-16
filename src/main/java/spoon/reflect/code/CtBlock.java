@@ -7,7 +7,6 @@
  */
 package spoon.reflect.code;
 
-import spoon.template.TemplateParameter;
 
 /**
  * This code element represents a block of code, that is to say a list of
@@ -23,7 +22,7 @@ import spoon.template.TemplateParameter;
  * value, the block should contain a return statement as a lastly reachable
  * statement. The returned type if any is given by R.
  */
-public interface CtBlock<R> extends CtStatement, CtStatementList, TemplateParameter<R> {
+public interface CtBlock<R> extends CtStatement, CtStatementList {
 
 	@Override
 	CtBlock<R> clone();

@@ -16,6 +16,7 @@
  */
 package spoon.test.intercession;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import spoon.Launcher;
@@ -57,9 +58,9 @@ public class OneCanCallSetterWithNullParameterizedTest {
 
 			@Override
 			protected void process(CtMethod<?> element) {
-				tests.add(dynamicTest(element.getReference().getActualMethod().getName(),
+				tests.add(dynamicTest(RuntimeAccess.actualMethod(element.getReference()).getName(),
 						() -> testNullSafe(createCompatibleObject(element.getDeclaringType().getReference()),
-								element.getReference().getActualMethod())));
+								RuntimeAccess.actualMethod(element.getReference()))));
 			}
 		}.scan(launcher.getModel().getRootPackage());
 		return tests;

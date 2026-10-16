@@ -16,6 +16,8 @@
   <url>https://spoon.gforge.inria.fr/</url>
 
   <properties>
+    <maven.compiler.release>25</maven.compiler.release>
+    <maven.compiler.testRelease>25</maven.compiler.testRelease>
     <sonar.coverage.exclusions>
         **/support/gui/*
     </sonar.coverage.exclusions>

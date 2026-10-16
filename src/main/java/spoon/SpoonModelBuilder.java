@@ -101,12 +101,6 @@ public interface SpoonModelBuilder {
 	boolean compile(InputType... types);
 
 	/**
-	 * Takes a list of fully qualified name processors and instantiates them to process
-	 * the Java model.
-	 */
-	void instantiateAndProcess(List<String> processors);
-
-	/**
 	 * Processes the Java model with the given processors.
 	 */
 	void process(Collection<Processor<? extends CtElement>> processors);

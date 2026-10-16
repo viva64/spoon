@@ -16,6 +16,7 @@
  */
 package spoon.test.fieldaccesses;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.util.Collections;
 import java.util.List;
@@ -226,9 +227,9 @@ public class FieldAccessTest {
 
 		final CtFieldAccess logFieldAccess = Query.getElements(build, new TypeFilter<>(CtFieldAccess.class)).get(0);
 
-		assertSame(Logger.class, logFieldAccess.getType().getActualClass());
+		assertSame(Logger.class, RuntimeAccess.actualClass(logFieldAccess.getType()));
 		assertEquals("LOG", logFieldAccess.getVariable().getSimpleName());
-		assertSame(MyClass.class, logFieldAccess.getVariable().getDeclaringType().getActualClass());
+		assertSame(MyClass.class, RuntimeAccess.actualClass(logFieldAccess.getVariable().getDeclaringType()));
 
 		String expectedLambda = "() -> {" + System.lineSeparator() + "    spoon.test.fieldaccesses.testclasses.MyClass.LOG.info(\"bla\");" + System.lineSeparator() + "}";
 		assertEquals(expectedLambda, logFieldAccess.getParent(CtLambda.class).toString());

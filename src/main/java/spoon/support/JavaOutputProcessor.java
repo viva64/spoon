@@ -45,6 +45,7 @@ public class JavaOutputProcessor extends AbstractProcessor<CtNamedElement> imple
 	 * @param printer  the PrettyPrinter to use for written the files
 	 */
 	public JavaOutputProcessor(PrettyPrinter printer) {
+		addProcessedElementType(CtNamedElement.class);
 		this.printer = printer;
 	}
 
@@ -52,6 +53,7 @@ public class JavaOutputProcessor extends AbstractProcessor<CtNamedElement> imple
 	 * Such processor will use printer created by {@link Environment#createPrettyPrinter()}
 	 */
 	public JavaOutputProcessor() {
+		addProcessedElementType(CtNamedElement.class);
 	}
 
 	@Override

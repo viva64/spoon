@@ -15,6 +15,7 @@ import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtConstructor;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeMember;
 import spoon.reflect.declaration.ModifierKind;
@@ -28,13 +29,8 @@ import spoon.reflect.visitor.CtVisitor;
 import spoon.reflect.visitor.filter.NamedElementFilter;
 import spoon.support.adaption.TypeAdaptor;
 import spoon.support.reflect.declaration.CtElementImpl;
-import spoon.support.util.RtHelper;
 import spoon.support.visitor.SignaturePrinter;
 
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -275,70 +271,6 @@ public class CtExecutableReferenceImpl<T> extends CtReferenceImpl implements CtE
 	}
 
 	@Override
-	protected AnnotatedElement getActualAnnotatedElement() {
-		if (isConstructor()) {
-			return getActualConstructor();
-		} else {
-			return getActualMethod();
-		}
-	}
-
-	@Override
-	public Method getActualMethod() {
-		List<CtTypeReference<?>> parameters = this.getParameters();
-
-		CtTypeReference<?> declaringType = getDeclaringType();
-		if (declaringType == null) {
-			return null;
-		}
-		method_loop:
-		for (Method m : declaringType.getActualClass().getDeclaredMethods()) {
-			if (!m.getDeclaringClass().isSynthetic() && m.isSynthetic()) {
-				continue;
-			}
-			if (!m.getName().equals(getSimpleName())) {
-				continue;
-			}
-			if (m.getParameterTypes().length != parameters.size()) {
-				continue;
-			}
-			for (int i = 0; i < parameters.size(); i++) {
-				Class<?> methodParameterType = m.getParameterTypes()[i];
-				Class<?> currentParameterType = parameters.get(i).getActualClass();
-				if (methodParameterType != currentParameterType) {
-					continue method_loop;
-				}
-			}
-
-			return m;
-		}
-		return null;
-	}
-
-	@Override
-	public Constructor<?> getActualConstructor() {
-		List<CtTypeReference<?>> parameters = this.getParameters();
-
-		CtTypeReference<?> declaringType = getDeclaringType();
-		if (declaringType == null) {
-			return null;
-		}
-		constructor_loop:
-		for (Constructor<?> c : declaringType.getActualClass().getDeclaredConstructors()) {
-			if (c.getParameterTypes().length != parameters.size()) {
-				continue;
-			}
-			for (int i = 0; i < parameters.size(); i++) {
-				if (c.getParameterTypes()[i] != parameters.get(i).getActualClass()) {
-					continue constructor_loop;
-				}
-			}
-			return c;
-		}
-		return null;
-	}
-
-	@Override
 	public boolean isStatic() {
 		return stat;
 	}
@@ -361,8 +293,8 @@ public class CtExecutableReferenceImpl<T> extends CtReferenceImpl implements CtE
 			}
 			return false;
 		}
-		Method m = getActualMethod();
-		return m != null && Modifier.isFinal(m.getModifiers());
+		CtExecutable<T> shadow = getExecutableDeclaration();
+		return shadow instanceof CtModifiable && ((CtModifiable) shadow).hasModifier(ModifierKind.FINAL);
 	}
 
 	public Set<ModifierKind> getModifiers() {
@@ -375,13 +307,9 @@ public class CtExecutableReferenceImpl<T> extends CtReferenceImpl implements CtE
 			}
 			return CtElementImpl.emptySet();
 		}
-		Method m = getActualMethod();
-		if (m != null) {
-			return RtHelper.getModifiers(m.getModifiers());
-		}
-		Constructor<?> c = getActualConstructor();
-		if (c != null) {
-			return RtHelper.getModifiers(c.getModifiers());
+		CtExecutable<T> shadow = getExecutableDeclaration();
+		if (shadow instanceof CtModifiable) {
+			return ((CtModifiable) shadow).getModifiers();
 		}
 		return Collections.emptySet();
 	}

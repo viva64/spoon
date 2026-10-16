@@ -246,27 +246,18 @@ public final class OperatorHelper {
 		}
 	}
 
-	private static final Set<Class<?>> WHOLE_NUMBERS = Set.of(
-		byte.class,
-		short.class,
-		int.class,
-		long.class
-	);
+	private static final Set<String> WHOLE_NUMBERS = Set.of("byte", "short", "int", "long");
 
-	private static final Set<Class<?>> NUMBERS_PROMOTED_TO_INT = Set.of(
-		byte.class,
-		short.class,
-		char.class
-	);
+	private static final Set<String> NUMBERS_PROMOTED_TO_INT = Set.of("byte", "short", "char");
 
 	private static boolean isIntegralType(CtTypeReference<?> ctTypeReference) {
 		return ctTypeReference.isPrimitive()
 			// see https://docs.oracle.com/javase/specs/jls/se7/html/jls-4.html#jls-4.2.1
-			&& (WHOLE_NUMBERS.contains(ctTypeReference.getActualClass()) || ctTypeReference.getActualClass().equals(char.class));
+			&& (WHOLE_NUMBERS.contains(ctTypeReference.getSimpleName()) || "char".equals(ctTypeReference.getSimpleName()));
 	}
 
 	private static boolean isNumericType(CtTypeReference<?> ctTypeReference) {
-		return ctTypeReference.isPrimitive() && !ctTypeReference.getActualClass().equals(boolean.class);
+		return ctTypeReference.isPrimitive() && !"boolean".equals(ctTypeReference.getSimpleName());
 	}
 
 	/**
@@ -287,7 +278,7 @@ public final class OperatorHelper {
 
 		// if the operand is of type byte, short, or char, it is promoted to a value of type int by a widening
 		// primitive conversion (§5.1.2).
-		if (NUMBERS_PROMOTED_TO_INT.contains(operandType.getActualClass())) {
+		if (NUMBERS_PROMOTED_TO_INT.contains(operandType.getSimpleName())) {
 			return Optional.of(operandType.getFactory().Type().integerPrimitiveType());
 		}
 

@@ -16,6 +16,7 @@
  */
 package spoon.test.parent;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import spoon.reflect.CtModelImpl;
@@ -52,7 +53,7 @@ public class SetParentTest{
 	public Collection<DynamicTest> createReceiverList() {
 		List<DynamicTest> values = new ArrayList<>();
 		for (CtType<?> t : SpoonTestHelpers.getAllInstantiableMetamodelInterfaces()) {
-			if (!(CtReference.class.isAssignableFrom(t.getActualClass()))) {
+			if (!(CtReference.class.isAssignableFrom(RuntimeAccess.actualClass(t)))) {
 				values.add(DynamicTest.dynamicTest(t.getSimpleName(), () -> 
 					testSetParentDoesNotAlterState(t)));
 			}
@@ -63,7 +64,7 @@ public class SetParentTest{
 	private void testSetParentDoesNotAlterState(CtType<?> toTest) throws Throwable {
 		// contract: setParent does not modifiy the state of the parent
 
-		Object o = factory.Core().create((Class<? extends CtElement>) toTest.getActualClass());
+		Object o = factory.Core().create((Class<? extends CtElement>) RuntimeAccess.actualClass(toTest));
 		CtMethod<?> setter = factory.Type().get(CtElement.class).getMethodsByName("setParent").get(0);
 
 		CtElement argument = createCompatibleParent(toTest);
@@ -94,7 +95,7 @@ public class SetParentTest{
 			}
 		}
 
-		Method actualMethod = setter.getReference().getActualMethod();
+		Method actualMethod = RuntimeAccess.actualMethod(setter.getReference());
 		CtElement argumentClone = argument.clone();
 		actualMethod.invoke(receiver, new Object[]{argument});
 

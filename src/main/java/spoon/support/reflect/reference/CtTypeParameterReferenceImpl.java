@@ -21,7 +21,6 @@ import spoon.reflect.visitor.CtVisitor;
 import spoon.support.DerivedProperty;
 import spoon.support.UnsettableProperty;
 
-import java.lang.reflect.AnnotatedElement;
 import java.util.List;
 import java.util.Objects;
 
@@ -45,12 +44,6 @@ public class CtTypeParameterReferenceImpl extends CtTypeReferenceImpl<Object> im
 	@Override
 	public boolean isPrimitive() {
 		return false;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public Class<Object> getActualClass() {
-		return (Class<Object>) getBoundingType().getActualClass();
 	}
 
 	@Override
@@ -88,12 +81,6 @@ public class CtTypeParameterReferenceImpl extends CtTypeReferenceImpl<Object> im
 			}
 		}
 		return getFactory().Type().getDefaultBoundingType();
-	}
-
-	@Override
-	protected AnnotatedElement getActualAnnotatedElement() {
-		// this is never annotated
-		return null;
 	}
 
 	@Override

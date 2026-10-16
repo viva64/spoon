@@ -16,6 +16,7 @@
  */
 package spoon.test.reference;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -150,7 +151,7 @@ public class TypeReferenceTest {
 		assertNotNull(referencedType);
 
 		// we can get the actual class from the reference, because it is loaded from the class path
-		Class referencedClass = referencedType.getActualClass();
+		Class referencedClass = RuntimeAccess.actualClass(referencedType);
 		assertEquals(referencedQualifiedName, referencedClass.getName());
 	}
 
@@ -233,7 +234,7 @@ public class TypeReferenceTest {
 	public void unboxTest() {
 		Factory factory = new Launcher().createFactory();
 		CtTypeReference<Boolean> boxedBoolean = factory.Class().createReference(Boolean.class);
-		assertSame(boolean.class, boxedBoolean.unbox().getActualClass());
+		assertSame(boolean.class, RuntimeAccess.actualClass(boxedBoolean.unbox()));
 	}
 
 	@Test
@@ -524,8 +525,8 @@ public class TypeReferenceTest {
 		CtTypeReference<Short> aShort = createFactory().Type().shortType();
 		CtTypeReference<Short> shortPrimitive = createFactory().Type().shortPrimitiveType();
 
-		assertSame(Short.class, aShort.getActualClass());
-		assertSame(short.class, shortPrimitive.getActualClass());
+		assertSame(Short.class, RuntimeAccess.actualClass(aShort));
+		assertSame(short.class, RuntimeAccess.actualClass(shortPrimitive));
 
 	}
 
@@ -634,12 +635,12 @@ public class TypeReferenceTest {
 		assertEquals("?", s.getType().getActualTypeArguments().get(0).getSimpleName());
 		assertTrue(s.getType().getActualTypeArguments().get(0) instanceof CtWildcardReference);
 		assertEquals("Object", s.getType().getActualTypeArguments().get(0).getTypeDeclaration().getSimpleName());
-		assertSame(Object.class, s.getType().getActualTypeArguments().get(0).getTypeDeclaration().getActualClass());
+		assertSame(Object.class, RuntimeAccess.actualClass(s.getType().getActualTypeArguments().get(0).getTypeDeclaration()));
 
 		// some additional tests
 		CtLocalVariable<?> s2 = new Launcher().getFactory().Code().createCodeSnippetStatement("java.util.List<String> l = null").compile();
 		assertEquals("String", s2.getType().getActualTypeArguments().get(0).getSimpleName());
-		assertSame(String.class, s2.getType().getActualTypeArguments().get(0).getTypeDeclaration().getActualClass());
+		assertSame(String.class, RuntimeAccess.actualClass(s2.getType().getActualTypeArguments().get(0).getTypeDeclaration()));
 	}
 
 	@Test

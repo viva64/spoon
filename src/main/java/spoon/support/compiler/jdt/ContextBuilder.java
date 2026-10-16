@@ -325,14 +325,13 @@ public class ContextBuilder {
 			if (potentialReferenceToField instanceof CtTypeReference) {
 				final CtTypeReference typeReference = (CtTypeReference) potentialReferenceToField;
 				try {
-					final Class classOfType = typeReference.getActualClass();
-					if (classOfType != null) {
-						final CtType declaringTypeOfField = typeReference.isInterface()
-								? interfaceFactory.get(classOfType) : classFactory.get(classOfType);
-						final CtField field = declaringTypeOfField.getField(name);
-						if (field != null) {
-							return (U) field;
-						}
+					final CtType declaringTypeOfField = typeReference.getTypeDeclaration();
+					if (declaringTypeOfField == null) {
+						throw new SpoonClassNotFoundException("cannot find " + typeReference.getQualifiedName(), null);
+					}
+					final CtField field = declaringTypeOfField.getField(name);
+					if (field != null) {
+						return (U) field;
 					}
 				} catch (final SpoonClassNotFoundException scnfe) {
 					// in noclasspath mode we do some heuristics to determine if `name` could be a

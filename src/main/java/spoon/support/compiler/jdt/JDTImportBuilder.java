@@ -180,11 +180,8 @@ class JDTImportBuilder {
 			klass = this.factory.Interface().get(className);
 
 			if (klass == null) {
-				try {
-					Class<?> zeClass = loadClass(className);
-					klass = this.factory.Type().get(zeClass);
-					return klass;
-				} catch (NoClassDefFoundError | ClassNotFoundException e) {
+				klass = this.factory.Type().getOrShadow(className);
+				if (klass == null) {
 					// in some cases we want to import an inner class.
 					if (!className.contains(CtType.INNERTTYPE_SEPARATOR) && className.contains(CtPackage.PACKAGE_SEPARATOR)) {
 						int lastIndexOfDot = className.lastIndexOf(CtPackage.PACKAGE_SEPARATOR);
@@ -198,13 +195,4 @@ class JDTImportBuilder {
 		return klass;
 	}
 
-	private Class<?> loadClass(String className) throws ClassNotFoundException {
-		Class<?> zeClass;
-		if (this.factory.getEnvironment().getInputClassLoader() != null) {
-			zeClass = this.factory.getEnvironment().getInputClassLoader().loadClass(className);
-		} else {
-			zeClass = this.getClass().getClassLoader().loadClass(className);
-		}
-		return zeClass;
-	}
 }

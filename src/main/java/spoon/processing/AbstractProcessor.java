@@ -12,9 +12,8 @@ import spoon.compiler.Environment;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.factory.Factory;
 import spoon.support.Level;
-import spoon.testing.utils.ProcessorUtils;
 
-import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,17 +32,8 @@ public abstract class AbstractProcessor<E extends CtElement> implements Processo
 	 */
 	@SuppressWarnings("unchecked")
 	public AbstractProcessor() {
-		for (Method m : getClass().getMethods()) {
-			if ("process".equals(m.getName()) && (m.getParameterTypes().length == 1)) {
-				Class<?> c = m.getParameterTypes()[0];
-				if (CtElement.class != c) {
-					addProcessedElementType((Class<E>) c);
-				}
-			}
-		}
-		if (processedElementTypes.isEmpty()) {
-			addProcessedElementType(CtElement.class);
-		}
+		// the processed types are not detected from the signature of process (that needs reflection),
+		// subclasses declare them with addProcessedElementType. Without any, all the elements are processed.
 	}
 
 	/**
@@ -73,6 +63,9 @@ public abstract class AbstractProcessor<E extends CtElement> implements Processo
 
 	@Override
 	public Set<Class<? extends CtElement>> getProcessedElementTypes() {
+		if (processedElementTypes.isEmpty()) {
+			return Collections.singleton(CtElement.class);
+		}
 		return processedElementTypes;
 	}
 
@@ -113,7 +106,7 @@ public abstract class AbstractProcessor<E extends CtElement> implements Processo
 	 */
 	@Override
 	public void initProperties(ProcessorProperties properties) {
-		ProcessorUtils.initProperties(this, properties);
+		// properties are not mapped to fields (that required reflection); override to read them
 	}
 
 	/**

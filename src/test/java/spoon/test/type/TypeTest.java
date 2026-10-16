@@ -16,6 +16,7 @@
  */
 package spoon.test.type;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -294,8 +295,8 @@ public class TypeTest {
 		assertNotNull(boundingType);
 		assertTrue(boundingType instanceof CtIntersectionTypeReference);
 		assertEquals(2, boundingType.asCtIntersectionTypeReference().getBounds().size());
-		assertSame(Number.class, boundingType.asCtIntersectionTypeReference().getBounds().stream().collect(Collectors.toList()).get(0).getActualClass());
-		assertSame(Comparable.class, boundingType.asCtIntersectionTypeReference().getBounds().stream().collect(Collectors.toList()).get(1).getActualClass());
+		assertSame(Number.class, RuntimeAccess.actualClass(boundingType.asCtIntersectionTypeReference().getBounds().stream().collect(Collectors.toList()).get(0)));
+		assertSame(Comparable.class, RuntimeAccess.actualClass(boundingType.asCtIntersectionTypeReference().getBounds().stream().collect(Collectors.toList()).get(1)));
 		assertEquals("public class Mole<NUMBER extends java.lang.Number & java.lang.Comparable<NUMBER>> {}", aMole.toString());
 	}
 
@@ -351,10 +352,10 @@ public class TypeTest {
 		assertSame(launcher.getFactory().Class(), objectCtClass1.getFactory().Class());
 		assertSame(launcher.getFactory(), objectCtClass1.getFactory());
 
-		assertSame(objectCtClass.getFactory().Class().get(objectCtClass.getActualClass()), objectCtClass);
+		assertSame(objectCtClass.getFactory().Class().get(RuntimeAccess.actualClass(objectCtClass)), objectCtClass);
 		assertSame(objectCtClass.getFactory().Class().get(Object.class), objectCtClass);
 
-		assertSame(objectCtClass1.getFactory().Class().get(objectCtClass1.getActualClass()), objectCtClass1);
+		assertSame(objectCtClass1.getFactory().Class().get(RuntimeAccess.actualClass(objectCtClass1)), objectCtClass1);
 		assertSame(objectCtClass1.getFactory().Class().get(Object.class), objectCtClass1);
 
 		assertTrue(objectCtClass.isShadow());
@@ -371,10 +372,10 @@ public class TypeTest {
 		assertSame(launcher.getFactory().Type(), objectCtType1.getFactory().Type());
 		assertSame(launcher.getFactory(), objectCtType1.getFactory());
 
-		assertSame(objectCtType.getFactory().Type().get(objectCtType.getActualClass()), objectCtType);
+		assertSame(objectCtType.getFactory().Type().get(RuntimeAccess.actualClass(objectCtType)), objectCtType);
 		assertSame(objectCtType.getFactory().Type().get(Object.class), objectCtType);
 
-		assertSame(objectCtType1.getFactory().Type().get(objectCtType1.getActualClass()), objectCtType1);
+		assertSame(objectCtType1.getFactory().Type().get(RuntimeAccess.actualClass(objectCtType1)), objectCtType1);
 		assertSame(objectCtType1.getFactory().Type().get(Object.class), objectCtType1);
 
 		assertTrue(objectCtClass.isShadow());

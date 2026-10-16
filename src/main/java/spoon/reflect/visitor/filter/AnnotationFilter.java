@@ -40,6 +40,6 @@ public class AnnotationFilter<E extends CtElement> extends TypeFilter<E> {
 
 	@Override
 	public boolean matches(E element) {
-		return super.matches(element) && element.getAnnotation(annotationType) != null;
+		return super.matches(element) && element.hasAnnotation(annotationType);
 	}
 }

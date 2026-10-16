@@ -16,6 +16,7 @@
  */
 package spoon.test.executable;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -58,7 +59,7 @@ public class ExecutableRefTest {
 		CtExecutableReference<?> executableReference = ctAbstractInvocation.getExecutable();
 		assertNotNull(executableReference);
 
-		Method method = executableReference.getActualMethod();
+		Method method = RuntimeAccess.actualMethod(executableReference);
 		assertNotNull(method);
 
 		assertEquals("Hello World",
@@ -73,7 +74,7 @@ public class ExecutableRefTest {
 		CtExecutableReference<?> executableReference = ctAbstractInvocation.getExecutable();
 		assertNotNull(executableReference);
 
-		Constructor<?> constructor = executableReference.getActualConstructor();
+		Constructor<?> constructor = RuntimeAccess.actualConstructor(executableReference);
 		assertNotNull(constructor);
 
 		assertEquals("Hello World",
@@ -87,7 +88,7 @@ public class ExecutableRefTest {
 		CtMethod<?> method = factory.Class().get(ExecutableRefTestSource.class).getMethod("myMethod");
 		CtExecutableReference<?> ref = method.getReference();
 
-		Method m = ref.getActualMethod();
+		Method m = RuntimeAccess.actualMethod(ref);
 		assertEquals("myMethod", m.getName());
 		assertEquals(0, m.getExceptionTypes().length);
 	}

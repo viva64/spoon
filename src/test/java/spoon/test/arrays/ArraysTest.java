@@ -16,6 +16,7 @@
  */
 package spoon.test.arrays;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.lang.reflect.Array;
 import java.util.List;
@@ -59,7 +60,7 @@ public class ArraysTest {
 		assertEquals("int[]", typeRef.getSimpleName());
 		assertEquals("int[]", typeRef.getQualifiedName());
 		assertEquals("int", typeRef.getComponentType().getSimpleName());
-		assertTrue(((CtArrayTypeReference<?>) typeRef).getComponentType().getActualClass().equals(int.class));
+		assertTrue(RuntimeAccess.actualClass(((CtArrayTypeReference<?>) typeRef).getComponentType()).equals(int.class));
 
 		CtType<?> ctType = typeRef.getTypeDeclaration();
 		assertEquals("int[]", ctType.getQualifiedName());
@@ -77,16 +78,16 @@ public class ArraysTest {
 		assertTrue(x.getType().isSubtypeOf(x.getFactory().Type().get(Array.class).getReference()));
 
 		// solution 4: you can ask for actual class and then the component type if any
-		assertTrue(typeRef.getActualClass().getComponentType() != null);
-		assertTrue(ctType.getActualClass().getComponentType() != null);
+		assertTrue(RuntimeAccess.actualClass(typeRef).getComponentType() != null);
+		assertTrue(RuntimeAccess.actualClass(ctType).getComponentType() != null);
 		assertTrue(typeRef.getComponentType() != null);
 		assertEquals("int", typeRef.getComponentType().getSimpleName());
 
 		// solution 5: use getActualClass if you know it already
-		assertSame(int[].class, typeRef.getActualClass());
-		assertEquals(int[].class, ctType.getActualClass());
-		assertEquals(int.class, ctType.getActualClass().getComponentType());
-		assertEquals("int[]", ctType.getActualClass().getSimpleName());
+		assertSame(int[].class, RuntimeAccess.actualClass(typeRef));
+		assertEquals(int[].class, RuntimeAccess.actualClass(ctType));
+		assertEquals(int.class, RuntimeAccess.actualClass(ctType).getComponentType());
+		assertEquals("int[]", RuntimeAccess.actualClass(ctType).getSimpleName());
 
 		//contract: the API provides the array information
 		assertTrue(typeRef.isArray());

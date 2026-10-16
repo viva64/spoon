@@ -1466,15 +1466,14 @@ public class ReferenceBuilder {
 		} else if (declaring instanceof CtTypeReference) {
 			ref.setDeclaringType((CtTypeReference) declaring);
 		} else if (declaring == null) {
-			try {
-				// sometimes JDT does not provide the information that ref comes from java.lang
-				// it seems to occurs in particular with anonymous inner classes: see #1307
-				// In that case, we try to load the class to check if it belongs to java.lang
-				Class.forName("java.lang." + ref.getSimpleName());
+			// sometimes JDT does not provide the information that ref comes from java.lang
+			// it seems to occurs in particular with anonymous inner classes: see #1307
+			// In that case, we look for the class to check if it belongs to java.lang
+			if (this.jdtTreeBuilder.getFactory().Type().getOrShadow("java.lang." + ref.getSimpleName()) != null) {
 				CtPackageReference javaLangPackageReference = this.jdtTreeBuilder.getFactory().Core().createPackageReference();
 				javaLangPackageReference.setSimpleName("java.lang");
 				ref.setPackage(javaLangPackageReference);
-			} catch (NoClassDefFoundError | ClassNotFoundException e) {
+			} else {
 				assert jdtTreeBuilder.getFactory().getEnvironment().getNoClasspath();
 				ContextBuilder ctx = jdtTreeBuilder.getContextBuilder();
 				if (containsStarImport(ctx.compilationunitdeclaration.imports)) {

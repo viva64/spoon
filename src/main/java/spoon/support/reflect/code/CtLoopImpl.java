@@ -50,11 +50,6 @@ public abstract class CtLoopImpl extends CtStatementImpl implements CtLoop {
 		return (CtLoop) super.clone();
 	}
 
-	@Override
-	public Void S() {
-		return null;
-	}
-
 	public CtCodeElement getSubstitution(CtType<?> targetType) {
 		return clone();
 	}

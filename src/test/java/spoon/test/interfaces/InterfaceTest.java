@@ -16,6 +16,7 @@
  */
 package spoon.test.interfaces;
 
+import spoon.test.util.RuntimeAccess;
 import spoon.test.SpoonTestHelpers;
 import spoon.test.interfaces.testclasses.RedefinesStaticMethodInterface;
 import spoon.SpoonModelBuilder;
@@ -106,7 +107,7 @@ public class InterfaceTest {
 
 		final CtMethod<?> getZonedDateTimeMethod = ctInterface.getMethodsByName("getZonedDateTime").get(0);
 		assertTrue(getZonedDateTimeMethod.isDefaultMethod(), "Method in the sub interface must be a default method");
-		assertSame(ExtendsDefaultMethodInterface.class, getZonedDateTimeMethod.getDeclaringType().getActualClass(), "Interface of the default method must be the sub interface");
+		assertSame(ExtendsDefaultMethodInterface.class, RuntimeAccess.actualClass(getZonedDateTimeMethod.getDeclaringType()), "Interface of the default method must be the sub interface");
 	}
 
 	@Test
@@ -118,7 +119,7 @@ public class InterfaceTest {
 
 		final CtMethod<?> getZonedDateTimeMethod = ctInterface.getMethodsByName("getZonedDateTime").get(0);
 		assertFalse(getZonedDateTimeMethod.isDefaultMethod(), "Method in the sub interface mustn't be a default method");
-		assertSame(RedefinesDefaultMethodInterface.class, getZonedDateTimeMethod.getDeclaringType().getActualClass(), "Interface of the default method must be the sub interface");
+		assertSame(RedefinesDefaultMethodInterface.class, RuntimeAccess.actualClass(getZonedDateTimeMethod.getDeclaringType()), "Interface of the default method must be the sub interface");
 	}
 
 	@Test
@@ -130,7 +131,7 @@ public class InterfaceTest {
 
 		final CtMethod<?> getZoneIdMethod = ctInterface.getMethodsByName("getZoneId").get(0);
 		assertTrue(getZoneIdMethod.getModifiers().contains(ModifierKind.STATIC), "Method in the sub interface must be a static method");
-		assertSame(ExtendsStaticMethodInterface.class, getZoneIdMethod.getDeclaringType().getActualClass(), "Interface of the static method must be the sub interface");
+		assertSame(ExtendsStaticMethodInterface.class, RuntimeAccess.actualClass(getZoneIdMethod.getDeclaringType()), "Interface of the static method must be the sub interface");
 	}
 
 	@Test
@@ -142,7 +143,7 @@ public class InterfaceTest {
 
 		final CtMethod<?> getZoneIdMethod = ctInterface.getMethodsByName("getZoneId").get(0);
 		assertFalse(getZoneIdMethod.getModifiers().contains(ModifierKind.STATIC), "Method in the sub interface mustn't be a static method");
-		assertSame(RedefinesStaticMethodInterface.class, getZoneIdMethod.getDeclaringType().getActualClass(), "Interface of the static method must be the sub interface");
+		assertSame(RedefinesStaticMethodInterface.class, RuntimeAccess.actualClass(getZoneIdMethod.getDeclaringType()), "Interface of the static method must be the sub interface");
 	}
 
 	@org.junit.jupiter.api.Test

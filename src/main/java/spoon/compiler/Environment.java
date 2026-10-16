@@ -254,23 +254,6 @@ public interface Environment {
 	int getWarningCount();
 
 	/**
-	 * Returns the {@code ClassLoader} which is used by JDT and to resolve classes from references.
-	 *
-	 * By default, returns a class loader able to load classes from the
-	 * Spoon-specific class path set with  {@link #setSourceClasspath(String[])}
-	 *
-	 * @return the currently configured classloader
-	 */
-	ClassLoader getInputClassLoader();
-
-	/**
-	 * Sets a specific classloader for JDT and reference resolution
-	 *
-	 * @param classLoader a classloader to set
-	 */
-	void setInputClassLoader(ClassLoader classLoader);
-
-	/**
 	 * When set, the generated source code will try to generate code that
 	 * preserves the line numbers of the original source code. This option may
 	 * lead to difficult-to-read indentation and formatting.

@@ -14,7 +14,6 @@ import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.visitor.CtVisitor;
 
-import java.lang.reflect.AnnotatedElement;
 import java.util.Collections;
 import java.util.Set;
 
@@ -47,12 +46,6 @@ public abstract class CtVariableReferenceImpl<T> extends CtReferenceImpl impleme
 		getFactory().getEnvironment().getModelChangeListener().onObjectUpdate(this, TYPE, type, this.type);
 		this.type = type;
 		return (C) this;
-	}
-
-	@Override
-	protected AnnotatedElement getActualAnnotatedElement() {
-		// this is never available through reflection
-		return null;
 	}
 
 	@Override

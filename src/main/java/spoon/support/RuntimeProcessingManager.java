@@ -46,31 +46,9 @@ public class RuntimeProcessingManager implements ProcessingManager {
 	}
 
 	@Override
-	public void addProcessor(Class<? extends Processor<?>> type) {
-		try {
-			Processor<?> p = type.newInstance();
-			p.setFactory(factory);
-			p.init();
-			addProcessor(p);
-		} catch (Exception e) {
-			factory.getEnvironment().report(null, Level.ERROR, "Unable to instantiate processor \"" + type.getName() + "\" - Your processor should have a constructor with no arguments");
-		}
-	}
-
-	@Override
 	public boolean addProcessor(Processor<?> p) {
 		p.setFactory(getFactory());
 		return getProcessors().add(p);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public void addProcessor(String qualifiedName) {
-		try {
-			addProcessor((Class<? extends Processor<?>>) getFactory().getEnvironment().getInputClassLoader().loadClass(qualifiedName));
-		} catch (ClassNotFoundException e) {
-			factory.getEnvironment().report(null, Level.ERROR, "Unable to load processor \"" + qualifiedName + "\" - Check your classpath.");
-		}
 	}
 
 	public Processor<?> getCurrentProcessor() {

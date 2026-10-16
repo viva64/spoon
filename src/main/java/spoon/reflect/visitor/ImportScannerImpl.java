@@ -749,13 +749,8 @@ public class ImportScannerImpl extends CtScanner implements ImportScanner {
 					|| namesPresentInJavaLang9.contains(ref.getSimpleName())) {
 				presentInJavaLang = true;
 			} else {
-				// Assuming Spoon's own runtime environment is Java 7+
-				try {
-					Class.forName("java.lang." + ref.getSimpleName());
-					presentInJavaLang = true;
-				} catch (NoClassDefFoundError | ClassNotFoundException e) {
-					presentInJavaLang = false;
-				}
+				// look the class up on the class path (class files are only read, nothing is loaded)
+				presentInJavaLang = ref.getFactory().Type().getOrShadow("java.lang." + ref.getSimpleName()) != null;
 			}
 			namesPresentInJavaLang.put(ref.getSimpleName(), presentInJavaLang);
 		}

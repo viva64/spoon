@@ -16,6 +16,7 @@
  */
 package spoon.test.annotation;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.Test;
 import spoon.reflect.code.CtFor;
 import spoon.reflect.code.CtLocalVariable;
@@ -36,9 +37,9 @@ public class AnnotationLoopTest {
 
 		final CtFor aLoop = aPozole.getMethod("cook").getElements(new TypeFilter<>(CtFor.class)).get(0);
 		assertEquals(3, aLoop.getForInit().size());
-		assertSame(SuppressWarnings.class, aLoop.getForInit().get(0).getAnnotations().get(0).getAnnotationType().getActualClass());
-		assertSame(SuppressWarnings.class, aLoop.getForInit().get(1).getAnnotations().get(0).getAnnotationType().getActualClass());
-		assertSame(SuppressWarnings.class, aLoop.getForInit().get(2).getAnnotations().get(0).getAnnotationType().getActualClass());
+		assertSame(SuppressWarnings.class, RuntimeAccess.actualClass(aLoop.getForInit().get(0).getAnnotations().get(0).getAnnotationType()));
+		assertSame(SuppressWarnings.class, RuntimeAccess.actualClass(aLoop.getForInit().get(1).getAnnotations().get(0).getAnnotationType()));
+		assertSame(SuppressWarnings.class, RuntimeAccess.actualClass(aLoop.getForInit().get(2).getAnnotations().get(0).getAnnotationType()));
 
 		assertEquals("u", ((CtLocalVariable) aLoop.getForInit().get(0)).getSimpleName());
 		assertEquals("p", ((CtLocalVariable) aLoop.getForInit().get(1)).getSimpleName());

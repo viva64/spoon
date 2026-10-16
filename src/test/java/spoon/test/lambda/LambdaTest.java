@@ -16,6 +16,7 @@
  */
 package spoon.test.lambda;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import spoon.Launcher;
@@ -482,7 +483,7 @@ public class LambdaTest {
 	}
 
 	private void assertTypedBy(Class<?> expectedType, CtTypeReference<?> type) {
-		assertSame(expectedType, type.getActualClass(), "Lambda must be typed");
+		assertSame(expectedType, RuntimeAccess.actualClass(type), "Lambda must be typed");
 	}
 
 	private void assertParametersSizeIs(int nbParameters, List<CtParameter<?>> parameters) {
@@ -495,7 +496,7 @@ public class LambdaTest {
 
 	private void assertParameterTypedBy(Class<?> expectedType, CtParameter<?> parameter) {
 		assertNotNull(parameter.getType(), "Lambda has a parameter typed");
-		assertSame(expectedType, parameter.getType().getActualClass(), "Lambda has a parameter typed by");
+		assertSame(expectedType, RuntimeAccess.actualClass(parameter.getType()), "Lambda has a parameter typed by");
 	}
 
 	private void assertHasExpressionBody(CtLambda<?> lambda) {

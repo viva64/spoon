@@ -31,7 +31,6 @@ import spoon.reflect.declaration.CtTypeParameter;
 import spoon.reflect.declaration.ParentNotInitializedException;
 import spoon.reflect.path.CtPath;
 import spoon.reflect.path.CtPathException;
-import spoon.reflect.path.CtPathStringBuilder;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtFieldReference;
@@ -59,7 +58,6 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static spoon.testing.utils.Check.assertNotNull;
 
 /**
  * Verifies all contracts that should hold on any AST.
@@ -68,6 +66,18 @@ import static spoon.testing.utils.Check.assertNotNull;
  */
 @Experimental
 public class ContractVerifier {
+
+	private static <T> T assertNotNull(T reference) {
+		return assertNotNull("Your parameter can't be null.", reference);
+	}
+
+	private static <T> T assertNotNull(String message, T reference) {
+		if (reference == null) {
+			throw new AssertionError(message);
+		}
+		return reference;
+	}
+
 
 	private CtPackage _rootPackage;
 
@@ -92,7 +102,6 @@ public class ContractVerifier {
 		checkModelIsTree();
 		checkContractCtScanner();
 		checkElementIsContainedInAttributeOfItsParent();
-		checkElementToPathToElementEquivalence();
 		checkRoleInParent();
 		checkJavaIdentifiers();
 	}
@@ -523,28 +532,6 @@ public class ContractVerifier {
 		}
 		assertTrue("lastFragment.end(" + pos + ") <= max(" + maxOffset + ")", pos <= maxOffset);
 		return nr;
-	}
-
-	/** checks that for all elements, the path can be obtained, parsed, and give the same element when evaluated */
-	public void checkElementToPathToElementEquivalence() {
-		_rootPackage.getPackage("spoon").getElements(e -> true).parallelStream().forEach(element -> {
-			CtPath path = element.getPath();
-			String pathStr = path.toString();
-			try {
-				CtPath pathRead = new CtPathStringBuilder().fromString(pathStr);
-				assertEquals(pathStr, pathRead.toString());
-				Collection<CtElement> returnedElements = pathRead.evaluateOn(_rootPackage);
-				//contract: CtUniqueRolePathElement.evaluateOn() returns a unique elements if provided only a list of one inputs
-				assertEquals(1, returnedElements.size());
-				CtElement actualElement = (CtElement) returnedElements.toArray()[0];
-				//contract: Element -> Path -> String -> Path -> Element leads to the original element
-				assertSame(element, actualElement);
-			} catch (CtPathException e) {
-				throw new AssertionError("Path " + pathStr + " is either incorrectly generated or incorrectly read", e);
-			} catch (AssertionError e) {
-				throw new AssertionError("Path " + pathStr + " detection failed on " + element.getClass().getSimpleName() + ": " + element, e);
-			}
-		});
 	}
 
 	/** contract: element is contained in attribute of element's parent */

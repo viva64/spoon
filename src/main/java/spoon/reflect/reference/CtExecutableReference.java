@@ -13,8 +13,6 @@ import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.path.CtRole;
 import spoon.support.DerivedProperty;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.util.List;
 
 
@@ -36,22 +34,6 @@ public interface CtExecutableReference<T> extends CtReference, CtActualTypeConta
 	 * Tells if this is a reference to a constructor.
 	 */
 	boolean isConstructor();
-
-	/**
-	 * Gets the runtime method that corresponds to an executable reference if
-	 * any.
-	 *
-	 * @return the method (null if not found)
-	 */
-	Method getActualMethod();
-
-	/**
-	 * Gets the runtime constructor that corresponds to an executable reference
-	 * if any.
-	 *
-	 * @return the constructor (null if not found)
-	 */
-	Constructor<?> getActualConstructor();
 
 	@Override
 	@DerivedProperty

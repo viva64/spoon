@@ -16,6 +16,7 @@
  */
 package spoon.test.refactoring;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.OutputType;
@@ -91,7 +92,7 @@ public class CtRenameLocalVariableRefactoringTest
 			method.filterChildren((CtVariable var)->true)
 				.map((CtVariable var)->var.getAnnotation(tryRename))
 				.forEach((CtAnnotation<TestTryRename> annotation)->{
-					String[] newNames = annotation.getActualAnnotation().value();
+					String[] newNames = RuntimeAccess.actualAnnotation(annotation).value();
 					CtVariable<?> targetVariable = (CtVariable<?>)annotation.getAnnotatedElement();
 					for (String newName : newNames) {
 						boolean renameShouldPass = newName.startsWith("-")==false;

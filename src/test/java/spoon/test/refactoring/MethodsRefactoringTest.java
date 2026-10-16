@@ -16,6 +16,7 @@
  */
 package spoon.test.refactoring;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.OutputType;
@@ -257,7 +258,7 @@ public class MethodsRefactoringTest {
 					ele = stats.get(0);
 				}
 			}
-			TestHierarchy th = ele.getAnnotation(TestHierarchy.class);
+			TestHierarchy th = RuntimeAccess.annotation(ele, TestHierarchy.class);
 			if (th!=null) {
 				return Arrays.asList(th.value()).contains(hierarchyName);
 			}

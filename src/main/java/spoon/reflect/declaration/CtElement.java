@@ -46,30 +46,6 @@ import static spoon.reflect.path.CtRole.POSITION;
 public interface CtElement extends FactoryAccessor, CtVisitable, Cloneable, CtQueryable, Serializable, SourcePositionHolder {
 
 	/**
-	 * Searches for an annotation of the given class that annotates the
-	 * current element.
-	 *
-	 * When used with a shadow element, this method might return an empty list even on an annotated element
-	 * because annotations without a RUNTIME retention policy are lost after compilation.
-	 *
-	 * WARNING: this method uses a class loader proxy, which is costly.
-	 * Use {@link #getAnnotation(CtTypeReference)} preferably.
-	 *
-	 * <p>
-	 * NOTE: before using an annotation proxy, you have to make sure that all
-	 * the types referenced by the annotation have been compiled and are in the
-	 * classpath so that accessed values can be converted into the actual types.
-	 *
-	 * @param <A>
-	 * 		the annotation's type
-	 * @param annotationType
-	 * 		the annotation's class
-	 * @return if found, returns a proxy for this annotation
-	 */
-	@PropertyGetter(role = ANNOTATION)
-	<A extends Annotation> A getAnnotation(Class<A> annotationType);
-
-	/**
 	 * Gets the annotation element for a given annotation type.
 	 *
 	 * When used with a shadow element, this method might return an empty list even on an annotated element

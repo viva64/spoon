@@ -43,38 +43,6 @@ public abstract class AbstractAssert<T extends AbstractAssert<T, A>, A> {
 		return myself;
 	}
 
-	/**
-	 * Applies the processor on the actual value.
-	 *
-	 * @param processor
-	 * 		the class of the given processor.
-	 * @return {@code this} assertion object.
-	 */
-	public T withProcessor(Class<? extends Processor<?>> processor) {
-		try {
-			withProcessor(processor.newInstance());
-		} catch (InstantiationException | IllegalAccessException e) {
-			throw new RuntimeException("Can't instantiate class processor.", e);
-		}
-		return myself;
-	}
-
-	/**
-	 * Applies the processor on the actual value.
-	 *
-	 * @param qualifiedName
-	 * 		the qualified name of the given processor.
-	 * @return {@code this} assertion object.
-	 */
-	public T withProcessor(String qualifiedName) {
-		try {
-			withProcessor((Class<? extends Processor<?>>) Thread.currentThread().getContextClassLoader().loadClass(qualifiedName));
-		} catch (ClassNotFoundException e) {
-			throw new SpoonException("Unable to load processor \"" + qualifiedName + "\"", e);
-		}
-		return myself;
-	}
-
 	public int hashCode() {
 		return 1;
 	}

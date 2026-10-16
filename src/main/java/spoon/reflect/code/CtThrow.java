@@ -9,7 +9,6 @@ package spoon.reflect.code;
 
 import spoon.reflect.annotations.PropertyGetter;
 import spoon.reflect.annotations.PropertySetter;
-import spoon.template.TemplateParameter;
 
 import static spoon.reflect.path.CtRole.EXPRESSION;
 
@@ -21,7 +20,7 @@ import static spoon.reflect.path.CtRole.EXPRESSION;
  *     throw new RuntimeException("oops")
  * </pre>
  */
-public interface CtThrow extends CtCFlowBreak, TemplateParameter<Void> {
+public interface CtThrow extends CtCFlowBreak {
 
 	/**
 	 * Returns the thrown expression (must be a throwable).

@@ -87,15 +87,6 @@ public class CtWildcardReferenceImpl extends CtTypeParameterReferenceImpl implem
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public Class<Object> getActualClass() {
-		if (isUpper()) {
-			return (Class<Object>) getBoundingType().getActualClass();
-		}
-		return Object.class;
-	}
-
-	@Override
 	protected boolean isWildcard() {
 		return true;
 	}

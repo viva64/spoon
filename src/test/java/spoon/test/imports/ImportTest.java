@@ -16,6 +16,7 @@
  */
 package spoon.test.imports;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -402,9 +403,9 @@ public class ImportTest {
 		final CtClass<ImportTest> aClass = launcher.getFactory().Class().get(ClientClass.class.getName()+"$InnerClass");
 		assertEquals(ClientClass.class.getName()+"$InnerClass", aClass.getQualifiedName());
 		final CtTypeReference<?> parentClass = aClass.getSuperclass();
-		//comment next line and parentClass.getActualClass(); will fail anyway
+		//comment next line and RuntimeAccess.actualClass(parentClass); will fail anyway
 		assertEquals("spoon.test.imports.testclasses.internal.SuperClass$InnerClassProtected", parentClass.getQualifiedName());
-		Class<?> actualClass = parentClass.getActualClass();
+		Class<?> actualClass = RuntimeAccess.actualClass(parentClass);
 		assertEquals("spoon.test.imports.testclasses.internal.SuperClass$InnerClassProtected", actualClass.getName());
 	}
 

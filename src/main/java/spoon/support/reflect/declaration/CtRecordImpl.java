@@ -23,6 +23,9 @@ import org.jspecify.annotations.Nullable;
 import spoon.JLSViolation;
 import spoon.reflect.annotations.MetamodelPropertyField;
 import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.code.CtExpression;
+import spoon.reflect.code.CtFieldAccess;
+import spoon.reflect.code.CtNewArray;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtAnonymousExecutable;
 import spoon.reflect.declaration.CtConstructor;
@@ -206,6 +209,26 @@ public class CtRecordImpl extends CtClassImpl<Object> implements CtRecord {
 		return super.addTypeMemberAt(position, member);
 	}
 
+	/**
+	 * @return true if the {@link Target} annotation lists the element type
+	 */
+	private static boolean targetsElementType(CtAnnotation<?> target, ElementType elementType) {
+		CtExpression<?> value = target.getValue("value");
+		List<CtExpression<?>> values = new ArrayList<>();
+		if (value instanceof CtNewArray) {
+			values.addAll(((CtNewArray<?>) value).getElements());
+		} else if (value != null) {
+			values.add(value);
+		}
+		for (CtExpression<?> element : values) {
+			if (element instanceof CtFieldAccess
+				&& ((CtFieldAccess<?>) element).getVariable().getSimpleName().equals(elementType.name())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private List<CtAnnotation<?>> getAnnotationsWithName(String name, ElementType elementType) {
 		List<CtAnnotation<?>> result = new ArrayList<>();
 		for (CtRecordComponent component : components) {
@@ -214,7 +237,13 @@ public class CtRecordImpl extends CtClassImpl<Object> implements CtRecord {
 					CtType<?> annotationType = annotation.getAnnotationType().getTypeDeclaration();
 					// TODO: this is not the best way to handle this, but it's the best we can do for now
 					if (annotationType != null) {
-						Target target = annotationType.getAnnotation(Target.class);
+						CtAnnotation<?> target = null;
+						for (CtAnnotation<?> candidate : annotationType.getAnnotations()) {
+							if (Target.class.getName().equals(candidate.getAnnotationType().getQualifiedName())) {
+								target = candidate;
+								break;
+							}
+						}
 						// https://docs.oracle.com/javase/specs/jls/se19/html/jls-9.html#jls-9.6.4.1
 						// If an annotation of type java.lang.annotation.Target is not present on the declaration of
 						// an annotation interface A, then A is applicable in all declaration contexts and in no
@@ -222,7 +251,7 @@ public class CtRecordImpl extends CtClassImpl<Object> implements CtRecord {
 						if (target == null && elementType == ElementType.TYPE_USE) {
 							continue;
 						}
-						if (target == null || Arrays.stream(target.value()).anyMatch(e -> e == elementType)) {
+						if (target == null || targetsElementType(target, elementType)) {
 							result.add(annotation.clone());
 						}
 					}

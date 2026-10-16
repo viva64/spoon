@@ -189,11 +189,6 @@ public class CtBlockImpl<R> extends CtStatementImpl implements CtBlock<R> {
 	}
 
 	@Override
-	public R S() {
-		return null;
-	}
-
-	@Override
 	public CtBlock<R> clone() {
 		return (CtBlock<R>) super.clone();
 	}

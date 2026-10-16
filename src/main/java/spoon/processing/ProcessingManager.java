@@ -24,16 +24,6 @@ import spoon.reflect.declaration.CtElement;
 public interface ProcessingManager extends FactoryAccessor {
 
 	/**
-	 * Adds a processor by instantiating its type (a class that must define an
-	 * empty constructor).
-	 *
-	 * @param type
-	 *            the processor class to instantiate and add
-	 * @see #getProcessors()
-	 */
-	void addProcessor(Class<? extends Processor<?>> type);
-
-	/**
 	 * Adds a processor.
 	 *
 	 * @param p
@@ -42,16 +32,6 @@ public interface ProcessingManager extends FactoryAccessor {
 	 * @see #getProcessors()
 	 */
 	boolean addProcessor(Processor<?> p);
-
-	/**
-	 * Adds a processor by instantiating its type (a class that must define an
-	 * empty constructor and implement {@link Processor}).
-	 *
-	 * @param qualifiedName
-	 *            the qualified name of the processor's type
-	 * @see #getProcessors()
-	 */
-	void addProcessor(String qualifiedName);
 
 	/**
 	 * Gets the processors that have been added to the manager and that will be

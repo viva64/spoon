@@ -27,9 +27,4 @@ public abstract class AbstractReferenceFilter<T extends CtReference> extends Abs
 		super(type);
 	}
 
-	/**
-	 * Creates a filter with the type computed by reflection from the matches method parameter
-	 */
-	public AbstractReferenceFilter() {
-	}
 }

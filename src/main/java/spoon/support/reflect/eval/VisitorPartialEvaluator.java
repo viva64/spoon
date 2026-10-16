@@ -47,7 +47,6 @@ import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.OperatorHelper;
-import spoon.support.util.RtHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,25 +65,28 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 	CtElement result;
 
 	static Number convert(CtTypeReference<?> type, Number n) {
-		if ((type.getActualClass() == int.class) || (type.getActualClass() == Integer.class)) {
-			return n.intValue();
+		switch (type.getQualifiedName()) {
+			case "int":
+			case "java.lang.Integer":
+				return n.intValue();
+			case "byte":
+			case "java.lang.Byte":
+				return n.byteValue();
+			case "long":
+			case "java.lang.Long":
+				return n.longValue();
+			case "float":
+			case "java.lang.Float":
+				return n.floatValue();
+			case "short":
+			case "java.lang.Short":
+				return n.shortValue();
+			case "double":
+			case "java.lang.Double":
+				return n.doubleValue();
+			default:
+				return n;
 		}
-		if ((type.getActualClass() == byte.class) || (type.getActualClass() == Byte.class)) {
-			return n.byteValue();
-		}
-		if ((type.getActualClass() == long.class) || (type.getActualClass() == Long.class)) {
-			return n.longValue();
-		}
-		if ((type.getActualClass() == float.class) || (type.getActualClass() == Float.class)) {
-			return n.floatValue();
-		}
-		if ((type.getActualClass() == short.class) || (type.getActualClass() == Short.class)) {
-			return n.shortValue();
-		}
-		if ((type.getActualClass() == double.class) || (type.getActualClass() == Double.class)) {
-			return n.doubleValue();
-		}
-		return n;
 	}
 
 	@Override
@@ -150,7 +152,7 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 				}
 			}
 		} else {
-			result.setValue(type.getActualClass().cast(literal.getValue()));
+			result.setValue(literal.getValue());
 		}
 
 		return result;
@@ -403,14 +405,6 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 	}
 
 	private <T> void visitFieldAccess(CtFieldAccess<T> fieldAccess) {
-		if ("class".equals(fieldAccess.getVariable().getSimpleName())) {
-			Class<?> actualClass = fieldAccess.getVariable().getDeclaringType().getActualClass();
-			if (actualClass != null) {
-				CtLiteral<Class<?>> literal = fieldAccess.getFactory().createLiteral(actualClass);
-				setResult(literal);
-				return;
-			}
-		}
 		if ("length".equals(fieldAccess.getVariable().getSimpleName())) {
 			CtExpression<?> target = fieldAccess.getTarget();
 			if (target instanceof CtNewArray<?>) {
@@ -553,18 +547,6 @@ public class VisitorPartialEvaluator extends CtScanner implements PartialEvaluat
 						setResult(((CtReturn<?>) last).getReturnedExpression());
 						return;
 					}
-				}
-			} else {
-				// try to completely evaluate
-				T r;
-				try {
-					r = RtHelper.invoke(i);
-					if (isLiteralType(r)) {
-						CtLiteral<T> l = invocation.getFactory().createLiteral(r);
-						setResult(l);
-						return;
-					}
-				} catch (Exception e) {
 				}
 			}
 		}

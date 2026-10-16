@@ -16,6 +16,7 @@
  */
 package spoon.test.methodreference;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import spoon.Launcher;
@@ -233,7 +234,7 @@ public class MethodReferenceTest {
 		CtType<?> classCloud = ModelUtils.buildClass(Cloud.class);
 		CtMethod<?> ctMethod = classCloud.getMethodsByName("method").get(0);
 		CtExecutableReference<?> execRef = ctMethod.getReference();
-		Method method = execRef.getActualMethod();
+		Method method = RuntimeAccess.actualMethod(execRef);
 		assertNotNull(method);
 		assertEquals("method", method.getName());
 
@@ -243,7 +244,7 @@ public class MethodReferenceTest {
 				.map((CtInvocation i)->i.getExecutable())
 				.first();
 		assertNotNull(execRef2);
-		Method method2 = execRef2.getActualMethod();
+		Method method2 = RuntimeAccess.actualMethod(execRef2);
 		assertNotNull(method2);
 		assertEquals("method", method2.getName());
 	}
@@ -257,7 +258,7 @@ public class MethodReferenceTest {
 		int n = 0;
 		for (CtMethod<?> method1 : classCloud.getMethodsByName("method")) {
 			CtExecutableReference<?> execRef = method1.getReference();
-			Method method = execRef.getActualMethod();
+			Method method = RuntimeAccess.actualMethod(execRef);
 			assertNotNull(method);
 			assertEquals("method", method.getName());
 			List<CtParameter<?>> parameters = method1.getParameters();
@@ -266,7 +267,7 @@ public class MethodReferenceTest {
 			//check that we have found the method with correct parameters
 			for (int i = 0; i < parameters.size(); i++) {
 				CtTypeReference<?> paramTypeRef = parameters.get(i).getType();
-				Class<?> paramClass = paramTypeRef.getTypeErasure().getActualClass();
+				Class<?> paramClass = RuntimeAccess.actualClass(paramTypeRef.getTypeErasure());
 				assertSame(paramClass, method.getParameterTypes()[i]);
 				//
 				CtType<?> paramType = paramTypeRef.getDeclaration();
@@ -287,7 +288,7 @@ public class MethodReferenceTest {
 	}
 
 	private void assertTypedBy(Class<?> expected, CtTypeReference<?> type) {
-		assertSame(expected, type.getActualClass(), "Method reference must be typed.");
+		assertSame(expected, RuntimeAccess.actualClass(type), "Method reference must be typed.");
 	}
 
 	private void assertTargetedBy(String expected, CtExpression<?> target) {
@@ -326,7 +327,7 @@ public class MethodReferenceTest {
 		CtMethod method1 = methods.get(0);
 
 		CtExecutableReference<?> execRef = method1.getReference();
-		Method method = execRef.getActualMethod();
+		Method method = RuntimeAccess.actualMethod(execRef);
 		assertNotNull(method);
 		assertEquals("assertThat", method.getName());
 		List<CtParameter<?>> parameters = method1.getParameters();
@@ -334,7 +335,7 @@ public class MethodReferenceTest {
 
 		//check that we have found the method with correct parameters
 		CtTypeReference<?> paramTypeRef = parameters.get(0).getType();
-		Class<?> paramClass = paramTypeRef.getTypeErasure().getActualClass();
+		Class<?> paramClass = RuntimeAccess.actualClass(paramTypeRef.getTypeErasure());
 		assertSame(paramClass, method.getParameterTypes()[0]);
 
 		assertSame(method1, execRef.getDeclaration());

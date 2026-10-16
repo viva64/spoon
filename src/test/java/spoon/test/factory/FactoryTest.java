@@ -16,6 +16,7 @@
  */
 package spoon.test.factory;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.lang.reflect.Method;
 import java.nio.file.Paths;
@@ -244,9 +245,9 @@ public class FactoryTest {
 	public void specificationCoreFactoryCreate() {
 		// contract: all concrete metamodel classes must be instantiable by CoreFactory.create
 		for (CtType<? extends CtElement> itf : SpoonTestHelpers.getAllInstantiableMetamodelInterfaces()) {
-			CtElement o = itf.getFactory().Core().create(itf.getActualClass());
+			CtElement o = itf.getFactory().Core().create(RuntimeAccess.actualClass(itf));
 			assertNotNull(o);
-			assertTrue(itf.getActualClass().isInstance(o));
+			assertTrue(RuntimeAccess.actualClass(itf).isInstance(o));
 		}
 	}
 
@@ -273,7 +274,7 @@ public class FactoryTest {
 			for (int i =0; i<args.length; i++) {
 				CtTypeReference<?> type = m.getParameters().get(i).getType();
 				args[i] = createCompatibleObject(type);
-				argsClass[i] = type.getActualClass();
+				argsClass[i] = RuntimeAccess.actualClass(type);
 				if (!type.isPrimitive()) {
 					// post-condition to be sure that createCompatibleObject works well
 					assertTrue(argsClass[i].isAssignableFrom(args[i].getClass()), args[i].getClass().toString() + " != " + argsClass[i].toString());
@@ -282,7 +283,7 @@ public class FactoryTest {
 
 			// calling the method
 			Method rm;
-			rm = m.getReference().getActualMethod();
+			rm = RuntimeAccess.actualMethod(m.getReference());
 			//rm = spoon.getFactory().getClass().getDeclaredMethod(m.getSimpleName(), argsClass); // works also
 			//System.out.println(rm);
 			Object res = rm.invoke(spoon.getFactory(), args);

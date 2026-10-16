@@ -16,6 +16,7 @@
  */
 package spoon.reflect.ast;
 
+import spoon.test.util.RuntimeAccess;
 import org.junit.jupiter.api.Test;
 import spoon.Launcher;
 import spoon.reflect.code.CtStatement;
@@ -223,10 +224,10 @@ public class AstCheckerTest {
 		}
 
 		private boolean isToBeProcessed(CtMethod<?> candidate) {
-			if (candidate.getAnnotation(UnsettableProperty.class) != null) {
+			if (RuntimeAccess.annotation(candidate, UnsettableProperty.class) != null) {
 				return false;
 			}
-			if (candidate.getAnnotation(DerivedProperty.class) != null) {
+			if (RuntimeAccess.annotation(candidate, DerivedProperty.class) != null) {
 				return false;
 			}
 			return candidate.getBody() != null //

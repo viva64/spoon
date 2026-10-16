@@ -16,6 +16,7 @@
  */
 package spoon.test.trycatch;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.File;
 import java.io.IOException;
@@ -121,12 +122,12 @@ public class TryCatchTest {
 		// the first caught exception is RuntimeException
 		assertEquals(
 				RuntimeException.class,
-				tryStmt.getCatchers().get(0).getParameter().getType().getActualClass());
+				RuntimeAccess.actualClass(tryStmt.getCatchers().get(0).getParameter().getType()));
 		assertEquals("java.lang.System.exit(0)", tryStmt.getCatchers().get(0).getBody().getStatement(0).toString());
 
 		assertEquals(
 				Exception.class,
-				tryStmt.getCatchers().get(1).getParameter().getType().getActualClass());
+				RuntimeAccess.actualClass(tryStmt.getCatchers().get(1).getParameter().getType()));
 	}
 
 	@Test
@@ -144,16 +145,16 @@ public class TryCatchTest {
 
 		assertEquals(
 				Throwable.class,
-				catchers.get(0).getParameter().getType().getActualClass());
+				RuntimeAccess.actualClass(catchers.get(0).getParameter().getType()));
 
 		assertEquals(2, catchers.get(0).getParameter().getMultiTypes().size());
 
 		assertEquals(
 				RuntimeException.class,
-				catchers.get(0).getParameter().getMultiTypes().get(0).getActualClass());
+				RuntimeAccess.actualClass(catchers.get(0).getParameter().getMultiTypes().get(0)));
 		assertEquals(
 				Error.class,
-				catchers.get(0).getParameter().getMultiTypes().get(1).getActualClass());
+				RuntimeAccess.actualClass(catchers.get(0).getParameter().getMultiTypes().get(1)));
 
 		// the code of the catch block is duplicated
 		assertEquals("java.lang.System.exit(0)", catchers.get(0).getBody().getStatement(0).toString());
@@ -260,37 +261,37 @@ public class TryCatchTest {
 
 		assertEquals(
 				RuntimeException.class,
-				catchVariable.getType().getActualClass());
+				RuntimeAccess.actualClass(catchVariable.getType()));
 
 		assertEquals(1, catchVariable.getMultiTypes().size());
 
 		assertEquals(
 				RuntimeException.class,
-				catchVariable.getMultiTypes().get(0).getActualClass());
+				RuntimeAccess.actualClass(catchVariable.getMultiTypes().get(0)));
 
 		//contract: the manipulation with catch variable type is possible
 		catchVariable.setType((CtTypeReference)factory.Type().createReference(IllegalArgumentException.class));
-		assertEquals(IllegalArgumentException.class,catchVariable.getType().getActualClass());
+		assertEquals(IllegalArgumentException.class,RuntimeAccess.actualClass(catchVariable.getType()));
 		//contract setType influences multitypes
 		assertEquals(1, catchVariable.getMultiTypes().size());
-		assertEquals(IllegalArgumentException.class, catchVariable.getMultiTypes().get(0).getActualClass());
+		assertEquals(IllegalArgumentException.class, RuntimeAccess.actualClass(catchVariable.getMultiTypes().get(0)));
 
 		catchVariable.setMultiTypes(Collections.singletonList(factory.Type().createReference(UnsupportedOperationException.class)));
-		assertEquals(UnsupportedOperationException.class,catchVariable.getType().getActualClass());
+		assertEquals(UnsupportedOperationException.class,RuntimeAccess.actualClass(catchVariable.getType()));
 		//contract setType influences multitypes
 		assertEquals(1, catchVariable.getMultiTypes().size());
-		assertEquals(UnsupportedOperationException.class, catchVariable.getMultiTypes().get(0).getActualClass());
+		assertEquals(UnsupportedOperationException.class, RuntimeAccess.actualClass(catchVariable.getMultiTypes().get(0)));
 
 		catchVariable.setMultiTypes(Arrays.asList(
 				factory.Type().createReference(UnsupportedOperationException.class),
 				factory.Type().createReference(IllegalArgumentException.class)
 				));
 		assertEquals(2, catchVariable.getMultiTypes().size());
-		assertEquals(UnsupportedOperationException.class, catchVariable.getMultiTypes().get(0).getActualClass());
-		assertEquals(IllegalArgumentException.class, catchVariable.getMultiTypes().get(1).getActualClass());
+		assertEquals(UnsupportedOperationException.class, RuntimeAccess.actualClass(catchVariable.getMultiTypes().get(0)));
+		assertEquals(IllegalArgumentException.class, RuntimeAccess.actualClass(catchVariable.getMultiTypes().get(1)));
 
 		//contract setMultiTypes influences types, which contains common super class of all multi types
-		assertEquals(RuntimeException.class,catchVariable.getType().getActualClass());
+		assertEquals(RuntimeException.class,RuntimeAccess.actualClass(catchVariable.getType()));
 	}
 
 	@Test

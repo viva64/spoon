@@ -9,7 +9,6 @@ package spoon.reflect.code;
 
 import spoon.reflect.annotations.PropertyGetter;
 import spoon.reflect.annotations.PropertySetter;
-import spoon.template.TemplateParameter;
 
 import java.util.List;
 
@@ -27,7 +26,7 @@ import static spoon.reflect.path.CtRole.FINALIZER;
  *     } catch (Exception ignore) {}
  * </pre>
  */
-public interface CtTry extends CtStatement, TemplateParameter<Void>, CtBodyHolder {
+public interface CtTry extends CtStatement, CtBodyHolder {
 
 	/**
 	 * Gets the <i>catchers</i> of this <code>try</code>.

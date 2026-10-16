@@ -41,7 +41,6 @@ import spoon.support.compiler.FileSystemFile;
 import spoon.support.compiler.FileSystemFolder;
 import spoon.support.compiler.VirtualFile;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
-import spoon.support.gui.SpoonModelTree;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -89,7 +88,6 @@ public class Launcher implements SpoonAPI {
 	private static JSAP jsapSpec;
 	protected JSAPResult jsapActualArgs;
 
-	private List<String> processorTypes = new ArrayList<>();
 	private List<Processor<? extends CtElement>> processors = new ArrayList<>();
 
 	/**
@@ -110,10 +108,6 @@ public class Launcher implements SpoonAPI {
 		this.setArgs(args);
 		if (args.length != 0) {
 			this.run();
-			// display GUI
-			if (this.jsapActualArgs.getBoolean("gui")) {
-				new SpoonModelTree(getFactory());
-			}
 		} else {
 			this.printUsage();
 		}
@@ -180,11 +174,6 @@ public class Launcher implements SpoonAPI {
 	/** adds a resource to be parsed to build the spoon model */
 	public void addInputResource(SpoonResource resource) {
 		modelBuilder.addInputSource(resource);
-	}
-
-	@Override
-	public void addProcessor(String name) {
-		processorTypes.add(name);
 	}
 
 	@Override
@@ -272,15 +261,6 @@ public class Launcher implements SpoonAPI {
 			opt2.setStringParser(JSAP.STRING_PARSER);
 			opt2.setRequired(false);
 			opt2.setHelp("List of path to sources files.");
-			jsap.registerParameter(opt2);
-
-			// Processor qualified name
-			opt2 = new FlaggedOption("processors");
-			opt2.setShortFlag('p');
-			opt2.setLongFlag("processors");
-			opt2.setHelp("List of processor's qualified name to be used.");
-			opt2.setStringParser(JSAP.STRING_PARSER);
-			opt2.setRequired(false);
 			jsap.registerParameter(opt2);
 
 			// setting input template
@@ -383,13 +363,6 @@ public class Launcher implements SpoonAPI {
 			sw1.setLongFlag("ignore-syntax-errors");
 			sw1.setHelp("If an input resource has any syntax errors, it will be removed from the compilation batch.");
 			sw1.setDefault("false");
-			jsap.registerParameter(sw1);
-
-			// show GUI
-			sw1 = new Switch("gui");
-			sw1.setShortFlag('g');
-			sw1.setLongFlag("gui");
-			sw1.setHelp("Show spoon model after processing");
 			jsap.registerParameter(sw1);
 
 			// Disable copy of resources.
@@ -541,25 +514,11 @@ public class Launcher implements SpoonAPI {
 			}
 		}
 
-		if (getArguments().getString("processors") != null) {
-			for (String processorName : getArguments().getString("processors").split(File.pathSeparator)) {
-				addProcessor(processorName);
-			}
-		}
-
 	}
 
 	protected void reportClassPathMode() {
 		String cpmode = jsapActualArgs.getString("cpmode").toUpperCase();
 		factory.getEnvironment().report(null, Level.DEBUG, "Running in " + cpmode + " mode (doc: http://spoon.gforge.inria.fr/launcher.html).");
-	}
-
-	/**
-	 * Gets the list of processor types to be initially applied during the
-	 * processing (-p option).
-	 */
-	protected java.util.List<String> getProcessorTypes() {
-		return processorTypes;
 	}
 
 	/**
@@ -786,7 +745,6 @@ public class Launcher implements SpoonAPI {
 	@Override
 	public void process() {
 		long tstart = System.currentTimeMillis();
-		modelBuilder.instantiateAndProcess(getProcessorTypes());
 		modelBuilder.process(getProcessors());
 		getEnvironment().debugMessage("model processed in " + (System.currentTimeMillis() - tstart) + " ms");
 	}

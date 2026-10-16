@@ -16,6 +16,7 @@
  */
 package spoon.test.annotation;
 
+import spoon.test.util.RuntimeAccess;
 import java.lang.annotation.Annotation;
 import java.util.HashSet;
 import java.util.Set;
@@ -172,7 +173,7 @@ public class AnnotationValuesTest {
 
 		public <A extends Annotation> CtAnnotation<? extends Annotation> giveMeAnnotation(Class<A> annotation) {
 			for (CtAnnotation<? extends Annotation> ctAnnotation : element.getAnnotations()) {
-				if (ctAnnotation.getActualAnnotation().annotationType().equals(annotation)) {
+				if (RuntimeAccess.actualAnnotation(ctAnnotation).annotationType().equals(annotation)) {
 					return ctAnnotation;
 				}
 			}

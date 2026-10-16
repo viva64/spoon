@@ -16,6 +16,7 @@
  */
 package spoon.test.comment;
 
+import spoon.test.util.RuntimeAccess;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -903,7 +904,7 @@ public class CommentTest {
 			assertTrue(!x.getDocComment().isEmpty(), x.getSimpleName() + " has no documentation");
 
 			// we only consider instantiable interfaces
-			if (launcher.getModel().getElements(new AbstractFilter<CtElement>() {
+			if (launcher.getModel().getElements(new AbstractFilter<CtElement>(CtElement.class) {
 				@Override
 				public boolean matches(CtElement element) {
 					return (element instanceof CtNamedElement) && ((CtNamedElement) element).getSimpleName().equals(x.getSimpleName() + "Impl") && (element instanceof CtClass) && !((CtClass) element).hasModifier(ModifierKind.ABSTRACT);
@@ -964,7 +965,7 @@ public class CommentTest {
 					CtElement el = launcher.getFactory().Code().createCodeSnippetStatement(snippet).compile();
 
 					// the snippet contains this element
-					assertTrue(!el.getElements(new TypeFilter<>(x.getActualClass())).isEmpty(), snippet + " does not contain a " + x.getSimpleName());
+					assertTrue(!el.getElements(new TypeFilter<>(RuntimeAccess.actualClass(x))).isEmpty(), snippet + " does not contain a " + x.getSimpleName());
 
 					codeElementsDocumentationPage.append(snippet + "\n");
 

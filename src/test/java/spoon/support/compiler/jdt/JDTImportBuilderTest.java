@@ -97,9 +97,7 @@ public class JDTImportBuilderTest {
 
 	private void setupEnvironmentWithCustomClassLoader(String jarFile) throws MalformedURLException {
 		File jarWithImportedType = new File(jarFile);
-		ClassLoader customLoader = new URLClassLoader(new URL[] { jarWithImportedType.toURI().toURL() },
-				JDTImportBuilder.class.getClassLoader());
-		environment.setInputClassLoader(customLoader);
+		environment.setSourceClasspath(new String[] { jarWithImportedType.getAbsolutePath() });
 	}
 
 	private void assertResolvedImport(CtImport ctImport, String theImport) {

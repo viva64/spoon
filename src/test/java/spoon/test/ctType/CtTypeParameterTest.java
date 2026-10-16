@@ -14,6 +14,7 @@
  */
 package spoon.test.ctType;
 
+import spoon.test.util.RuntimeAccess;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -57,7 +58,7 @@ public class CtTypeParameterTest {
 	private void checkType(CtType<?> type) throws NoSuchFieldException, SecurityException {
 		List<CtTypeParameter> formalTypeParameters = type.getFormalCtTypeParameters();
 		for (CtTypeParameter ctTypeParameter : formalTypeParameters) {
-			checkTypeParamErasureOfType(ctTypeParameter, type.getActualClass());
+			checkTypeParamErasureOfType(ctTypeParameter, RuntimeAccess.actualClass(type));
 		}
 
 		for (CtTypeMember member : type.getTypeMembers()) {
@@ -91,7 +92,7 @@ public class CtTypeParameterTest {
 		CtParameter<?> param = exec.filterChildren(new NamedElementFilter<>(CtParameter.class, "param" + typeParam.getSimpleName())).first();
 		assertNotNull(param, "Missing param" + typeParam.getSimpleName() + " in " + exec.getSignature());
 		int paramIdx = exec.getParameters().indexOf(param);
-		Class declClass = exec.getParent(CtType.class).getActualClass();
+		Class declClass = RuntimeAccess.actualClass(exec.getParent(CtType.class));
 		Executable declExec;
 		if (exec instanceof CtConstructor) {
 			declExec = declClass.getDeclaredConstructors()[0];
@@ -107,7 +108,7 @@ public class CtTypeParameterTest {
 		CtExecutable<?> exec = param.getParent();
 		CtTypeReference<?> typeErasure = param.getType().getTypeErasure();
 		int paramIdx = exec.getParameters().indexOf(param);
-		Class declClass = exec.getParent(CtType.class).getActualClass();
+		Class declClass = RuntimeAccess.actualClass(exec.getParent(CtType.class));
 		Executable declExec;
 		if (exec instanceof CtConstructor) {
 			declExec = declClass.getDeclaredConstructors()[0];

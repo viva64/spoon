@@ -16,6 +16,7 @@
  */
 package spoon.test.api;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.File;
 import java.util.List;
@@ -73,7 +74,7 @@ public class NoClasspathTest {
 		// "Unknown" is not in the classpath at all
 		assertEquals("Unknown", superclass.getSimpleName());
 		try {
-			superclass.getActualClass();
+			RuntimeAccess.actualClass(superclass);
 			fail();
 		} catch (SpoonClassNotFoundException e) {
 			// expected
@@ -85,7 +86,7 @@ public class NoClasspathTest {
 
 		// now we really make sure we don't have the class in the classpath
 		try {
-			superclass.getActualClass();
+			RuntimeAccess.actualClass(superclass);
 			fail();
 		} catch (SpoonClassNotFoundException e) {
 			// expected
@@ -224,7 +225,7 @@ public class NoClasspathTest {
 
 		CtTypeReference myClassReference = spoon.getFactory().Type().createReference("fr.acme.MyClass");
 		assertEquals(myClassReference, field.getType());
-		assertNotNull(myClassReference.getActualClass());
+		assertNotNull(RuntimeAccess.actualClass(myClassReference));
 
 		CtTypeReference myInterfaceReference = spoon.getFactory().Type().createReference("org.myorganization.MyInterface");
 		assertTrue(myClassReference.isSubtypeOf(myInterfaceReference));

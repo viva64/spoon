@@ -16,6 +16,7 @@
  */
 package spoon.test.pkg;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -87,7 +88,7 @@ public class PackageTest {
 		spoon.createCompiler(factory, SpoonResourceHelper.resources(classFilePath, packageInfoFilePath)).build();
 
 		CtClass<?> clazz = factory.Class().get(PackageTestClass.class);
-		assertSame(PackageTestClass.class, clazz.getActualClass());
+		assertSame(PackageTestClass.class, RuntimeAccess.actualClass(clazz));
 
 		CtPackage ctPackage = clazz.getPackage();
 		assertEquals("spoon.test.pkg.name", ctPackage.getQualifiedName());
@@ -108,7 +109,7 @@ public class PackageTest {
 		assertTrue(ctPackage.hasPackageInfo());
 
 		CtAnnotation<?> annotation = ctPackage.getAnnotations().get(0);
-		assertSame(Deprecated.class, annotation.getAnnotationType().getActualClass());
+		assertSame(Deprecated.class, RuntimeAccess.actualClass(annotation.getAnnotationType()));
 		assertEquals(packageInfoFile.getCanonicalPath(), annotation.getPosition().getFile().getCanonicalPath());
 		assertEquals(5, annotation.getPosition().getLine());
 

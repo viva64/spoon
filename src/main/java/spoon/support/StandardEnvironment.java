@@ -40,11 +40,6 @@ import spoon.support.modelobs.FineModelChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemNotFoundException;
@@ -433,67 +428,6 @@ public class StandardEnvironment implements Serializable, Environment {
 		this.tabulationSize = tabulationSize;
 	}
 
-	private transient  ClassLoader classloader;
-	/*
-	 * cache class loader which loads classes from source class path
-	 * we must cache it to make all the loaded classes compatible
-	 * The cache is reset when setSourceClasspath(...) is called
-	 */
-private transient  ClassLoader inputClassloader;
-
-	@Override
-	public void setInputClassLoader(ClassLoader aClassLoader) {
-		if (aClassLoader instanceof URLClassLoader) {
-			final URL[] urls = ((URLClassLoader) aClassLoader).getURLs();
-			if (urls != null && urls.length > 0) {
-				// Check that the URLs are only file URLs
-				for (URL url : urls) {
-					if (!"file".equals(url.getProtocol())) {
-						throw new SpoonException("Spoon does not support a URLClassLoader containing other resources than local file.");
-					}
-				}
-				List<String> classpath = new ArrayList<>();
-				for (URL url : urls) {
-					try {
-						classpath.add(Path.of(url.toURI()).toAbsolutePath().toString());
-					} catch (URISyntaxException | FileSystemNotFoundException | IllegalArgumentException ignored) {
-						classpath.add(URLDecoder.decode(url.getPath(), StandardCharsets.UTF_8));
-					}
-				}
-				setSourceClasspath(classpath.toArray(new String[0]));
-			}
-		}
-		this.classloader = aClassLoader;
-	}
-
-	@Override
-	public ClassLoader getInputClassLoader() {
-		if (classloader != null) {
-			return classloader;
-		}
-		if (inputClassloader == null) {
-			inputClassloader = new URLClassLoader(urlClasspath(), Thread.currentThread().getContextClassLoader());
-		}
-		return inputClassloader;
-	}
-
-	/**
-	 * Creates a URL class path from {@link Environment#getSourceClasspath()}
-	 */
-	public URL[] urlClasspath() {
-		String[] classpath = getSourceClasspath();
-		int length = (classpath == null) ? 0 : classpath.length;
-		URL[] urls = new URL[length];
-		for (int i = 0; i < length; i += 1) {
-			try {
-				urls[i] = new File(classpath[i]).toURI().toURL();
-			} catch (MalformedURLException e) {
-				throw new IllegalStateException("Invalid classpath: " + Arrays.toString(classpath), e);
-			}
-		}
-		return urls;
-	}
-
 	@Override
 	public String[] getSourceClasspath() {
 		return sourceClasspath;
@@ -503,7 +437,6 @@ private transient  ClassLoader inputClassloader;
 	public void setSourceClasspath(String[] sourceClasspath) {
 		verifySourceClasspath(sourceClasspath);
 		this.sourceClasspath = sourceClasspath;
-		this.inputClassloader = null;
 	}
 
 	@Override

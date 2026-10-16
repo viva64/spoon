@@ -16,6 +16,7 @@
  */
 package spoon.test.secondaryclasses;
 
+import spoon.test.util.RuntimeAccess;
 
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
@@ -108,7 +109,7 @@ public class ClassesTest {
 		assertNotNull(x.getType().getTypeDeclaration());
 
 		// but the actual class is known
-		assertSame(ActionListener.class, x.getType().getActualClass());
+		assertSame(ActionListener.class, RuntimeAccess.actualClass(x.getType()));
 
 		assertNotNull(y.getType().getDeclaration());
 

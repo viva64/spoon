@@ -81,11 +81,6 @@ public interface SpoonAPI {
 	void setBinaryOutputDirectory(File outputDirectory);
 
 	/**
-	 * Adds a processor (fully qualified name).
-	 */
-	void addProcessor(String name);
-
-	/**
 	 * Adds an instance of a processor. The user is responsible for keeping a pointer to it for
 	 * later retrieving some processing information.
 	 */
@@ -97,7 +92,7 @@ public interface SpoonAPI {
 	CtModel buildModel();
 
 	/**
-	 * Processes the model with the processors given previously with {@link #addProcessor(String)}
+	 * Processes the model with the processors given previously with {@link #addProcessor(Processor)}
 	 */
 	void process();
 

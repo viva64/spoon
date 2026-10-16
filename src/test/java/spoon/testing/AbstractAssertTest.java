@@ -34,16 +34,6 @@ public class AbstractAssertTest {
 	}
 
 	@Test
-	public void testTransformationWithProcessorClass() {
-		assertThat(PATH + "Foo.java").withProcessor(FooToBarProcessor.class).isEqualTo(PATH + "Bar.java");
-	}
-
-	@Test
-	public void testTransformationWithProcessorName() {
-		assertThat(PATH + "Foo.java").withProcessor(FooToBarProcessor.class.getName()).isEqualTo(PATH + "Bar.java");
-	}
-
-	@Test
 	public void testTransformationFromCtElementWithProcessor() throws Exception {
 		class MyProcessor extends AbstractProcessor<CtField<?>> {
 			@Override

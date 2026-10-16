@@ -35,7 +35,6 @@ import spoon.support.SpoonClassNotFoundException;
 import spoon.support.adaption.TypeAdaptor;
 import spoon.support.reflect.declaration.CtElementImpl;
 
-import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,8 +56,6 @@ public class CtTypeReferenceImpl<T> extends CtReferenceImpl implements CtTypeRef
 
 	// We use thread-local storage for the caching to avoid having to lock when doing cache invalidation and lookup.
 	// See https://github.com/INRIA/spoon/issues/4668 for details.
-	private static final ThreadLocal<Map<String, Class<?>>> classByQName = ThreadLocal.withInitial(HashMap::new);
-	private static final ThreadLocal<ClassLoader> lastClassLoader = new ThreadLocal<>();
 
 	@MetamodelPropertyField(role = TYPE_ARGUMENT)
 	List<CtTypeReference<?>> actualTypeArguments = CtElementImpl.emptyList();
@@ -115,119 +112,8 @@ public class CtTypeReferenceImpl<T> extends CtReferenceImpl implements CtTypeRef
 	}
 
 	@Override
-
-	public Class<T> getActualClass() {
-			return getPrimitiveType(this).orElseGet(this::findClass);
-	}
-
-	@SuppressWarnings("unchecked")
-	private Optional<Class<T>> getPrimitiveType(CtTypeReference<?> typeReference) {
-		switch (typeReference.getSimpleName()) {
-			case "boolean":
-				return Optional.of((Class<T>) boolean.class);
-			case "byte":
-				return Optional.of((Class<T>) byte.class);
-			case "double":
-				return Optional.of((Class<T>) double.class);
-			case "int":
-				return Optional.of((Class<T>) int.class);
-			case "short":
-				return Optional.of((Class<T>) short.class);
-			case "char":
-				return Optional.of((Class<T>) char.class);
-			case "long":
-				return Optional.of((Class<T>) long.class);
-			case "float":
-				return Optional.of((Class<T>) float.class);
-			case "void":
-				return Optional.of((Class<T>) void.class);
-			default:
-				return Optional.empty();
-		}
-	}
-
-
-	/**
-	 * Finds the class requested in {@link #getActualClass()}.
-	 *
-	 * Looks for the class in the standard Java classpath, but also in the sourceClassPath given as option.
-	 */
-	protected Class<T> findClass() {
-		CtTypeReference<?> typeReference = this;
-		if (isArray()) {
-			CtTypeReference<?> componentTypeReference = convertToComponentType();
-			if (componentTypeReference.isPrimitive()) {
-				return getPrimitiveType(componentTypeReference)
-					.map(this::asArrayTypeWithOurDimensions)
-					.orElseThrow(() -> new SpoonException("Cant find primitive type: " + componentTypeReference));
-			}
-			typeReference = componentTypeReference;
-		}
-		Class<T> actualClass = getClassFromThreadLocalCacheOrLoad(typeReference);
-		return isArray() ? asArrayTypeWithOurDimensions(actualClass) : actualClass;
-	}
-
-	@SuppressWarnings("unchecked")
-	private Class<T> getClassFromThreadLocalCacheOrLoad(CtTypeReference<?> typeReference) {
-		ClassLoader classLoader = getFactory().getEnvironment().getInputClassLoader();
-		checkCacheIntegrity(classLoader);
-		String qualifiedName = typeReference.getQualifiedName();
-		return (Class<T>) classByQName.get().computeIfAbsent(qualifiedName, key -> loadClassWithQName(classLoader, qualifiedName));
-	}
-
-	/**
-	 * Converts the type reference to its component type. If the type is no array, the type reference is returned.
-	 * @return  the component type of the type reference.
-	 */
-	private CtTypeReference<T> convertToComponentType() {
-		if (!this.getQualifiedName().contains("[")) {
-			return this;
-		}
-		return getFactory().createReference(this.getQualifiedName().substring(0, this.getQualifiedName().indexOf("[")));
-	}
-
-	private Class<?> loadClassWithQName(ClassLoader classLoader, String qualifiedName) {
-			try {
-				return classLoader.loadClass(qualifiedName);
-			} catch (Throwable e) {
-				throw new SpoonClassNotFoundException("cannot load class: " + qualifiedName, e);
-			}
-	}
-
-	/**
-	 * Checks if the given classloader is the same as the one used in the last call to {@link #findClass()}.
-	 * If not, the cache is cleared.
-	 * @param classLoader  the classloader to check against the old one.
-	 */
-	private void checkCacheIntegrity(ClassLoader classLoader) {
-		if (classLoader != lastClassLoader.get()) {
-			//clear cache because class loader changed
-			classByQName.get().clear();
-			lastClassLoader.set(classLoader);
-		}
-	}
-
-	/**
-	 * Converts the given type to an array type.
-	 * @param clazz  the type to convert.
-	 * @return  the array type.
-	 */
-	@SuppressWarnings("unchecked")
-	private <R> Class<R> asArrayTypeWithOurDimensions(Class<R> clazz) {
-		String simpleName = getSimpleName();
-		int dimensionCount = (simpleName.length() - simpleName.indexOf('[')) / 2;
-		int[] dimensions = new int[dimensionCount];
-		return (Class<R>) Array.newInstance(clazz, dimensions).getClass();
-	}
-
-	@Override
 	public List<CtTypeReference<?>> getActualTypeArguments() {
 		return actualTypeArguments;
-	}
-
-	@Override
-	protected AnnotatedElement getActualAnnotatedElement() {
-		return getActualClass();
 	}
 
 	@Override
@@ -237,16 +123,7 @@ public class CtTypeReferenceImpl<T> extends CtReferenceImpl implements CtTypeRef
 
 	@Override
 	public CtType<T> getTypeDeclaration() {
-		CtType<T> t = getFactory().Type().get(getQualifiedName());
-		if (t != null) {
-			return t;
-		}
-		try {
-			return getFactory().Type().get(getActualClass());
-		} catch (SpoonClassNotFoundException e) {
-			// this only happens in noclasspath
-			return null;
-		}
+		return getFactory().Type().getOrShadow(getQualifiedName());
 	}
 
 	@Override
@@ -270,9 +147,12 @@ public class CtTypeReferenceImpl<T> extends CtReferenceImpl implements CtTypeRef
 		}
 	}
 
+	private static final java.util.Set<String> PRIMITIVE_NAMES = new java.util.HashSet<>(
+		java.util.Arrays.asList("boolean", "byte", "double", "int", "short", "char", "long", "float", "void"));
+
 	@Override
 	public boolean isPrimitive() {
-		return getPrimitiveType(this).isPresent();
+		return PRIMITIVE_NAMES.contains(getSimpleName());
 	}
 
 	@Override
@@ -364,38 +244,27 @@ public class CtTypeReferenceImpl<T> extends CtReferenceImpl implements CtTypeRef
 		if (isPrimitive()) {
 			return this;
 		}
-		Class<T> actualClass;
-		try {
-			actualClass = getActualClass();
-		} catch (SpoonClassNotFoundException e) {
-			return this;
-		}
-		if (actualClass == Integer.class) {
-			return getFactory().Type().createReference(int.class);
-		}
-		if (actualClass == Float.class) {
-			return getFactory().Type().createReference(float.class);
-		}
-		if (actualClass == Long.class) {
-			return getFactory().Type().createReference(long.class);
-		}
-		if (actualClass == Character.class) {
-			return getFactory().Type().createReference(char.class);
-		}
-		if (actualClass == Double.class) {
-			return getFactory().Type().createReference(double.class);
-		}
-		if (actualClass == Boolean.class) {
-			return getFactory().Type().createReference(boolean.class);
-		}
-		if (actualClass == Short.class) {
-			return getFactory().Type().createReference(short.class);
-		}
-		if (actualClass == Byte.class) {
-			return getFactory().Type().createReference(byte.class);
-		}
-		if (actualClass == Void.class) {
-			return getFactory().Type().createReference(void.class);
+		switch (getQualifiedName()) {
+			case "java.lang.Integer":
+				return getFactory().Type().createReference(int.class);
+			case "java.lang.Float":
+				return getFactory().Type().createReference(float.class);
+			case "java.lang.Long":
+				return getFactory().Type().createReference(long.class);
+			case "java.lang.Character":
+				return getFactory().Type().createReference(char.class);
+			case "java.lang.Double":
+				return getFactory().Type().createReference(double.class);
+			case "java.lang.Boolean":
+				return getFactory().Type().createReference(boolean.class);
+			case "java.lang.Short":
+				return getFactory().Type().createReference(short.class);
+			case "java.lang.Byte":
+				return getFactory().Type().createReference(byte.class);
+			case "java.lang.Void":
+				return getFactory().Type().createReference(void.class);
+			default:
+				break;
 		}
 		return this;
 	}
