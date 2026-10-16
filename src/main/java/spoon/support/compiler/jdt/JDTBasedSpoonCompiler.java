@@ -408,6 +408,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 							.encoding(this.getEnvironment().getEncoding().displayName())
 							.classpath(classpath)
 							.modulePath(modulePath);
+			AnnotationProcessingOptions annotationOptions = new AnnotationProcessingOptions().generatedFilesOutput(getEnvironment().getSourceOutputDirectory());
 			ComplianceOptions complianceOptions = new ComplianceOptions().compliance(javaCompliance);
 			if (factory.getEnvironment().isPreviewFeaturesEnabled()) {
 				complianceOptions.enablePreview();
@@ -417,6 +418,7 @@ public class JDTBasedSpoonCompiler implements spoon.SpoonModelBuilder {
 			args = new JDTBuilderImpl()
 					.classpathOptions(classpathOptions)
 					.complianceOptions(complianceOptions)
+					.annotationProcessingOptions(annotationOptions)
 					.advancedOptions(advancedOptions)
 					.sources(sourceOptions) // no sources, handled by the JDTBatchCompiler
 					.build();

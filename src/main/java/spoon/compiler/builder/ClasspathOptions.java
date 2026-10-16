@@ -50,6 +50,10 @@ public class ClasspathOptions<T extends ClasspathOptions<T>> extends Options<T> 
 	 * @return the instance of the class calling this method
 	 */
 	public T modulePath(List<String> modulePaths) {
+		if (modulePaths == null || modulePaths.isEmpty()) {
+			// an empty --module-path makes ecj look up annotation processors on it instead of the classpath
+			return myself;
+		}
 		args.add("--module-path");
 		args.add(String.join(File.pathSeparator, modulePaths));
 		return myself;

@@ -7,6 +7,8 @@
  */
 package spoon.compiler.builder;
 
+import java.io.File;
+
 public class AnnotationProcessingOptions<T extends AnnotationProcessingOptions<T>> extends Options<T> {
 	public AnnotationProcessingOptions() {
 		super(AnnotationProcessingOptions.class);
@@ -35,6 +37,12 @@ public class AnnotationProcessingOptions<T extends AnnotationProcessingOptions<T
 
 	public T compileProcessors() {
 		args.add("-proc:none");
+		return myself;
+	}
+
+	public T generatedFilesOutput(File path) {
+		args.add("-s");
+		args.add(path.getPath());
 		return myself;
 	}
 }
